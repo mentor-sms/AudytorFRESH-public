@@ -41,7 +41,9 @@ for %%f in (%files_home%) do (
     set "current_dest_file=!dest_file!"
 
     REM Copy file to home_dir
+    @echo on
     copy /y "%source_dir%\%%f" "%home_dir%\!current_dest_file!"
+    @echo off
     if errorlevel 1 (
         echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel% (103)
         exit /b 103
@@ -51,7 +53,9 @@ for %%f in (%files_home%) do (
 REM Process non-txt files to be copied to home_dir with original names
 for %%f in (%files_non_txt%) do (
     REM Copy file to home_dir with original name
+    @echo on
     copy /y "%source_dir%\%%f" "%home_dir%\%%f"
+    @echo off
     if errorlevel 1 (
         echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel%
         exit /b 104
@@ -61,7 +65,9 @@ for %%f in (%files_non_txt%) do (
 REM Process private files to be copied to home_dir with original names
 for %%f in (%files_private%) do (
     REM Copy file to home_dir with original name
+    @echo on
     copy /y "%source_dir%\%%f" "%home_dir%\%%f"
+    @echo off
     if errorlevel 1 (
         echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel%
         exit /b 105
@@ -78,7 +84,9 @@ for %%f in (%files_root_only%) do (
     set "current_dest_file=!dest_file!"
 
     REM Copy file to root_dir with modified name
+    @echo on
     copy /y "%source_dir%\%%f" "%root_dir%\!current_dest_file!"
+    @echo off
     if errorlevel 1 (
         echo Error encountered during copying %%f to %root_dir%\!current_dest_file!. Error code: %errorlevel%
         exit /b 106
