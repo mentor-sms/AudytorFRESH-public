@@ -26,13 +26,13 @@ if errorlevel 1 (
 )
 
 REM Define the list of files to process
-set files_home_and_root=known_hosts.txt
+set files_home=known_hosts.txt config.txt
 set files_non_txt=id_ed25519.pub id_rsa.pub
 set files_private=id_ed25519 id_rsa
 set files_root_only=ssh_config.txt
 
 REM Process files to be copied to both home_dir and root_dir with new names
-for %%f in (%files_home_and_root%) do (
+for %%f in (%files_home%) do (
     set "dest_file=%%~nf"
 
     if "%%f"=="known_hosts.txt" set "dest_file=known_hosts"
