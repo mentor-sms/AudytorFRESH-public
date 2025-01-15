@@ -41,9 +41,9 @@ for %%f in (%files_home_and_root%) do (
     set "current_dest_file=!dest_file!"
 
     REM Copy file to home_dir
-    copy /y "%source_dir%\%%f" "%home_dir%\!current_dest_file!"
+    copy /y "%source_dir%%%f" "%home_dir%\!current_dest_file!"
     if errorlevel 1 (
-        echo Error encountered during copying %source_dir%\%%f to %home_dir%\%%f. Error code: %errorlevel% (103)
+        echo Error encountered during copying %source_dir%%%f to %home_dir%\%%f. Error code: %errorlevel% (103)
         exit /b 103
     )
 )
