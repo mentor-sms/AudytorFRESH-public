@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 REM Check if the username argument is provided
 if "%1"=="" (
     echo Usage: %0 username
-    exit /b 1
+    exit /b 101
 )
 
 REM Set the username and home_dir based on the provided argument
@@ -14,17 +14,21 @@ REM Define source and destination directories
 set "source_dir=%~dp0"
 set "root_dir=C:\ProgramData\ssh"
 
+echo SSH directory: %root_dir%
+echo Source directory: %source_dir%
+echo Home directory: %home_dir%
+
 REM Ensure the script is running with administrator privileges
 >nul 2>&1 "%SystemRoot%\system32\cacls.exe" "%SystemRoot%\system32\config\system"
 if errorlevel 1 (
     echo This script requires elevated privileges. Please run as administrator.
-    exit /b 1
+    exit /b 102
 )
 
 REM Define the list of files to process
 set files_home_and_root=known_hosts.txt
-set files_non_txt=id_ed25519.pub id_ecdsa.pub id_rsa.pub
-set files_private=id_ed25519 id_ecdsa id_rsa
+set files_non_txt=id_ed25519.pub id_rsa.pub
+set files_private=id_ed25519 id_rsa
 set files_root_only=ssh_config.txt
 
 REM Process files to be copied to both home_dir and root_dir with new names
@@ -39,8 +43,8 @@ for %%f in (%files_home_and_root%) do (
     REM Copy file to home_dir
     copy /y "%source_dir%\%%f" "%home_dir%\!current_dest_file!"
     if errorlevel 1 (
-        echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel%
-        exit /b %errorlevel%
+        echo Error encountered during copying %source_dir%\%%f to %home_dir%\%%f. Error code: %errorlevel% (103)
+        exit /b 103
     )
 )
 
@@ -50,7 +54,7 @@ for %%f in (%files_non_txt%) do (
     copy /y "%source_dir%\%%f" "%home_dir%\%%f"
     if errorlevel 1 (
         echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel%
-        exit /b %errorlevel%
+        exit /b 104
     )
 )
 
@@ -60,7 +64,7 @@ for %%f in (%files_private%) do (
     copy /y "%source_dir%\%%f" "%home_dir%\%%f"
     if errorlevel 1 (
         echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel%
-        exit /b %errorlevel%
+        exit /b 105
     )
 )
 
@@ -77,7 +81,7 @@ for %%f in (%files_root_only%) do (
     copy /y "%source_dir%\%%f" "%root_dir%\!current_dest_file!"
     if errorlevel 1 (
         echo Error encountered during copying %%f to %root_dir%\!current_dest_file!. Error code: %errorlevel%
-        exit /b %errorlevel%
+        exit /b 106
     )
 
     REM Remove inheritance and set permissions using icacls
@@ -85,19 +89,19 @@ for %%f in (%files_root_only%) do (
     icacls "%root_dir%\!current_dest_file!" /inheritance:r
     if errorlevel 1 (
         echo Error encountered during removing inheritance for %root_dir%\!current_dest_file!. Error code: %errorlevel%
-        exit /b %errorlevel%
+        exit /b 107
     )
 
     REM Set permissions for all files
     icacls "%root_dir%\!current_dest_file!" /grant SYSTEM:F Administrators:F
     if errorlevel 1 (
         echo Error encountered during setting permissions for %root_dir%\!current_dest_file!. Error code: %errorlevel%
-        exit /b %errorlevel%
+        exit /b 108
     )
     icacls "%root_dir%\!current_dest_file!" /grant:r "Authenticated Users":RX
     if errorlevel 1 (
         echo Error encountered during adding read and execute permissions for Authenticated Users on %%f. Error code: %errorlevel%
-        exit /b %errorlevel%
+        exit /b 109
     )
 )
 

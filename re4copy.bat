@@ -17,7 +17,7 @@ for /f "tokens=1-4 delims=." %%a in ("%IP%") do (
 )
 
 set REMOTE_USER=pi
-set PRIV_KEY=%USERPROFILE%\.ssh\id_ecdsa
+set PRIV_KEY=%USERPROFILE%\.ssh\id_repo_defaults
 set REMOTE_HOST=%IP%
 
 REM Define the ssh command
