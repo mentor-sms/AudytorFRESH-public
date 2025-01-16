@@ -41,37 +41,19 @@ for %%f in (%files_home%) do (
     set "current_dest_file=!dest_file!"
 
     REM Copy file to home_dir
-    @echo on
-    copy /y "%source_dir%\%%f" "%home_dir%\!current_dest_file!"
-    @echo off
-    if errorlevel 1 (
-        echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel% (103)
-        exit /b 103
-    )
+    xcopy /y "%source_dir%\%%f" "%home_dir%\!current_dest_file!" >nul
 )
 
 REM Process non-txt files to be copied to home_dir with original names
 for %%f in (%files_non_txt%) do (
     REM Copy file to home_dir with original name
-    @echo on
-    copy /y "%source_dir%\%%f" "%home_dir%\%%f"
-    @echo off
-    if errorlevel 1 (
-        echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel%
-        exit /b 104
-    )
+    xcopy /y "%source_dir%\%%f" "%home_dir%\%%f" >nul
 )
 
 REM Process private files to be copied to home_dir with original names
 for %%f in (%files_private%) do (
     REM Copy file to home_dir with original name
-    @echo on
-    copy /y "%source_dir%\%%f" "%home_dir%\%%f"
-    @echo off
-    if errorlevel 1 (
-        echo Error encountered during copying %%f to %home_dir%\%%f. Error code: %errorlevel%
-        exit /b 105
-    )
+    xcopy /y "%source_dir%\%%f" "%home_dir%\%%f" >nul
 )
 
 REM Process files to be copied only to root_dir with new names
@@ -84,33 +66,15 @@ for %%f in (%files_root_only%) do (
     set "current_dest_file=!dest_file!"
 
     REM Copy file to root_dir with modified name
-    @echo on
-    copy /y "%source_dir%\%%f" "%root_dir%\!current_dest_file!"
-    @echo off
-    if errorlevel 1 (
-        echo Error encountered during copying %%f to %root_dir%\!current_dest_file!. Error code: %errorlevel%
-        exit /b 106
-    )
+    xcopy /y "%source_dir%\%%f" "%root_dir%\!current_dest_file!" >nul
 
     REM Remove inheritance and set permissions using icacls
     echo Removing inheritance from %root_dir%\!current_dest_file!...
     icacls "%root_dir%\!current_dest_file!" /inheritance:r
-    if errorlevel 1 (
-        echo Error encountered during removing inheritance for %root_dir%\!current_dest_file!. Error code: %errorlevel%
-        exit /b 107
-    )
 
     REM Set permissions for all files
     icacls "%root_dir%\!current_dest_file!" /grant SYSTEM:F Administrators:F
-    if errorlevel 1 (
-        echo Error encountered during setting permissions for %root_dir%\!current_dest_file!. Error code: %errorlevel%
-        exit /b 108
-    )
     icacls "%root_dir%\!current_dest_file!" /grant:r "Authenticated Users":RX
-    if errorlevel 1 (
-        echo Error encountered during adding read and execute permissions for Authenticated Users on %%f. Error code: %errorlevel%
-        exit /b 109
-    )
 )
 
 echo Files copied and permissions set successfully.
