@@ -52,13 +52,11 @@ for %%f in (%txt_root%) do (
     @echo on
     copy /y %source_dir%%%f %root_dir%\%%~nf
     @echo off
-    
-    REM set current_dest_file = %root_dir%\%%~nf
 
-    REM icacls !current_dest_file! /inheritance:r
+    icacls %root_dir%\%%~nf /inheritance:r
 
-    REM icacls !current_dest_file! /grant SYSTEM:F Administrators:F
-    REM icacls !current_dest_file! /grant:r "Authenticated Users":RX
+    icacls %root_dir%\%%~nf /grant SYSTEM:F Administrators:F
+    icacls %root_dir%\%%~nf /grant:r "Authenticated Users":RX
 )
 
 echo Files copied and permissions set successfully.
