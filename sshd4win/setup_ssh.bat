@@ -23,55 +23,42 @@ if errorlevel 1 (
 
 echo Elevated privileges verified.
 
-set files_home=known_hosts.txt config.txt
-set files_non_txt=id_ed25519.pub id_rsa.pub
-set files_private=id_ed25519 id_rsa
-set files_root_only=ssh_config.txt
+set txt_home=known_hosts.txt config.txt
+set ntxt_home=id_ed25519.pub id_rsa.pub id_ed25519 id_rsa
+set txt_root=ssh_config.txt
 
 echo Processing txt files...
 
-for %%f in (%files_home%) do (
+for %%f in (%txt_home%) do (
+    echo from %source_dir%%%f to %home_dir%\%%~nf
     @echo on
-    echo copy from %source_dir%\%%f to %home_dir%\%%~nf
-    xcopy /y "%source_dir%\%%f" "%home_dir%\%%~nf"
+    copy /y "%source_dir%%%f" "%home_dir%\%%~nf"
     @echo off
 )
 
 echo Processing non-txt files...
 
-for %%f in (%files_non_txt%) do (
+for %%f in (%ntxt_home%) do (
+    echo from %source_dir%%%f to %home_dir%\%%f
     @echo on
-    echo copy from %source_dir%\%%f to %home_dir%\%%f
-    xcopy /y "%source_dir%\%%f" "%home_dir%\%%f"
-    @echo off
-)
-
-echo Processing private files...
-
-for %%f in (%files_private%) do (
-    @echo on
-    xcopy /y "%source_dir%\%%f" "%home_dir%\%%f"
+    copy /y %source_dir%%%f %home_dir%\%%f
     @echo off
 )
 
 echo Processing root files...
 
-for %%f in (%files_root_only%) do (
-    set "dest_file=%%~nf"
-
-    if "%%f"=="ssh_config.txt" set "dest_file=ssh_config"
-
-    set "current_dest_file=!dest_file!"
-
+for %%f in (%txt_root%) do (    
+    echo from %source_dir%%%f to %home_dir%\%%~nf
     @echo on
-    xcopy /y "%source_dir%\%%f" "%root_dir%\!current_dest_file!"
+    copy /y %source_dir%%%f %root_dir%\%%~nf
     @echo off
+    
+    REM set current_dest_file = %root_dir%\%%~nf
 
-    echo Removing inheritance from %root_dir%\!current_dest_file!...
-    icacls "%root_dir%\!current_dest_file!" /inheritance:r
+    REM icacls !current_dest_file! /inheritance:r
 
-    icacls "%root_dir%\!current_dest_file!" /grant SYSTEM:F Administrators:F
-    icacls "%root_dir%\!current_dest_file!" /grant:r "Authenticated Users":RX
+    REM icacls !current_dest_file! /grant SYSTEM:F Administrators:F
+    REM icacls !current_dest_file! /grant:r "Authenticated Users":RX
 )
 
 echo Files copied and permissions set successfully.
