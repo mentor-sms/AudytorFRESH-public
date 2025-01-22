@@ -13,9 +13,10 @@ DESTRUCTIVE=0
 job=release
 dir=home4copy
 timeout=30
+installed_file="/.mentor/installed"
 
 show_help() {
-    echo "Usage: $0 [options]"
+    echo "Usage: sudo $0 [options]"
     echo "Options:"
     echo "  --from <path>          Block device lub katalog (default: /dev/sda1)"
     echo "  --mnt <path>           Miejsce montowania dla urzadzenia from (default: /mnt)"
@@ -33,38 +34,71 @@ show_help() {
     echo "  --help                 Show this help message"
 }
 
-diff_files() {
-  if [ "$DESTRUCTIVE" -eq 1 ]; then
-    echo "Running in DESTRUCTIVE mode"
-    # rsync -avq --dry-run --delete --progress "$from/$dir/" "$target/"
-    echo "DESTRUCTIVE not implemented"
-    exit 1
-  else
-    echo "Running in non-DESTRUCTIVE mode"
-    # rsync -avq --dry-run --progress "$from/$dir/" "$target/"
-    true
-  fi
+backup_files() {
+    echo "Creating backup of files that will be overridden by rsync"
+    rsync -avq --dry-run --progress "$from/$dir/" "$target/" | grep -E '^deleting|^>f' | while read -r line; do
+        file=$(echo "$line" | awk '{print $2}')
+        if [ -f "$target/$file" ]; then
+            cp "$target/$file" "$target/$file.mbak"
+        fi
+    done
+}
+
+run_rsync() {
+    echo "Running rsync"
+    rsync -avq --progress "$from/$dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+        echo "$target/$file" >> "$installed_file"
+    done
+}
+
+restore_files() {
+    echo "Restoring files from $installed_file"
+    while read -r file; do
+        if [ -f "$file.mbak" ]; then
+            mv "$file.mbak" "$file"
+        else
+            rm -f "$file"
+        fi
+    done < "$installed_file"
 }
 
 main() {
-    echo "Starting script with arguments: $@"
+    echo "Starting script with arguments: $*"
     parse "$@"
 
     if [ "$(id -u)" -ne 0 ]; then
       echo "Wymaga sudo!"
+      show_help
+      echo "Wymaga sudo!"
       exit 1
     fi
 
-    echo "Reloading systemd daemon"
-    systemctl daemon-reload
-    echo "Unmounting $mnt"
-    umount "$mnt"
+    echo "Start po $timeout sekundach od nacisniecia [Enter]. W tym czasie odlacz klawiature i podlacz pendrive z $dir."
+    read -rp "Naciśnij [Enter], gdy bedziesz gotowy..."
+    echo "Podlacz teraz pendrive zawierajacy $dir."
+    if [ "$timeout" -gt 0 ]; then
+        echo "Sleeping for $timeout seconds"
+        sleep "$timeout"
+    fi
+
+    if [ "$nosync" -ne 1 ]; then
+        if [ "$DESTRUCTIVE" -eq 1 ]; then
+            echo "Restoring files from $installed_file"
+            restore_files
+        else
+            echo "Creating backup of files that will be overridden by rsync"
+            backup_files
+        fi
+    fi
 
     echo "Creating target directory $target"
     mkdir -p "$target" || { print_error "Blad zapisu do $target"; }
 
     input_path="${device}"
     device=""
+
+    echo "Reloading systemd daemon"
+    systemctl daemon-reload
 
     if is_block_device "$input_path"; then
         echo "$input_path is a block device"
@@ -88,31 +122,7 @@ main() {
     fi
 
     if [ "$nosync" -ne 1 ]; then
-        echo "Synchronizing files"
-        diff_files
-    fi
-
-    if [ "$nosync" -ne 1 ] && [ $DESTRUCTIVE -eq 1 ]; then
-        echo "Wszystkie pliki w $target zostana usuniete jezeli nie znajduja sie jednoczenie w $from/$dir!"
-    fi
-
-    echo "Start po $timeout sekundach od nacisniecia [Enter]. W tym czasie odlacz klawiature i podlacz pendrive z $dir."
-    read -rp "Naciśnij [Enter], gdy bedziesz gotowy..."
-    echo "Podlacz teraz pendrive zawierajacy $dir."
-    if [ "$timeout" -gt 0 ]; then
-        echo "Sleeping for $timeout seconds"
-        sleep "$timeout"
-    fi
-
-    if [ "$nosync" -ne 1 ]; then
-        if [ "$DESTRUCTIVE" -eq 1 ]; then
-            echo "Running rsync in DESTRUCTIVE mode"
-            # rsync -avq --delete --progress "$from/$dir/" "$target/"
-            exit 1
-        else
-            echo "Running rsync in non-DESTRUCTIVE mode"
-            rsync -avq --progress "$from/$dir/" "$target/"
-        fi
+        run_rsync
     fi
 
     if [ "$do_umount" -eq 1 ]; then
