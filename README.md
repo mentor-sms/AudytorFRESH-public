@@ -19,7 +19,7 @@ $ cd ~ && curl -O https://raw.githubusercontent.com/mentor-sms/AudytorFRESH-publ
 $ dos2unix ~/copy4prepare.sh
 $ chmod +x ~/copy4prepare.sh
 $ ~/copy4prepare.sh --help
-$ lsls /msudo ~/copy4prepare.sh
+$ sudo ~/copy4prepare.sh
 ```
 5) Postępuj zgodnie z instrukcjami na ekranie pulitu.
 6)
