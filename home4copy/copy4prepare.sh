@@ -158,6 +158,7 @@ main() {
             if [ "$quick" -eq 0 ]; then
                 read -rp "Press [Enter] to continue..."
             fi
+            echo "Running $target/$file with job $job"
             "$target/$file" "$job" &
         else
             print_error "Failed to run the script"
