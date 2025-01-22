@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 if "%1"=="" (
-    echo Usage: %0 username
+    echo Usage: %0 home_dir
     exit /b 101
 )
 
