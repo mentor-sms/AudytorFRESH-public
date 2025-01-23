@@ -159,7 +159,8 @@ main() {
                 read -rp "Press [Enter] to continue..."
             fi
             echo "Running $target/$file with job $job"
-            "$target/$file" "$job" &
+            sleep 3
+            "$target/$file" "$job" </dev/tty &
         else
             print_error "Failed to run the script"
         fi
