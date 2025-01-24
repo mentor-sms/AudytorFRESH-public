@@ -151,7 +151,7 @@ main() {
     fi
 
     if [ "$norun" -ne 1 ]; then
-        echo "Running $target/$file with job $job"
+        echo "Will run $target/$file with job $job"
         ok=true
 
         if [ "$ok" = true ]; then
