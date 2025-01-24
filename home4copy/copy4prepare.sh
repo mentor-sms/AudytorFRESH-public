@@ -1,5 +1,8 @@
 #!/bin/bash
 
+WERSJA=3.0.0
+echo copy4prepare ver: $WERSJA
+
 device=/dev/sda1
 do_umount=0
 from=""
