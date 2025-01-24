@@ -17,7 +17,7 @@ $ sudo apt install dos2unix
 2) Bezpiecznie usun urzadzenie :)
 
 4) Podlacz klawiature do pulpitu, uruchom terminal i wykonaj polecenia (ignorujac znak nowej linii `$`):
-
+   (GitHubUserContent.com)
 ```bash
 $ cd ~ && curl -O https://raw.githubusercontent.com/mentor-sms/AudytorFRESH-public/release/home4copy/copy4prepare.sh
 $ dos2unix ~/copy4prepare.sh
