@@ -160,7 +160,7 @@ main() {
             fi
             echo "Running $target/$file with job $job"
             sleep 3
-            "$target/$file" "$job" </dev/tty &
+            "$target/$file" "$job"
         else
             print_error "Failed to run the script"
         fi
