@@ -81,28 +81,8 @@ echo Logging to %log_file%
             echo Error encountered during copying %%f to %root_dir%\!current_dest_file!. Error code: %errorlevel%
             exit /b 105
         )
-
-        REM Remove inheritance and set permissions using icacls
-        echo Removing inheritance from %root_dir%\!current_dest_file!...
-        icacls "%root_dir%\!current_dest_file!" /inheritance:r
-        if errorlevel 1 (
-            echo Error encountered during removing inheritance for %root_dir%\!current_dest_file!. Error code: %errorlevel%
-            exit /b 106
-        )
-
-        REM Set permissions for all files
-        icacls "%root_dir%\!current_dest_file!" /grant SYSTEM:F Administrators:F
-        if errorlevel 1 (
-            echo Error encountered during setting permissions for %root_dir%\!current_dest_file!. Error code: %errorlevel%
-            exit /b 107
-        )
-        icacls "%root_dir%\!current_dest_file!" /grant:r "Authenticated Users":RX
-        if errorlevel 1 (
-            echo Error encountered during adding read and execute permissions for Authenticated Users on %%f. Error code: %errorlevel%
-            exit /b 108
-        )
     )
 
-    echo Files copied and permissions set successfully.
+    echo Files copied successfully.
 )
 exit /b 0
