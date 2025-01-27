@@ -18,6 +18,8 @@ echo [setup_ssh] Logging to %log_file%
     echo "Source directory: !source_dir!"
     echo "Home directory: !home_dir!"
 
+    echo "%SystemRoot%\system32\cacls.exe"
+    echo "%SystemRoot%\system32\config\system"
     >nul 2>&1 "%SystemRoot%\system32\cacls.exe" "%SystemRoot%\system32\config\system"
     if errorlevel 1 (
         echo This script requires elevated privileges. Please run as administrator.
@@ -33,28 +35,28 @@ echo [setup_ssh] Logging to %log_file%
 
     echo Processing user config...
     for %%f in (%txt_home%) do (
-        echo from %source_dir%%%f to %home_dir%\%%~nf
-        copy /y "%source_dir%%%f" "%home_dir%\%%~nf"
+        echo from !source_dir!%%f to !home_dir!\%%~nf
+        copy /y "!source_dir!%%f" "!home_dir!\%%~nf"
     )
 
     echo Processing user public keys...
     for %%f in (%pub_home%) do (
-        echo from %source_dir%%%f to %home_dir%\%%f
-        copy /y %source_dir%%%f %home_dir%\%%f
+        echo from !source_dir!%%f to !home_dir!\%%f
+        copy /y !source_dir!%%f !home_dir!\%%f
     )
     
     echo Processing user private keys...
     
     for %%f in (%priv_home%) do (
-        echo from %source_dir%%%f to %home_dir%\%%f
-        copy /y %source_dir%%%f %home_dir%\%%f
+        echo from !source_dir!%%f to !home_dir!\%%f
+        copy /y !source_dir!%%f !home_dir!\%%f
     )
 
     echo Processing root config...
 
     for %%f in (%txt_root%) do (
-        echo from %source_dir%%%f to %home_dir%\%%~nf
-        copy /y %source_dir%%%f %root_dir%\%%~nf
+        echo from !source_dir!%%f to !home_dir!\%%~nf
+        copy /y !source_dir!%%f !root_dir!\%%~nf
     )
 
     echo Files copied and permissions set successfully.
