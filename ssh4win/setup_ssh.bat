@@ -5,7 +5,7 @@ set "log_file=%~dp0setup_ssh.log"
 echo Logging to %log_file%
 > "%log_file%" 2>&1 (
     if "%1"=="" (
-        echo Usage: %0 home_dir
+        echo Usage: %0 home_dir [filepaths, ...]
         exit /b 101
     )
 
@@ -26,10 +26,11 @@ echo Logging to %log_file%
     echo Elevated privileges verified.
 
     set txt_home=known_hosts.txt config.txt
-    set ntxt_home=id_ed25519.pub id_rsa.pub id_ed25519 id_rsa
+    set pub_home=id_ed25519.pub id_rsa.pub
+    set priv_home=id_ed25519 id_rsa
     set txt_root=ssh_config.txt
 
-    echo Processing txt files...
+    echo Processing user config...
 
     for %%f in (%txt_home%) do (
         echo from %source_dir%%%f to %home_dir%\%%~nf
@@ -38,16 +39,30 @@ echo Logging to %log_file%
         @echo off
     )
 
-    echo Processing non-txt files...
+    echo Processing user public keys...
 
-    for %%f in (%ntxt_home%) do (
+    for %%f in (%pub_home%) do (
         echo from %source_dir%%%f to %home_dir%\%%f
         @echo on
         copy /y %source_dir%%%f %home_dir%\%%f
         @echo off
     )
 
-    echo Processing root files...
+    echo Processing user private keys...
+
+    for %%f in (%priv_home%) do (
+        echo from %source_dir%%%f to %home_dir%\%%f
+        @echo on
+        copy /y %source_dir%%%f %home_dir%\%%f
+        @echo off
+
+        icacls %home_dir%\%%~nf /inheritance:r
+        icacls %home_dir%\%%~nf /setowner %USERNAME%
+        icacls %home_dir%\%%~nf /grant SYSTEM:R Administrators:R %USERNAME%:F
+        icacls %home_dir%\%%~nf /grant:r "Authenticated Users":RX Users:RX
+    )
+
+    echo Processing root config...
 
     for %%f in (%txt_root%) do (
         echo from %source_dir%%%f to %home_dir%\%%~nf
@@ -56,11 +71,25 @@ echo Logging to %log_file%
         @echo off
 
         icacls %root_dir%\%%~nf /inheritance:r
-
         icacls %root_dir%\%%~nf /grant SYSTEM:F Administrators:F
-        icacls %root_dir%\%%~nf /grant:r "Authenticated Users":RX
     )
 
-    echo Files copied and permissions set successfully.
+    shift
+    :process_files
+    if "%~1"=="" goto :done
+
+    set "file_path=%~1"
+    echo Processing file: %file_path%
+
+    icacls "%file_path%" /inheritance:r
+    icacls "%file_path%" /setowner %USERNAME%
+    icacls "%file_path%" /grant SYSTEM:R Administrators:R %USERNAME%:F
+    icacls "%file_path%" /grant:r "Authenticated Users":RX Users:RX
+
+    shift
+    goto :process_files
+
+    :done
+    echo Files permissions set successfully.
 )
 exit /b 0
