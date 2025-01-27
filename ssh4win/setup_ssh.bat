@@ -2,20 +2,21 @@
 setlocal enabledelayedexpansion
 
 set "log_file=%~dp0setup_ssh.log"
-echo Logging to %log_file%
+echo [setup_ssh] Logging to %log_file%
 > "%log_file%" 2>&1 (
-    if "%1"=="" (
-        echo Usage: %0 home_dir
+
+    if "%~1"=="" (
+        echo [repo_keys] Usage: %0 home_dir
         exit /b 101
     )
 
-    set "home_dir=%1\.ssh"
-    set "source_dir=%~dp0"
-    set "root_dir=C:\ProgramData\ssh"
+    set home_dir=%~1\.ssh
+    set source_dir=%~dp0
+    set root_dir=C:\ProgramData\ssh
 
-    echo SSH directory: %root_dir%
-    echo Source directory: %source_dir%
-    echo Home directory: %home_dir%
+    echo "SSH directory: !root_dir!"
+    echo "Source directory: !source_dir!"
+    echo "Home directory: !home_dir!"
 
     >nul 2>&1 "%SystemRoot%\system32\cacls.exe" "%SystemRoot%\system32\config\system"
     if errorlevel 1 (
