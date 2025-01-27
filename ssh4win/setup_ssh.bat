@@ -1,4 +1,4 @@
-@echo off
+@echo on
 setlocal enabledelayedexpansion
 
 set "log_file=%~dp0setup_ssh.log"
