@@ -14,51 +14,51 @@ echo [setup_ssh] Logging to %log_file%
     set source_dir=%~dp0
     set root_dir=C:\ProgramData\ssh
 
-    echo "SSH directory: !root_dir!"
-    echo "Source directory: !source_dir!"
-    echo "Home directory: !home_dir!"
+    echo [setup_ssh] "SSH directory: !root_dir!"
+    echo [setup_ssh] "Source directory: !source_dir!"
+    echo [setup_ssh] "Home directory: !home_dir!"
 
-    echo "%SystemRoot%\system32\cacls.exe"
-    echo "%SystemRoot%\system32\config\system"
-    >nul 2>&1 "%SystemRoot%\system32\cacls.exe" "%SystemRoot%\system32\config\system"
+    echo [setup_ssh] %SystemRoot%\system32\cacls.exe
+    echo [setup_ssh] %SystemRoot%\system32\config\system
+    >nul 2>&1 %SystemRoot%\system32\cacls.exe %SystemRoot%\system32\config\system
     if errorlevel 1 (
         echo This script requires elevated privileges. Please run as administrator.
         exit /b 102
     )
 
-    echo Elevated privileges verified.
+    echo [setup_ssh] Elevated privileges verified.
 
     set txt_home=known_hosts.txt config.txt
     set pub_home=id_ed25519.pub id_rsa.pub
     set priv_home=id_ed25519 id_rsa
     set txt_root=ssh_config.txt
 
-    echo Processing user config...
+    echo [setup_ssh] Processing user config...
     for %%f in (%txt_home%) do (
-        echo from !source_dir!%%f to !home_dir!\%%~nf
+        echo [setup_ssh] from !source_dir!%%f to !home_dir!\%%~nf
         copy /y "!source_dir!%%f" "!home_dir!\%%~nf"
     )
 
-    echo Processing user public keys...
+    echo [setup_ssh] Processing user public keys...
     for %%f in (%pub_home%) do (
-        echo from !source_dir!%%f to !home_dir!\%%f
+        echo [setup_ssh] from !source_dir!%%f to !home_dir!\%%f
         copy /y !source_dir!%%f !home_dir!\%%f
     )
     
-    echo Processing user private keys...
+    echo [setup_ssh] Processing user private keys...
     
     for %%f in (%priv_home%) do (
-        echo from !source_dir!%%f to !home_dir!\%%f
+        echo [setup_ssh] from !source_dir!%%f to !home_dir!\%%f
         copy /y !source_dir!%%f !home_dir!\%%f
     )
 
-    echo Processing root config...
+    echo [setup_ssh] Processing root config...
 
     for %%f in (%txt_root%) do (
-        echo from !source_dir!%%f to !home_dir!\%%~nf
+        echo [setup_ssh] from !source_dir!%%f to !home_dir!\%%~nf
         copy /y !source_dir!%%f !root_dir!\%%~nf
     )
 
-    echo Files copied and permissions set successfully.
+    echo [setup_ssh] Files copied and permissions set successfully.
 )
 exit /b 0
