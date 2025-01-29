@@ -48,7 +48,7 @@ for /f "delims=" %%f in ('dir /b /s "%BASE_DIR%"') do (
         set "REMOTE_DIR=!REMOTE_PATH:~0,-%%~nxf!"
         echo mkdir -p !REMOTE_DIR!
         %SSH_CMD% mkdir -p !REMOTE_DIR!
-        if errorlevel 1 (
+        if %errorlevel% neq 0 (
             echo Error: Failed to create remote directory !REMOTE_DIR!.
             goto :error
         )
@@ -56,14 +56,14 @@ for /f "delims=" %%f in ('dir /b /s "%BASE_DIR%"') do (
         REM Transfer the file to the remote system
         echo scp -i %PRIV_KEY% "%%f" %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
         scp -i %PRIV_KEY% "%%f" %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
-        if errorlevel 1 (
+        if %errorlevel% neq 0 (
             echo Error: Failed to transfer file %%f to remote.
             goto :error
         )
 
         echo scp -i %PRIV_KEY% "%%f" %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
         scp -i %PRIV_KEY% "%%f" %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
-        if errorlevel 1 (
+        if %errorlevel% neq 0 (
             echo Error: Failed to transfer file %%f to remote.
             goto :error
         )

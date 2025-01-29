@@ -21,7 +21,7 @@ echo [setup_ssh] Logging to %log_file%
     echo [setup_ssh] %SystemRoot%\system32\cacls.exe
     echo [setup_ssh] %SystemRoot%\system32\config\system
     >nul 2>&1 %SystemRoot%\system32\cacls.exe %SystemRoot%\system32\config\system
-    if errorlevel 1 (
+    if %errorlevel% neq 0 (
         echo This script requires elevated privileges. Please run as administrator.
         exit /b 102
     )

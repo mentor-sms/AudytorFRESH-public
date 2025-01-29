@@ -19,7 +19,7 @@ echo Logging to %log_file%
 
     REM Ensure the script is running with administrator privileges
     >nul 2>&1 "%SystemRoot%\system32\cacls.exe" "%SystemRoot%\system32\config\system"
-    if errorlevel 1 (
+    if %errorlevel% neq 0 (
         echo This script requires elevated privileges. Please run as administrator.
         exit /b 102
     )
@@ -77,7 +77,7 @@ echo Logging to %log_file%
 
         REM Copy file to root_dir with modified name
         copy /y "%source_dir%\%%f" "%root_dir%\!current_dest_file!"
-        if errorlevel 1 (
+        if %errorlevel% neq 0 (
             echo Error encountered during copying %%f to %root_dir%\!current_dest_file!. Error code: %errorlevel%
             exit /b 105
         )
