@@ -27,10 +27,11 @@ echo [setup_sshd] Logging to %log_file%
 
     echo [setup_sshd] Elevated privileges verified.
 
-    set txt_home=known_hosts.txt config.txt
-    set pub_home=id_ed25519.pub id_rsa.pub
-    set priv_home=id_ed25519 id_rsa
+    set txt_home=known_hosts.txt config.txt authorized_keys.txt
     set txt_root=sshd_config.txt
+    
+    set pub_root=ssh_host_ed25519_key
+    set priv_root=ssh_host_ed25519_key.pub
 
     echo [setup_sshd] Processing user config...
     for %%f in (%txt_home%) do (
@@ -38,24 +39,19 @@ echo [setup_sshd] Logging to %log_file%
         copy /y "!source_dir!%%f" "!home_dir!\%%~nf"
     )
 
-    echo [setup_sshd] Processing user public keys...
-    for %%f in (%pub_home%) do (
-        echo [setup_sshd] from !source_dir!%%f to !home_dir!\%%f
-        copy /y !source_dir!%%f !home_dir!\%%f
-    )
-
-    echo [setup_sshd] Processing user private keys...
-
-    for %%f in (%priv_home%) do (
-        echo [setup_sshd] from !source_dir!%%f to !home_dir!\%%f
-        copy /y !source_dir!%%f !home_dir!\%%f
-    )
-
     echo [setup_sshd] Processing root config...
 
     for %%f in (%txt_root%) do (
-        echo [setup_sshd] from !source_dir!%%f to !home_dir!\%%~nf
+        echo [setup_sshd] from !source_dir!%%f to !root_dir!\%%~nf
         copy /y !source_dir!%%f !root_dir!\%%~nf
+    )
+    for %%f in (%priv_root%) do (
+        echo [setup_sshd] from !source_dir!%%f to !root_dir!\%%f
+        copy /y !source_dir!%%f !root_dir!\%%f
+    )
+    for %%f in (%pub_root%) do (
+        echo [setup_sshd] from !source_dir!%%f to !root_dir!\%%f
+        copy /y !source_dir!%%f !root_dir!\%%f
     )
 
     echo [setup_sshd] Files copied and permissions set successfully.

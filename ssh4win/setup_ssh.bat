@@ -37,12 +37,20 @@ echo [setup_ssh] Logging to %log_file%
     for %%f in (%txt_home%) do (
         echo [setup_ssh] from !source_dir!%%f to !home_dir!\%%~nf
         copy /y "!source_dir!%%f" "!home_dir!\%%~nf"
+        if %errorlevel% neq 0 (
+            echo [setup_ssh] Error copying !source_dir!%%f to !home_dir!\%%~nf
+            exit /b 103
+        )
     )
 
     echo [setup_ssh] Processing user public keys...
     for %%f in (%pub_home%) do (
         echo [setup_ssh] from !source_dir!%%f to !home_dir!\%%f
         copy /y !source_dir!%%f !home_dir!\%%f
+        if %errorlevel% neq 0 (
+            echo [setup_ssh] Error copying !source_dir!%%f to !home_dir!\%%~nf
+            exit /b 104
+        )
     )
     
     echo [setup_ssh] Processing user private keys...
@@ -50,6 +58,10 @@ echo [setup_ssh] Logging to %log_file%
     for %%f in (%priv_home%) do (
         echo [setup_ssh] from !source_dir!%%f to !home_dir!\%%f
         copy /y !source_dir!%%f !home_dir!\%%f
+        if %errorlevel% neq 0 (
+            echo [setup_ssh] Error copying !source_dir!%%f to !home_dir!\%%~nf
+            exit /b 105
+        )
     )
 
     echo [setup_ssh] Processing root config...
@@ -57,6 +69,10 @@ echo [setup_ssh] Logging to %log_file%
     for %%f in (%txt_root%) do (
         echo [setup_ssh] from !source_dir!%%f to !home_dir!\%%~nf
         copy /y !source_dir!%%f !root_dir!\%%~nf
+        if %errorlevel% neq 0 (
+            echo [setup_ssh] Error copying !source_dir!%%f to !home_dir!\%%~nf
+            exit /b 106
+        )
     )
 
     echo [setup_ssh] Files copied and permissions set successfully.
