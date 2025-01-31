@@ -32,7 +32,7 @@ show_help() {
     echo "  --dir <name>           Katalog docelowy w target (default: home4copy)"
     echo "  --timeout <seconds>    Czas oczekiwania przed rozpoczęciem procesu (default: 30)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
-    echo "                                               (alternatywy prepare4lab: quick, devel, debug)"
+    echo "                                               (alternatywy prepare4lab: devel, debug)"
     echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
     echo "  --help                 Show this help message"
 }
