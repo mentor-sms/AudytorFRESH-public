@@ -12,7 +12,7 @@ target=/home/pi/.mentor
 quick=0
 norun=0
 nosync=0
-DESTRUCTIVE=0
+restore=0
 job=release
 dir=home4copy
 timeout=30
@@ -28,7 +28,7 @@ show_help() {
     echo "  --quick                Nie pyta przed rozruchem skryptu file"
     echo "  --norun                Nie uruchamia skryptu file"
     echo "  --nosync               Nie synchronizuje katalogow przed kopiowaniem"
-    echo "  --DESTRUCTIVE          Usuwa wszystkie pliki z katalogu target"
+    echo "  --restore              Uzywa kopii zapasowej zamiast kopiowac (o ile istnieje, ignoruje --from i --mnt)"
     echo "  --dir <name>           Katalog docelowy w target (default: home4copy)"
     echo "  --timeout <seconds>    Czas oczekiwania przed rozpoczęciem procesu (default: 30)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
@@ -85,59 +85,58 @@ main() {
           sleep "$timeout"
       fi
     fi
-
-    if [ "$nosync" -ne 1 ]; then
-        if [ "$DESTRUCTIVE" -eq 1 ]; then
-            echo "Restoring files from $installed_file"
-            restore_files
-        else
-            echo "Creating backup of files that will be overridden by rsync"
-            backup_files
-        fi
-    fi
-
+    
     echo "Creating target directory $target"
     mkdir -p "$target" || { print_error "Blad zapisu do $target"; }
-
-    input_path="${device}"
-    device=""
-
-    echo "Reloading systemd daemon"
-    systemctl daemon-reload
-
-    if is_block_device "$input_path"; then
-        echo "$input_path is a block device"
-        device=$input_path
-        if is_mounted "$input_path"; then
-            echo "$input_path is already mounted"
-            mnt=$(mount | grep "$input_path" | awk '{print $3}')
-            set_from "$mnt"
-        else
-            echo "Mounting $input_path"
-            do_umount=1
-            mount_device "$input_path"
-            set_from "$mnt"
-        fi
-    elif is_directory "$input_path"; then
-        echo "$input_path is a directory"
-        mnt=""
-        set_from "$input_path"
-    else
-        print_error "Niewlasciwa sciezka: $input_path"
+    
+    
+    if [ "$restore" -eq 1 ]; then
+        echo "Restoring files from $installed_file"
+        restore_files
+    elif [ "$nosync" -ne 1 ]; then
+        echo "Creating backup of files that will be overridden by rsync"
+        backup_files
     fi
-
-    if [ "$nosync" -ne 1 ]; then
-        run_rsync
+    
+    if [ "$restore" -ne 1 ]; then
+      input_path="${device}"
+      device=""
+  
+      echo "Reloading systemd daemon"
+      systemctl daemon-reload
+  
+      if is_block_device "$input_path"; then
+          echo "$input_path is a block device"
+          device=$input_path
+          if is_mounted "$input_path"; then
+              echo "$input_path is already mounted"
+              mnt=$(mount | grep "$input_path" | awk '{print $3}')
+              set_from "$mnt"
+          else
+              echo "Mounting $input_path"
+              do_umount=1
+              mount_device "$input_path"
+              set_from "$mnt"
+          fi
+      elif is_directory "$input_path"; then
+          echo "$input_path is a directory"
+          mnt=""
+          set_from "$input_path"
+      else
+          print_error "Niewlasciwa sciezka: $input_path"
+      fi
+  
+      if [ "$nosync" -ne 1 ]; then
+          run_rsync
+      fi
+  
+      if [ "$do_umount" -eq 1 ]; then
+          echo "Unmounting $mnt"
+          if ! umount "$mnt"; then
+              print_error "Nie udalo sie umount $mnt"
+          fi
+      fi
     fi
-
-    if [ "$do_umount" -eq 1 ]; then
-        echo "Unmounting $mnt"
-        if ! umount "$mnt"; then
-            print_error "Nie udalo sie umount $mnt"
-        fi
-    fi
-
-    ok=false
 
     echo "Converting $target/$file to Unix format"
     if ! dos2unix "$target/$file"; then
@@ -157,18 +156,13 @@ main() {
 
     if [ "$norun" -ne 1 ]; then
         echo "Will run $target/$file with job $job"
-        ok=true
-
-        if [ "$ok" = true ]; then
-            if [ "$quick" -eq 0 ]; then
-                read -rp "Press [Enter] to continue..."
-            fi
-            echo "Running $target/$file with job $job"
+        
+        if [ "$quick" -eq 0 ]; then
+            read -rp "Press [Enter] to continue..."
+            echo "Running $target/$file with job $job..."
             sleep 3
-            "$target/$file" "$job"
-        else
-            print_error "Failed to run the script"
         fi
+        "$target/$file" "$job" &
     fi
 }
 
@@ -210,9 +204,9 @@ parse() {
                 echo "Option --nosync"
                 shift
                 ;;
-            --DESTRUCTIVE)
-                DESTRUCTIVE=1
-                echo "Option --DESTRUCTIVE"
+            --restore)
+                restore=1
+                echo "Option --restore"
                 shift
                 ;;
             --job)
