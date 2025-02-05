@@ -89,7 +89,6 @@ main() {
     echo "Creating target directory $target"
     mkdir -p "$target" || { print_error "Blad zapisu do $target"; }
     
-    
     if [ "$restore" -eq 1 ]; then
         echo "Restoring files from $installed_file"
         restore_files
@@ -104,6 +103,7 @@ main() {
   
       echo "Reloading systemd daemon"
       systemctl daemon-reload
+      echo "$input_path"
   
       if is_block_device "$input_path"; then
           echo "$input_path is a block device"
@@ -170,8 +170,8 @@ parse() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             --from)
-                input_path="$2"
-                echo "Option --from with value $input_path"
+                from="$2"
+                echo "Option --from with value $from"
                 shift 2
                 ;;
             --mnt)
