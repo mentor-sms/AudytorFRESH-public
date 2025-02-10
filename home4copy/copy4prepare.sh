@@ -3,9 +3,8 @@
 WERSJA=3.0.0
 echo copy4prepare ver: $WERSJA
 
-device=/dev/sda1
 do_umount=0
-from=""
+from=/dev/sda1
 mnt=/mnt
 file=prepare4lab.sh
 target=/home/pi/.mentor
@@ -97,45 +96,39 @@ main() {
         backup_files
     fi
     
-    if [ "$restore" -ne 1 ]; then
-      input_path="${device}"
-      device=""
+    echo "Reloading systemd daemon"
+    systemctl daemon-reload
+    echo "$from"
   
-      echo "Reloading systemd daemon"
-      systemctl daemon-reload
-      echo "$input_path"
-  
-      if is_block_device "$input_path"; then
-          echo "$input_path is a block device"
-          device=$input_path
-          if is_mounted "$input_path"; then
-              echo "$input_path is already mounted"
-              mnt=$(mount | grep "$input_path" | awk '{print $3}')
-              set_from "$mnt"
-          else
-              echo "Mounting $input_path"
-              do_umount=1
-              mount_device "$input_path"
-              set_from "$mnt"
-          fi
-      elif is_directory "$input_path"; then
-          echo "$input_path is a directory"
-          mnt=""
-          set_from "$input_path"
-      else
-          print_error "Niewlasciwa sciezka: $input_path"
-      fi
-  
-      if [ "$nosync" -ne 1 ]; then
-          run_rsync
-      fi
-  
-      if [ "$do_umount" -eq 1 ]; then
-          echo "Unmounting $mnt"
-          if ! umount "$mnt"; then
-              print_error "Nie udalo sie umount $mnt"
-          fi
-      fi
+    if is_block_device "$from"; then
+        echo "$from is a block device"
+        if is_mounted "$from"; then
+            echo "$from is already mounted"
+            mnt=$(mount | grep "$from" | awk '{print $3}')
+            set_from "$mnt"
+        else
+            echo "Mounting $from"
+            do_umount=1
+            mount_device "$from"
+            set_from "$mnt"
+        fi
+    elif is_directory "$from"; then
+        echo "$from is a directory"
+        mnt=""
+        set_from "$from"
+    else
+        print_error "Niewlasciwa sciezka: $from"
+    fi
+
+    if [ "$nosync" -ne 1 ]; then
+        run_rsync
+    fi
+
+    if [ "$do_umount" -eq 1 ]; then
+        echo "Unmounting $mnt"
+        if ! umount "$mnt"; then
+            print_error "Nie udalo sie umount $mnt"
+        fi
     fi
 
     echo "Converting $target/$file to Unix format"
@@ -165,6 +158,7 @@ main() {
         "$target/$file" "$job" &
     fi
 }
+
 
 parse() {
     while [[ $# -gt 0 ]]; do
