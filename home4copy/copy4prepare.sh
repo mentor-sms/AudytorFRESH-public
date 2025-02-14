@@ -29,7 +29,7 @@ show_help() {
     echo "  --nosync               Nie synchronizuje katalogow przed kopiowaniem"
     echo "  --restore              Uzywa kopii zapasowej zamiast kopiowac (o ile istnieje, ignoruje --from i --mnt)"
     echo "  --dir <name>           Katalog docelowy w target (default: home4copy)"
-    echo "  --timeout <seconds>    Czas oczekiwania przed rozpoczęciem procesu (default: 30)"
+    echo "  --timeout <seconds>    Czas oczekiwania przed rozpoczeciem procesu (default: 30)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
     echo "                                               (alternatywy prepare4lab: devel, debug)"
     echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
