@@ -77,7 +77,7 @@ main() {
 
     if [ "$timeout" -ne 0 ]; then
       echo "Start po $timeout sekundach od nacisniecia [Enter]. W tym czasie odlacz klawiature i podlacz pendrive z $dir."
-      read -rp "Naciśnij [Enter], gdy bedziesz gotowy..."
+      read -rp "Nacisnij [Enter], gdy bedziesz gotowy..."
       echo "Podlacz teraz pendrive zawierajacy $dir."
       if [ "$timeout" -gt 0 ]; then
           echo "Sleeping for $timeout seconds"
