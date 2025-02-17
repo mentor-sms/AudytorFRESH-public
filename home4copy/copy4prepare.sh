@@ -152,13 +152,13 @@ main() {
         
         if [ "$quick" -eq 0 ]; then
             read -rp "Press [Enter] to continue..."
-            echo "Running $target/$file with job $job..."
+            echo "Will run $target/$file in 3, 2, 1..."
             sleep 3
         fi
+        echo "Running $target/$file with job $job..."
         "$target/$file" "$job" &
     fi
 }
-
 
 parse() {
     while [[ $# -gt 0 ]]; do
