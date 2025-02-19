@@ -13,7 +13,8 @@ norun=0
 nosync=0
 restore=0
 job=release
-dir=home4copy
+home_dir=home4copy
+root_dir=home4copy/root4rpi
 timeout=30
 installed_file="/.mentor/installed"
 
@@ -28,7 +29,8 @@ show_help() {
     echo "  --norun                Nie uruchamia skryptu file"
     echo "  --nosync               Nie synchronizuje katalogow przed kopiowaniem"
     echo "  --restore              Uzywa kopii zapasowej zamiast kopiowac (o ile istnieje, ignoruje --from i --mnt)"
-    echo "  --dir <name>           Katalog docelowy w target (default: home4copy)"
+    echo "  --home_dir <name>      Katalog docelowy w from (default: home4copy)"
+    echo "  --root_dir <path>      Katalog do synchronizacji z root (default: home4copy/root4rpi)"
     echo "  --timeout <seconds>    Czas oczekiwania przed rozpoczeciem procesu (default: 30)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
     echo "                                               (alternatywy prepare4lab: devel, debug)"
@@ -38,7 +40,7 @@ show_help() {
 
 backup_files() {
     echo "Creating backup of files that will be overridden by rsync"
-    rsync -avq --dry-run --progress "$from/$dir/" "$target/" | grep -E '^deleting|^>f' | while read -r line; do
+    rsync -avq --dry-run --progress "$from/$home_dir/" "$target/" | grep -E '^deleting|^>f' | while read -r line; do
         file=$(echo "$line" | awk '{print $2}')
         if [ -f "$target/$file" ]; then
             cp "$target/$file" "$target/$file.mbak"
@@ -47,10 +49,21 @@ backup_files() {
 }
 
 run_rsync() {
-    echo "Running rsync"
-    rsync -avq --progress "$from/$dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+    echo "Running rsync for home_dir"
+    exclude_option=""
+    if [ -n "$root_dir" ] && [[ "$root_dir" == "$from/$home_dir"* ]]; then
+        exclude_option="--exclude=${root_dir#$from/}"
+    fi
+    rsync -avq --progress $exclude_option "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
         echo "$target/$file" >> "$installed_file"
     done
+
+    if [ -n "$root_dir" ]; then
+        echo "Running rsync for root_dir"
+        rsync -avq --progress "$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+            echo "/$file" >> "$installed_file"
+        done
+    fi
 }
 
 restore_files() {
@@ -76,18 +89,18 @@ main() {
     fi
 
     if [ "$timeout" -ne 0 ]; then
-      echo "Start po $timeout sekundach od nacisniecia [Enter]. W tym czasie odlacz klawiature i podlacz pendrive z $dir."
+      echo "Start po $timeout sekundach od nacisniecia [Enter]. W tym czasie odlacz klawiature i podlacz pendrive z $home_dir."
       read -rp "Nacisnij [Enter], gdy bedziesz gotowy..."
-      echo "Podlacz teraz pendrive zawierajacy $dir."
+      echo "Podlacz teraz pendrive zawierajacy $home_dir."
       if [ "$timeout" -gt 0 ]; then
           echo "Sleeping for $timeout seconds"
           sleep "$timeout"
       fi
     fi
-    
+
     echo "Creating target directory $target"
     mkdir -p "$target" || { print_error "Blad zapisu do $target"; }
-    
+
     if [ "$restore" -eq 1 ]; then
         echo "Restoring files from $installed_file"
         restore_files
@@ -95,11 +108,11 @@ main() {
         echo "Creating backup of files that will be overridden by rsync"
         backup_files
     fi
-    
+
     echo "Reloading systemd daemon"
     systemctl daemon-reload
     echo "$from"
-  
+
     if is_block_device "$from"; then
         echo "$from is a block device"
         if is_mounted "$from"; then
@@ -149,7 +162,7 @@ main() {
 
     if [ "$norun" -ne 1 ]; then
         echo "Will run $target/$file with job $job"
-        
+
         if [ "$quick" -eq 0 ]; then
             read -rp "Press [Enter] to continue..."
             echo "Will run $target/$file in 3, 2, 1..."
@@ -209,9 +222,14 @@ parse() {
                 echo "Option --job with value $job"
                 break
                 ;;
-            --dir)
-                dir="$2"
-                echo "Option --dir with value $dir"
+            --home_dir)
+                home_dir="$2"
+                echo "Option --home_dir with value $home_dir"
+                shift 2
+                ;;
+            --root_dir)
+                root_dir="$2"
+                echo "Option --root_dir with value $root_dir"
                 shift 2
                 ;;
             --timeout)
