@@ -51,10 +51,10 @@ backup_files() {
 run_rsync() {
     echo "Running rsync for home_dir"
     exclude_option=""
-    if [ -n "$root_dir" ] && [[ "$root_dir" == "$from/$home_dir"* ]]; then
-        exclude_option="--exclude=${root_dir#$from/}"
+    if [ -n "$root_dir" ] && [[ "$root_dir" == "$from/$root_dir"* ]]; then
+        exclude_option="--exclude=${from#"$root_dir"/}"
     fi
-    rsync -avq --progress $exclude_option "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+    rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
         echo "$target/$file" >> "$installed_file"
     done
 
