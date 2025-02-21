@@ -7,7 +7,7 @@ To use with AudytorFRESH/installer4lab
 Świeży, zaktualizowany system Debian Raspberry. Dodatkowo (ignorujac znak nowej linii `$`):
 
 ```bash
-$ sudo apt install dos2unix
+$ sudo apt-get install dos2unix
 ```
 
 # Podczas przygotowywania obrazu bazowego:
