@@ -49,17 +49,22 @@ backup_files() {
 }
 
 run_rsync() {
-    echo "Running rsync for home_dir aa2"
+    echo "Running rsync for home_dir (copy4prepare.sh)"
     exclude_option=""
-    if [ -n "$root_dir" ] && [[ "$root_dir" == "$from/$root_dir"* ]]; then
+    if [ -n "$root_dir" ] && [ -n "$home_dir" ] && [[ "$root_dir" == "$home_dir/$root_dir"* ]]; then
         exclude_option="--exclude=${from#"$root_dir"/}"
+        echo "default home rsync: rsync -avq --progress $exclude_option $from/ $target/"
+        rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+            echo "$target/$file" >> "$installed_file"
+        done
+    elif [ -n "$home_dir" ]; then
+        echo "home rsync: rsync -avq --progress $from/$home_dir/ $target/"
+        rsync -avq --progress "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+            echo "$target/$file" >> "$installed_file"
+        done
     fi
-    rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
-        echo "$target/$file" >> "$installed_file"
-    done
-
     if [ -n "$root_dir" ]; then
-        echo "Running rsync for root_dir bb2"
+        echo "root rsync: rsync -avq --progress $from/$root_dir/ $target/"
         rsync -avq --progress "$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             echo "/$file" >> "$installed_file"
         done
