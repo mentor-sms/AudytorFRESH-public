@@ -17,6 +17,7 @@ home_dir=home4copy
 root_dir=home4copy/root4rpi
 timeout=30
 installed_file="/.mentor/installed"
+run="/home/pi/.mentor/prepare4lab.sh"
 
 show_help() {
     echo "Usage: sudo $0 [options]"
@@ -32,7 +33,10 @@ show_help() {
     echo "  --home_dir <name>      Source directory in from (default: home4copy)"
     echo "  --root_dir <path>      Directory to sync with root (default: home4copy/root4rpi)"
     echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
-    echo "  --job <args>           Arguments for the script (default: release)"
+    echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
+    echo "  --job <args>           Argumenty dla skryptu (default: release)"
+    echo "                                               (alternatywy prepare4lab: devel, debug)"
+    echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
     echo "  --help                 Show this help message"
 }
 
@@ -85,7 +89,6 @@ run_rsync() {
     fi
     if [ -n "$root_dir" ]; then
         echo "root rsync: rsync -avq --progress $from/$root_dir/ /"
-        # shellcheck disable=SC2030
         sudo rsync -avq --progress "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             handle_file "$file"
         done
@@ -160,19 +163,15 @@ main() {
     fi
 
     if [ "$norun" -ne 1 ]; then
-        # shellcheck disable=SC2031
-        echo "Will run $target/$file with job $job"
+        echo "Will run $run with job $job"
 
         if [ "$quick" -eq 0 ]; then
             read -rp "Press [Enter] to continue..."
-            # shellcheck disable=SC2031
-            echo "Will run $target/$file in 3, 2, 1..."
+            echo "Will run $run in 3, 2, 1..."
             sleep 3
         fi
-        # shellcheck disable=SC2031
-        echo "Running $target/$file with job $job..."
-        # shellcheck disable=SC2031
-        "$target/$file" "$job" &
+        echo "Running $run with job $job..."
+        "$run" "$job" &
     fi
 }
 
@@ -230,12 +229,6 @@ parse() {
                 echo "Option --restore"
                 shift
                 ;;
-            --job)
-                shift
-                job="$*"
-                echo "Option --job with value $job"
-                break
-                ;;
             --home_dir)
                 home_dir="$2"
                 echo "Option --home_dir with value $home_dir"
@@ -249,6 +242,11 @@ parse() {
             --timeout)
                 timeout="$2"
                 echo "Option --timeout with value $timeout"
+                shift 2
+                ;;
+            --run)
+                run="$2"
+                echo "Option --run with value $run"
                 shift 2
                 ;;
             --help)
@@ -266,6 +264,11 @@ parse() {
                 ;;
         esac
     done
+
+    if [[ $# -gt 0 ]]; then
+        job="$*"
+        echo "Option --job with value $job"
+    fi
 }
 
 print_error() {
