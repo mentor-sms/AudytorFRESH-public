@@ -72,31 +72,46 @@ handle_file() {
 }
 
 run_rsync() {
-    echo "Running rsync for home_dir (copy4prepare.sh)"
     script_path=$(realpath "$0")
-    exclude_path="${script_path#/home/pi}"
+    echo "Running rsync for home_dir ($script_path)"
+    exclude_path=/home/pi/copy4prepare.sh
     exclude_option="--exclude=$exclude_path"
     
     if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
         exclude_option="$exclude_option --exclude=$from/$root_dir"
-        echo "default home rsync: rsync -avq --progress $exclude_option --ignore-existing $from/$home_dir/ $target/"
-        sudo -u pi rsync -avq --progress --ignore-existing "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
-            echo "Handling file: $file"
-            handle_file "$file"
+        echo "default home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
+        sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
+            if echo "$line" | grep -qE '^>f'; then
+                file=$(echo "$line" | awk '{print $NF}')
+                echo "Handling file: $file"
+                handle_file "$file"
+            else
+                echo "Other line: $line"
+            fi
         done
     elif [ -n "$home_dir" ]; then
-        echo "home rsync: rsync -avq --progress $exclude_option --ignore-existing $from/$home_dir/ $target/"
-        sudo -u pi rsync -avq --progress --ignore-existing "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
-            echo "Handling file: $file"
-            handle_file "$file"
+        echo "home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
+        sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
+            if echo "$line" | grep -qE '^>f'; then
+                file=$(echo "$line" | awk '{print $NF}')
+                echo "Handling file: $file"
+                handle_file "$file"
+            else
+                echo "Other line: $line"
+            fi
         done
     fi
     
     if [ -n "$root_dir" ]; then
-        echo "root rsync: rsync -avq --progress $exclude_option --ignore-existing $from/$root_dir/ /"
-        sudo rsync -avq --progress --ignore-existing "$exclude_option" "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
-            echo "Handling file: $file"
-            handle_file "$file"
+        echo "root rsync: rsync -avq --progress $exclude_option $from/$root_dir/ /"
+        sudo rsync -avq --progress "$exclude_option" "$from/$root_dir/" / | while read -r line; do
+            if echo "$line" | grep -qE '^>f'; then
+                file=$(echo "$line" | awk '{print $NF}')
+                echo "Handling file: $file"
+                handle_file "$file"
+            else
+                echo "Other line: $line"
+            fi
         done
     fi
 
@@ -109,6 +124,7 @@ run_rsync() {
         ls -la "$from/$root_dir"
     fi
 }
+
 
 main() {
     echo "Starting script with arguments: $*"
