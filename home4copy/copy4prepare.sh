@@ -14,7 +14,7 @@ nosync=0
 restore=0
 job=release
 home_dir=home4copy
-root_dir=home4copy/root4rpi
+root_dir=$home_dir/root4rpi
 timeout=30
 installed_file="/.mentor/installed"
 run="/home/pi/.mentor/prepare4lab.sh"
@@ -31,7 +31,6 @@ show_help() {
     echo "  --nosync               Do not sync directories before copying"
     echo "  --restore              Use backup instead of copying (if exists, ignores --from and --mnt)"
     echo "  --home_dir <name>      Source directory in from (default: home4copy)"
-    echo "  --root_dir <path>      Directory to sync with root (default: home4copy/root4rpi)"
     echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
     echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
@@ -76,7 +75,7 @@ run_rsync() {
     echo "Running rsync for home_dir (copy4prepare.sh)"
     exclude_option="--exclude=copy4prepare.sh"
     if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
-        exclude_option="$exclude_option --exclude=${from#"$root_dir"/}"
+        exclude_option="$exclude_option --exclude=$from/$root_dir"
         echo "default home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
         sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             handle_file "$file"
@@ -231,12 +230,8 @@ parse() {
                 ;;
             --home_dir)
                 home_dir="$2"
+                root_dir=$home_dir/root4rpi
                 echo "Option --home_dir with value $home_dir"
-                shift 2
-                ;;
-            --root_dir)
-                root_dir="$2"
-                echo "Option --root_dir with value $root_dir"
                 shift 2
                 ;;
             --timeout)
