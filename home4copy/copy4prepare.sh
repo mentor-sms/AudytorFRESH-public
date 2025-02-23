@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=7.7.7
+WERSJA=7.6.7
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -89,7 +89,9 @@ run_rsync() {
                 echo "Other line: $line"
             fi
         done
-    elif [ -n "$home_dir" ]; then
+    fi
+    
+    if [ -n "$home_dir" ] && [ -z "$root_dir" ]; then
         echo "home rsync: rsync -av --progress --itemize-changes $exclude_option $from/$home_dir/ $target/"
         sudo -u pi rsync -av --progress --itemize-changes "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
             if [[ "$line" == *">"* ]]; then
@@ -124,6 +126,7 @@ run_rsync() {
         ls -la "$from/$root_dir"
     fi
 }
+
 
 main() {
     echo "Starting script with arguments: $*"
