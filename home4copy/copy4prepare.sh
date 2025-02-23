@@ -77,7 +77,7 @@ run_rsync() {
     exclude_path="/home/pi/copy4prepare.sh"
     exclude_option="--exclude=$exclude_path"
     
-    if [ -n "$root_dir" ] && [ -n "$home_dir" ] then
+    if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
         exclude_option="$exclude_option --exclude=$from/$root_dir"
         echo "default home rsync: rsync -av --progress --itemize-changes $exclude_option $from/$home_dir/ $target/"
         sudo -u pi rsync -av --progress --itemize-changes "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
