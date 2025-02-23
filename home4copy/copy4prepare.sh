@@ -1,7 +1,7 @@
 #!/bin/bash
 
-WERSJA=3.0.0
-echo copy4prepare ver: $WERSJA
+WERSJA=4.0.0
+echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
 from=/dev/sda1
@@ -21,20 +21,18 @@ installed_file="/.mentor/installed"
 show_help() {
     echo "Usage: sudo $0 [options]"
     echo "Options:"
-    echo "  --from <path>          Block device lub katalog (default: /dev/sda1)"
-    echo "  --mnt <path>           Miejsce montowania dla urzadzenia from (default: /mnt)"
-    echo "  --file <name>          Nazwa skryptu do rozruchu po kopiowaniu (default: prepare4lab.sh)"
-    echo "  --target <path>        Katalog docelowy dla skryptu (default: /home/pi)"
-    echo "  --quick                Nie pyta przed rozruchem skryptu file"
-    echo "  --norun                Nie uruchamia skryptu file"
-    echo "  --nosync               Nie synchronizuje katalogow przed kopiowaniem"
-    echo "  --restore              Uzywa kopii zapasowej zamiast kopiowac (o ile istnieje, ignoruje --from i --mnt)"
-    echo "  --home_dir <name>      Katalog docelowy w from (default: home4copy)"
-    echo "  --root_dir <path>      Katalog do synchronizacji z root (default: home4copy/root4rpi)"
-    echo "  --timeout <seconds>    Czas oczekiwania przed rozpoczeciem procesu (default: 30)"
-    echo "  --job <args>           Argumenty dla skryptu (default: release)"
-    echo "                                               (alternatywy prepare4lab: devel, debug)"
-    echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
+    echo "  --from <path>          Block device or directory (default: /dev/sda1)"
+    echo "  --mnt <path>           Mount point for the device (default: /mnt)"
+    echo "  --file <name>          Script name to run after copying (default: prepare4lab.sh)"
+    echo "  --target <path>        Target directory for the script (default: /home/pi)"
+    echo "  --quick                Do not prompt before running the script"
+    echo "  --norun                Do not run the script"
+    echo "  --nosync               Do not sync directories before copying"
+    echo "  --restore              Use backup instead of copying (if exists, ignores --from and --mnt)"
+    echo "  --home_dir <name>      Source directory in from (default: home4copy)"
+    echo "  --root_dir <path>      Directory to sync with root (default: home4copy/root4rpi)"
+    echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
+    echo "  --job <args>           Arguments for the script (default: release)"
     echo "  --help                 Show this help message"
 }
 
@@ -48,6 +46,28 @@ backup_files() {
     done
 }
 
+handle_file() {
+    local _file=$1
+    echo "$target/$_file" >> "$installed_file"
+
+    if file "$target/$_file" | grep -q 'text'; then
+        echo "Converting $target/$_file to Unix format"
+        if ! dos2unix "$target/$_file"; then
+            print_error "Failed to convert file to Unix format"
+        fi
+    fi
+
+    if [[ "$_file" == *.sh ]]; then
+        echo "Making /$_file executable"
+        chmod +x "/$_file" || { print_error "Failed to make /$_file executable"; }
+
+        echo "Checking if /$_file is a valid bash script"
+        if ! sudo -u pi bash -n "/$_file"; then
+            print_error "/$_file is not a valid bash script"
+        fi
+    fi
+}
+
 run_rsync() {
     echo "Running rsync for home_dir (copy4prepare.sh)"
     exclude_option=""
@@ -55,31 +75,21 @@ run_rsync() {
         exclude_option="--exclude=${from#"$root_dir"/}"
         echo "default home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
         sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
-            echo "$target/$file" >> "$installed_file"
+            handle_file "$file"
         done
     elif [ -n "$home_dir" ]; then
         echo "home rsync: rsync -avq --progress $from/$home_dir/ $target/"
         sudo -u pi rsync -avq --progress "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
-            echo "$target/$file" >> "$installed_file"
+            handle_file "$file"
         done
     fi
     if [ -n "$root_dir" ]; then
         echo "root rsync: rsync -avq --progress $from/$root_dir/ /"
-        sudo -u pi rsync -avq --progress "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
-            echo "/$file" >> "$installed_file"
+        # shellcheck disable=SC2030
+        sudo rsync -avq --progress "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+            handle_file "$file"
         done
     fi
-}
-
-restore_files() {
-    echo "Restoring files from $installed_file"
-    while read -r file; do
-        if [ -f "$file.mbak" ]; then
-            mv "$file.mbak" "$file"
-        else
-            rm -f "$file"
-        fi
-    done < "$installed_file"
 }
 
 main() {
@@ -87,16 +97,16 @@ main() {
     parse "$@"
 
     if [ "$(id -u)" -ne 0 ]; then
-      echo "Wymaga sudo!"
+      echo "Requires sudo!"
       show_help
-      echo "Wymaga sudo!"
+      echo "Requires sudo!"
       exit 1
     fi
 
     if [ "$timeout" -ne 0 ]; then
-      echo "Start po $timeout sekundach od nacisniecia [Enter]. W tym czasie odlacz klawiature i podlacz pendrive z $home_dir."
-      read -rp "Nacisnij [Enter], gdy bedziesz gotowy..."
-      echo "Podlacz teraz pendrive zawierajacy $home_dir."
+      echo "Starting after $timeout seconds from pressing [Enter]. During this time, disconnect the keyboard and connect the USB drive with $home_dir."
+      read -rp "Press [Enter] when ready..."
+      echo "Now connect the USB drive containing $home_dir."
       if [ "$timeout" -gt 0 ]; then
           echo "Sleeping for $timeout seconds"
           sleep "$timeout"
@@ -104,8 +114,8 @@ main() {
     fi
 
     echo "Creating target directory $target"
-    sudo -u pi mkdir -p "$target" || { print_error "Blad zapisu do $target"; }
-    
+    sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
+
     echo "Reloading systemd daemon"
     systemctl daemon-reload
     echo "$from"
@@ -127,7 +137,7 @@ main() {
         mnt=""
         set_from "$from"
     else
-        print_error "Niewlasciwa sciezka: $from"
+        print_error "Invalid path: $from"
     fi
 
     if [ "$restore" -eq 1 ]; then
@@ -145,37 +155,36 @@ main() {
     if [ "$do_umount" -eq 1 ]; then
         echo "Unmounting $mnt"
         if ! umount "$mnt"; then
-            print_error "Nie udalo sie umount $mnt"
+            print_error "Failed to unmount $mnt"
         fi
     fi
 
-    echo "Converting $target/$file to Unix format"
-    if ! dos2unix "$target/$file"; then
-        print_error "Failed to convert file to Unix format"
-    fi
-
-    echo "Changing owner of $target to pi:pi"
-    chown -R pi:pi "$target" || { print_error "Failed to change file owner"; }
-
-    echo "Making $target/$file executable"
-    chmod +x "$target/$file" || { print_error "Failed to make file executable"; }
-
-    echo "Checking if $target/$file is a valid bash script"
-    if ! bash -n "$target/$file"; then
-        print_error "Plik nie jest poprawnym skryptem bash"
-    fi
-
     if [ "$norun" -ne 1 ]; then
+        # shellcheck disable=SC2031
         echo "Will run $target/$file with job $job"
 
         if [ "$quick" -eq 0 ]; then
             read -rp "Press [Enter] to continue..."
+            # shellcheck disable=SC2031
             echo "Will run $target/$file in 3, 2, 1..."
             sleep 3
         fi
+        # shellcheck disable=SC2031
         echo "Running $target/$file with job $job..."
+        # shellcheck disable=SC2031
         "$target/$file" "$job" &
     fi
+}
+
+restore_files() {
+    echo "Restoring files from $installed_file"
+    while read -r file; do
+        if [ -f "$file.mbak" ]; then
+            mv "$file.mbak" "$file"
+        else
+            rm -f "$file"
+        fi
+    done < "$installed_file"
 }
 
 parse() {
