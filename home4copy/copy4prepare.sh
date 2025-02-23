@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=6.5.6
+WERSJA=7.7.7
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -77,11 +77,11 @@ run_rsync() {
     exclude_path="/home/pi/copy4prepare.sh"
     exclude_option="--exclude=$exclude_path"
     
-    if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
+    if [ -n "$root_dir" ] && [ -n "$home_dir" ] then
         exclude_option="$exclude_option --exclude=$from/$root_dir"
-        echo "default home rsync: rsync -av --progress $exclude_option $from/$home_dir/ $target/"
-        sudo -u pi rsync -av --progress "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
-            if echo "$line" | grep -qE '^>f'; then
+        echo "default home rsync: rsync -av --progress --itemize-changes $exclude_option $from/$home_dir/ $target/"
+        sudo -u pi rsync -av --progress --itemize-changes "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
+            if [[ "$line" == *">"* ]]; then
                 file=$(echo "$line" | awk '{print $NF}')
                 echo "Handling file: $file"
                 handle_file "$file"
@@ -90,9 +90,9 @@ run_rsync() {
             fi
         done
     elif [ -n "$home_dir" ]; then
-        echo "home rsync: rsync -av --progress $exclude_option $from/$home_dir/ $target/"
-        sudo -u pi rsync -av --progress "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
-            if echo "$line" | grep -qE '^>f'; then
+        echo "home rsync: rsync -av --progress --itemize-changes $exclude_option $from/$home_dir/ $target/"
+        sudo -u pi rsync -av --progress --itemize-changes "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
+            if [[ "$line" == *">"* ]]; then
                 file=$(echo "$line" | awk '{print $NF}')
                 echo "Handling file: $file"
                 handle_file "$file"
@@ -103,9 +103,9 @@ run_rsync() {
     fi
     
     if [ -n "$root_dir" ]; then
-        echo "root rsync: rsync -av --progress $exclude_option $from/$root_dir/ /"
-        sudo rsync -av --progress "$exclude_option" "$from/$root_dir/" / | while read -r line; do
-            if echo "$line" | grep -qE '^>f'; then
+        echo "root rsync: rsync -av --progress --itemize-changes $exclude_option $from/$root_dir/ /"
+        sudo rsync -av --progress --itemize-changes "$exclude_option" "$from/$root_dir/" / | while read -r line; do
+            if [[ "$line" == *">"* ]]; then
                 file=$(echo "$line" | awk '{print $NF}')
                 echo "Handling file: $file"
                 handle_file "$file"
@@ -124,8 +124,6 @@ run_rsync() {
         ls -la "$from/$root_dir"
     fi
 }
-
-
 
 main() {
     echo "Starting script with arguments: $*"
