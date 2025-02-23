@@ -78,19 +78,31 @@ run_rsync() {
         exclude_option="$exclude_option --exclude=$from/$root_dir"
         echo "default home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
         sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+            echo "Handling file: $file"
             handle_file "$file"
         done
     elif [ -n "$home_dir" ]; then
         echo "home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
         sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+            echo "Handling file: $file"
             handle_file "$file"
         done
     fi
     if [ -n "$root_dir" ]; then
         echo "root rsync: rsync -avq --progress $exclude_option $from/$root_dir/ /"
         sudo rsync -avq --progress "$exclude_option" "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+            echo "Handling file: $file"
             handle_file "$file"
         done
+    fi
+
+    echo "Listing contents of $from/$home_dir:"
+    ls -la "$from/$home_dir"
+    echo "Listing contents of $target:"
+    ls -la "$target"
+    if [ -n "$root_dir" ]; then
+        echo "Listing contents of $from/$root_dir:"
+        ls -la "$from/$root_dir"
     fi
 }
 
