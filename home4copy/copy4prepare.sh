@@ -40,10 +40,10 @@ show_help() {
 
 backup_files() {
     echo "Creating backup of files that will be overridden by rsync"
-    rsync -avq --dry-run --progress "$from/$home_dir/" "$target/" | grep -E '^deleting|^>f' | while read -r line; do
+    sudo -u pi rsync -avq --dry-run --progress "$from/$home_dir/" "$target/" | grep -E '^deleting|^>f' | while read -r line; do
         file=$(echo "$line" | awk '{print $2}')
         if [ -f "$target/$file" ]; then
-            cp "$target/$file" "$target/$file.mbak"
+            sudo -u pi cp "$target/$file" "$target/$file.mbak"
         fi
     done
 }
@@ -54,18 +54,18 @@ run_rsync() {
     if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
         exclude_option="--exclude=${from#"$root_dir"/}"
         echo "default home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
-        rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+        sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             echo "$target/$file" >> "$installed_file"
         done
     elif [ -n "$home_dir" ]; then
         echo "home rsync: rsync -avq --progress $from/$home_dir/ $target/"
-        rsync -avq --progress "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+        sudo -u pi rsync -avq --progress "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             echo "$target/$file" >> "$installed_file"
         done
     fi
     if [ -n "$root_dir" ]; then
         echo "root rsync: rsync -avq --progress $from/$root_dir/ /"
-        rsync -avq --progress "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+        sudo -u pi rsync -avq --progress "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             echo "/$file" >> "$installed_file"
         done
     fi
@@ -104,7 +104,7 @@ main() {
     fi
 
     echo "Creating target directory $target"
-    mkdir -p "$target" || { print_error "Blad zapisu do $target"; }
+    sudo -u pi mkdir -p "$target" || { print_error "Blad zapisu do $target"; }
     
     echo "Reloading systemd daemon"
     systemctl daemon-reload
