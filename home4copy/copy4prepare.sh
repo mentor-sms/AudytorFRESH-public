@@ -7,7 +7,7 @@ do_umount=0
 from=/dev/sda1
 mnt=/mnt
 file=prepare4lab.sh
-target=/home/pi/.mentor
+target=/home/pi
 quick=0
 norun=0
 nosync=0
@@ -24,7 +24,7 @@ show_help() {
     echo "  --from <path>          Block device lub katalog (default: /dev/sda1)"
     echo "  --mnt <path>           Miejsce montowania dla urzadzenia from (default: /mnt)"
     echo "  --file <name>          Nazwa skryptu do rozruchu po kopiowaniu (default: prepare4lab.sh)"
-    echo "  --target <path>        Katalog docelowy dla skryptu (default: /home/pi/.mentor)"
+    echo "  --target <path>        Katalog docelowy dla skryptu (default: /home/pi)"
     echo "  --quick                Nie pyta przed rozruchem skryptu file"
     echo "  --norun                Nie uruchamia skryptu file"
     echo "  --nosync               Nie synchronizuje katalogow przed kopiowaniem"
@@ -51,9 +51,9 @@ backup_files() {
 run_rsync() {
     echo "Running rsync for home_dir (copy4prepare.sh)"
     exclude_option=""
-    if [ -n "$root_dir" ] && [ -n "$home_dir" ] && [[ "$root_dir" == "$home_dir/$root_dir"* ]]; then
+    if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
         exclude_option="--exclude=${from#"$root_dir"/}"
-        echo "default home rsync: rsync -avq --progress $exclude_option $from/ $target/"
+        echo "default home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
         rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             echo "$target/$file" >> "$installed_file"
         done
@@ -64,8 +64,8 @@ run_rsync() {
         done
     fi
     if [ -n "$root_dir" ]; then
-        echo "root rsync: rsync -avq --progress $from/$root_dir/ $target/"
-        rsync -avq --progress "$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+        echo "root rsync: rsync -avq --progress $from/$home_dir/$root_dir/ /"
+        rsync -avq --progress "$from/$home_dir/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             echo "/$file" >> "$installed_file"
         done
     fi
