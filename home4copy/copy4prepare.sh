@@ -64,8 +64,8 @@ run_rsync() {
         done
     fi
     if [ -n "$root_dir" ]; then
-        echo "root rsync: rsync -avq --progress $from/$home_dir/$root_dir/ /"
-        rsync -avq --progress "$from/$home_dir/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+        echo "root rsync: rsync -avq --progress $from/$root_dir/ /"
+        rsync -avq --progress "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             echo "/$file" >> "$installed_file"
         done
     fi
