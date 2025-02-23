@@ -74,22 +74,22 @@ handle_file() {
 
 run_rsync() {
     echo "Running rsync for home_dir (copy4prepare.sh)"
-    exclude_option=""
+    exclude_option="--exclude=copy4prepare.sh"
     if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
-        exclude_option="--exclude=${from#"$root_dir"/}"
+        exclude_option="$exclude_option --exclude=${from#"$root_dir"/}"
         echo "default home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
         sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             handle_file "$file"
         done
     elif [ -n "$home_dir" ]; then
-        echo "home rsync: rsync -avq --progress $from/$home_dir/ $target/"
-        sudo -u pi rsync -avq --progress "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+        echo "home rsync: rsync -avq --progress $exclude_option $from/$home_dir/ $target/"
+        sudo -u pi rsync -avq --progress "$exclude_option" "$from/$home_dir/" "$target/" | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             handle_file "$file"
         done
     fi
     if [ -n "$root_dir" ]; then
-        echo "root rsync: rsync -avq --progress $from/$root_dir/ /"
-        sudo rsync -avq --progress "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
+        echo "root rsync: rsync -avq --progress $exclude_option $from/$root_dir/ /"
+        sudo rsync -avq --progress "$exclude_option" "$from/$root_dir/" / | grep -E '^>f' | awk '{print $2}' | while read -r file; do
             handle_file "$file"
         done
     fi
@@ -171,7 +171,7 @@ main() {
             sleep 3
         fi
         echo "Running $run with job $job..."
-        "$run" "$job" &
+        sudo "$run" "$job"
     fi
 }
 
