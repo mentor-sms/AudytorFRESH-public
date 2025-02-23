@@ -105,15 +105,7 @@ main() {
 
     echo "Creating target directory $target"
     mkdir -p "$target" || { print_error "Blad zapisu do $target"; }
-
-    if [ "$restore" -eq 1 ]; then
-        echo "Restoring files from $installed_file"
-        restore_files
-    elif [ "$nosync" -ne 1 ]; then
-        echo "Creating backup of files that will be overridden by rsync"
-        backup_files
-    fi
-
+    
     echo "Reloading systemd daemon"
     systemctl daemon-reload
     echo "$from"
@@ -136,6 +128,14 @@ main() {
         set_from "$from"
     else
         print_error "Niewlasciwa sciezka: $from"
+    fi
+
+    if [ "$restore" -eq 1 ]; then
+        echo "Restoring files from $installed_file"
+        restore_files
+    elif [ "$nosync" -ne 1 ]; then
+        echo "Creating backup of files that will be overridden by rsync"
+        backup_files
     fi
 
     if [ "$nosync" -ne 1 ]; then
