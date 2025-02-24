@@ -63,8 +63,8 @@ run_rsync() {
     echo "Running rsync for home_dir ($script_path)"
     exclude_option="--exclude=$exclude_path"
 
-    echo "Listing contents of $from/$home_dir:"
-    ls -la "$from/$home_dir"
+    echo "Listing contents of $target:"
+    ls -la "$target"
     
     rsync_cmd="sudo -u pi rsync -av --progress --relative --no-implied-dirs --include='*/' --include='.*' --exclude='*' $exclude_option $from/$home_dir/ $target/"
     echo "Exec: $from/$home_dir/ $target/ ($exclude_option) -> sudo -u pi rsync -av --progress --relative --no-implied-dirs (<-)"
@@ -79,6 +79,9 @@ run_rsync() {
             fi
         fi
     done
+    
+    echo "Listing contents of $from/$home_dir:"
+    ls -la "$from/$home_dir"
 
     echo "Listing contents of $target:"
     ls -la "$target"
