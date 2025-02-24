@@ -74,12 +74,11 @@ run_rsync() {
         if [[ $fullname != "$target" ]]; then
             fullname="${fullname//$from\/$home_dir\//}"
             if [[ $line =~ ^$home_dir ]]; then
-                # Split the line at the first whitespace
                 first_part="${line%% *}"
                 second_part="${line#* }"
     
                 if [[ -z $second_part || $second_part == *uptodate* ]]; then
-                    echo "> $line -> $first_part"
+                    echo "+> $first_part"
                     handle_file "$first_part"
                 fi
             fi
