@@ -107,11 +107,10 @@ mnt_init() {
       mnt=""
       set_from "$from"
   else
-      # if $from ends with sd[a-z][0-9], iterate over /dev/sd* and rerun mnt_init and fix $mnt to be the path that will return true for is_block_device:
-      if echo "$from" | grep -q '/dev/sd[a-z][0-9]'; then
+      if echo "$from" | grep -q '/dev/sd[a-z]1'; then
           echo "Trying to find a block device for $from"
           gotit=0
-          for dev in /dev/sd*; do
+          for dev in /dev/sd*1; do
               if is_block_device "$dev"; then
                   echo "Found block device $dev"
                   from="$dev"
