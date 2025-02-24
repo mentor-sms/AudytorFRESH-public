@@ -77,45 +77,35 @@ run_rsync() {
     exclude_path="/home/pi/copy4prepare.sh"
     exclude_option="--exclude=$exclude_path"
     
+    run_rsync_task() {
+        rsync_cmd=$1
+        echo "Executing: $rsync_cmd"
+        eval "$rsync_cmd" | while read -r line; do
+            echo "Line: $line" # Debug output
+            if echo "$line" | grep -q "$from" && ! echo "$line" | grep -q '/$'; then
+                file=$(echo "$line" | awk '{print $NF}')
+                echo "Handling file: $file"
+                handle_file "$file"
+            else
+                echo "Other line: $line"
+            fi
+        done
+    }
+    
     if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
         exclude_option="$exclude_option --exclude=$from/$root_dir"
-        echo "default home rsync: rsync -av --progress $exclude_option $from/$home_dir/ $target/"
-        sudo -u pi rsync -av --progress "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
-            echo "Line: $line" # Debug output
-            if echo "$line" | grep -q "$from"; then
-                file=$(echo "$line" | awk '{print $NF}')
-                echo "Handling file: $file"
-                handle_file "$file"
-            else
-                echo "Other line: $line"
-            fi
-        done
-    elif [ -n "$home_dir" ]; then
-        echo "home rsync: rsync -av --progress $exclude_option $from/$home_dir/ $target/"
-        sudo -u pi rsync -av --progress "$exclude_option" "$from/$home_dir/" "$target/" | while read -r line; do
-            echo "Line: $line" # Debug output
-            if echo "$line" | grep -q "$from"; then
-                file=$(echo "$line" | awk '{print $NF}')
-                echo "Handling file: $file"
-                handle_file "$file"
-            else
-                echo "Other line: $line"
-            fi
-        done
+        rsync_cmd="sudo -u pi rsync -av --progress --relative $exclude_option $from/$home_dir/ $target/"
+        run_rsync_task "$rsync_cmd"
+    fi
+    
+    if [ -n "$home_dir" ] && [ -z "$root_dir" ]; then
+        rsync_cmd="sudo -u pi rsync -av --progress --relative $exclude_option $from/$home_dir/ $target/"
+        run_rsync_task "$rsync_cmd"
     fi
     
     if [ -n "$root_dir" ]; then
-        echo "root rsync: rsync -av --progress $exclude_option $from/$root_dir/ /"
-        sudo rsync -av --progress "$exclude_option" "$from/$root_dir/" / | while read -r line; do
-            echo "Line: $line" # Debug output
-            if echo "$line" | grep -q "$from"; then
-                file=$(echo "$line" | awk '{print $NF}')
-                echo "Handling file: $file"
-                handle_file "$file"
-            else
-                echo "Other line: $line"
-            fi
-        done
+        rsync_cmd="sudo rsync -av --progress --relative $exclude_option $from/$root_dir/ /"
+        run_rsync_task "$rsync_cmd"
     fi
 
     echo "Listing contents of $from/$home_dir:"
@@ -127,6 +117,8 @@ run_rsync() {
         ls -la "$from/$root_dir"
     fi
 }
+
+
 
 
 
