@@ -143,7 +143,9 @@ main() {
 
     echo "Reloading systemd daemon"
     systemctl daemon-reload
-    echo "$from"
+    sleep 5
+    lsblk
+    echo FROM: "$from"
 
     if is_block_device "$from"; then
         echo "$from is a block device"
