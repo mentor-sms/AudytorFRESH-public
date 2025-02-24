@@ -53,20 +53,20 @@ handle_file() {
     local _file=$1
     echo "$target/$_file" >> "$installed_file"
 
-    if file "$target/$_file" | grep -q 'text'; then
-        echo "Converting $target/$_file to Unix format"
-        if ! dos2unix "$target/$_file"; then
+    if file "$_file" | grep -q 'text'; then
+        echo "Converting $_file to Unix format"
+        if ! dos2unix "$_file"; then
             print_error "Failed to convert file to Unix format"
         fi
     fi
 
-    if [[ "$target/$_file" == *.sh ]]; then
-        echo "Making $target/$_file executable"
-        chmod +x "$target/$_file" || { print_error "Failed to make $target/$_file executable"; }
+    if [[ "$_file" == *.sh ]]; then
+        echo "Making $_file executable"
+        chmod +x "/$_file" || { print_error "Failed to make $_file executable"; }
 
-        echo "Checking if $target/$_file is a valid bash script"
-        if ! sudo -u pi bash -n "$target/$_file"; then
-            print_error "$target/$_file is not a valid bash script"
+        echo "Checking if $_file is a valid bash script"
+        if ! sudo -u pi bash -n "$_file"; then
+            print_error "$_file is not a valid bash script"
         fi
     fi
 }
@@ -79,12 +79,16 @@ run_rsync() {
     
     run_rsync_task() {
         rsync_cmd=$1
+        from=$2
+        target=$3
         echo "Executing: $rsync_cmd"
         eval "$rsync_cmd" | while read -r line; do
             if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
-                file=$(echo "$line" | awk '{print $NF}')
-                echo "Handling file: $file"
-                handle_file "$file"
+                source_file=$(echo "$line" | awk '{print $NF}')
+                relative_path="${source_file#$from/}"
+                effective_path="$target/$relative_path"
+                echo "Handling file: $effective_path"
+                handle_file "$effective_path"
             fi
         done
     }
@@ -92,17 +96,17 @@ run_rsync() {
     if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
         exclude_option="$exclude_option --exclude=$from/$root_dir"
         rsync_cmd="sudo -u pi rsync -av --progress --relative $exclude_option $from/$home_dir/ $target/"
-        run_rsync_task "$rsync_cmd"
+        run_rsync_task "$rsync_cmd" "$from/$home_dir" "$target"
     fi
     
     if [ -n "$home_dir" ] && [ -z "$root_dir" ]; then
         rsync_cmd="sudo -u pi rsync -av --progress --relative $exclude_option $from/$home_dir/ $target/"
-        run_rsync_task "$rsync_cmd"
+        run_rsync_task "$rsync_cmd" "$from/$home_dir" "$target"
     fi
     
     if [ -n "$root_dir" ]; then
         rsync_cmd="sudo rsync -av --progress --relative $exclude_option $from/$root_dir/ /"
-        run_rsync_task "$rsync_cmd"
+        run_rsync_task "$rsync_cmd" "$from/$root_dir" "/"
     fi
 
     echo "Listing contents of $from/$home_dir:"
@@ -114,6 +118,7 @@ run_rsync() {
         ls -la "$from/$root_dir"
     fi
 }
+
 
 main() {
     echo "Starting script with arguments: $*"
