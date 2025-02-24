@@ -41,12 +41,6 @@ show_help() {
 
 backup_files() {
     echo "Creating backup of files that will be overridden by rsync"
-    sudo -u pi rsync -avq --dry-run --progress "$from/$home_dir/" "$target/" | grep -E '^deleting|^>f' | while read -r line; do
-        file=$(echo "$line" | awk '{print $2}')
-        if [ -f "$target/$file" ]; then
-            sudo -u pi cp "$target/$file" "$target/$file.mbak"
-        fi
-    done
 }
 
 handle_file() {
@@ -62,7 +56,7 @@ handle_file() {
 
     if [[ "$_file" == *.sh ]]; then
         echo "Making $_file executable"
-        chmod +x "/$_file" || { print_error "Failed to make $_file executable"; }
+        chmod +x "$_file" || { print_error "Failed to make $_file executable"; }
 
         echo "Checking if $_file is a valid bash script"
         if ! sudo -u pi bash -n "$_file"; then
@@ -73,8 +67,12 @@ handle_file() {
 
 run_rsync() {
     script_path=$(realpath "$0")
+    exclude_path="$from/$home_dir/copy4prepare.sh"
+    if [ "$exclude_path" != "$script_path" ]; then
+        echo "Script path is not /home/pi/copy4prepare.sh"
+        exit 1
+    fi
     echo "Running rsync for home_dir ($script_path)"
-    exclude_path="/home/pi/copy4prepare.sh"
     exclude_option="--exclude=$exclude_path"
     
     run_rsync_task() {
@@ -85,7 +83,10 @@ run_rsync() {
         eval "$rsync_cmd" | while read -r line; do
             if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
                 source_file=$(echo "$line" | awk '{print $NF}')
+                echo "source_file: $source_file"
+                echo "from: $from"
                 relative_path="${source_file#$from/}"
+                echo "relative_path: $relative_path"
                 effective_path="$target/$relative_path"
                 echo "Handling file: $effective_path"
                 handle_file "$effective_path"
@@ -202,13 +203,6 @@ main() {
 
 restore_files() {
     echo "Restoring files from $installed_file"
-    while read -r file; do
-        if [ -f "$file.mbak" ]; then
-            mv "$file.mbak" "$file"
-        else
-            rm -f "$file"
-        fi
-    done < "$installed_file"
 }
 
 parse() {
