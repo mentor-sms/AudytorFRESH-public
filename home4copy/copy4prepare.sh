@@ -66,12 +66,11 @@ run_rsync() {
     rsync_cmd="sudo -u pi rsync -av --progress --relative --no-implied-dirs $exclude_option $from/$home_dir/ $target/"
     echo "Executing: $rsync_cmd"
     eval "$rsync_cmd" | while read -r line; do
-        fullname="$target"/"$line"
+        fullname="$target$line"
         if echo "$fullname" | grep -q '^[0-9a-zA-Z._/]*[0-9a-zA-Z]$'; then
+            echo "> $line"
             echo "Handling file: $fullname"
             handle_file "$fullname"
-        else
-            echo "> $line"
         fi
     done
 
