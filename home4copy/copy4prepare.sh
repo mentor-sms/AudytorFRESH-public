@@ -75,10 +75,7 @@ run_rsync() {
     eval "$rsync_cmd" | while read -r line; do
         if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
             source_file=$(echo "$line" | awk '{print $NF}')
-            echo "source_file: $source_file"
-            echo "from: $from"
-            relative_path="${source_file#$from/}"
-            echo "relative_path: $relative_path"
+            relative_path="${source_file#"$from"/"$home_dir"/}"
             effective_path="$target/$relative_path"
             echo "Handling file: $effective_path"
             handle_file "$effective_path"
