@@ -60,13 +60,13 @@ handle_file() {
         fi
     fi
 
-    if [[ "$_file" == *.sh ]]; then
-        echo "Making /$_file executable"
-        chmod +x "/$_file" || { print_error "Failed to make /$_file executable"; }
+    if [[ "$target/$_file" == *.sh ]]; then
+        echo "Making $target/$_file executable"
+        chmod +x "$target/$_file" || { print_error "Failed to make $target/$_file executable"; }
 
-        echo "Checking if /$_file is a valid bash script"
-        if ! sudo -u pi bash -n "/$_file"; then
-            print_error "/$_file is not a valid bash script"
+        echo "Checking if $target/$_file is a valid bash script"
+        if ! sudo -u pi bash -n "$target/$_file"; then
+            print_error "$target/$_file is not a valid bash script"
         fi
     fi
 }
@@ -81,13 +81,10 @@ run_rsync() {
         rsync_cmd=$1
         echo "Executing: $rsync_cmd"
         eval "$rsync_cmd" | while read -r line; do
-            echo "Line: $line" # Debug output
             if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
                 file=$(echo "$line" | awk '{print $NF}')
                 echo "Handling file: $file"
                 handle_file "$file"
-            else
-                echo "Other line: $line"
             fi
         done
     }
