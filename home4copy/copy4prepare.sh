@@ -15,7 +15,6 @@ restore=0
 job=release
 home_dir=home4copy
 timeout=30
-installed_file="/.mentor/installed"
 run="/home/pi/.mentor/prepare4lab.sh"
 
 show_help() {
@@ -28,7 +27,6 @@ show_help() {
     echo "  --quick                Do not prompt before running the script"
     echo "  --norun                Do not run the script"
     echo "  --nosync               Do not sync directories before copying"
-    echo "  --restore              Use backup instead of copying (if exists, ignores --from and --mnt)"
     echo "  --home_dir <name>      Source directory in from (default: home4copy)"
     echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
     echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
@@ -38,13 +36,8 @@ show_help() {
     echo "  --help                 Show this help message"
 }
 
-backup_files() {
-    echo "Creating backup of files that will be overridden by rsync"
-}
-
 handle_file() {
     local _file=$1
-    echo "$target/$_file" >> "$installed_file"
 
     if file "$_file" | grep -q 'text'; then
         echo "Converting $_file to Unix format"
@@ -138,14 +131,6 @@ main() {
         print_error "Invalid path: $from"
     fi
 
-    if [ "$restore" -eq 1 ]; then
-        echo "Restoring files from $installed_file"
-        restore_files
-    elif [ "$nosync" -ne 1 ]; then
-        echo "Creating backup of files that will be overridden by rsync"
-        backup_files
-    fi
-
     if [ "$nosync" -ne 1 ]; then
         run_rsync
     fi
@@ -168,10 +153,6 @@ main() {
         echo "Running $run with job $job..."
         sudo "$run" "$job"
     fi
-}
-
-restore_files() {
-    echo "Restoring files from $installed_file"
 }
 
 parse() {
@@ -210,11 +191,6 @@ parse() {
             --nosync)
                 nosync=1
                 echo "Option --nosync"
-                shift
-                ;;
-            --restore)
-                restore=1
-                echo "Option --restore"
                 shift
                 ;;
             --home_dir)
