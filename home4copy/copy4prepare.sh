@@ -67,12 +67,13 @@ run_rsync() {
     echo "Executing: $rsync_cmd"
     eval "$rsync_cmd" | while read -r line; do
         fullname="$target$line"
-        fullname="${fullname//$mnt\/$home_dir\//}"
-        echo "$fullname"
-        if echo "$fullname" | grep -q '^[0-9a-zA-Z._/]*[0-9a-zA-Z]$'; then
-            echo "> $line"
-            echo "Handling file: $fullname"
-            handle_file "$fullname"
+        if [[ $fullname != "$target" ]]; then
+            fullname="${fullname//$mnt\/$home_dir\//}"
+            echo "$fullname"
+            if echo "$fullname" | grep -q '^[0-9a-zA-Z._/]*[0-9a-zA-Z]$'; then
+                echo "> $line -> $fullname"
+                handle_file "$fullname"
+            fi
         fi
     done
 
