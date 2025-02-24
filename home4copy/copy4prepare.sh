@@ -126,6 +126,7 @@ main() {
             mount_device "$from"
             set_from "$mnt"
         fi
+        mkdir -p "$mnt"
     elif is_directory "$from"; then
         echo "$from is a directory"
         mnt=""
