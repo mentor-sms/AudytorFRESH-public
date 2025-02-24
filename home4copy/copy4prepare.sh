@@ -5,7 +5,7 @@ echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
 from=/dev/sda1
-mnt=/mnt
+mnt=/home/pi/mnt
 file=prepare4lab.sh
 target=/home/pi
 quick=0
@@ -21,7 +21,7 @@ show_help() {
     echo "Usage: sudo $0 [options]"
     echo "Options:"
     echo "  --from <path>          Block device or directory (default: /dev/sda1)"
-    echo "  --mnt <path>           Mount point for the device (default: /mnt)"
+    echo "  --mnt <path>           Mount point for the device (default: /home/pi/mnt)"
     echo "  --file <name>          Script name to run after copying (default: prepare4lab.sh)"
     echo "  --target <path>        Target directory for the script (default: /home/pi)"
     echo "  --quick                Do not prompt before running the script"
