@@ -59,20 +59,20 @@ handle_file() {
 
 run_rsync() {
     script_path=$(realpath "$0")
-    exclude_path="$from/$home_dir/copy4prepare.sh"
+    exclude_path="$home_dir/copy4prepare.sh"
     echo "Running rsync for home_dir ($script_path)"
     exclude_option="--exclude=$exclude_path"
 
     echo "Listing contents of $target:"
     ls -la "$target"
     
-    rsync_cmd="sudo -u pi rsync -av --progress --relative --no-implied-dirs --include='*/' --include='.*' --exclude='*' $exclude_option $from/$home_dir/ $target/"
-    echo "RSYNC: $from/$home_dir/ $target/ ($exclude_option)"
+    rsync_cmd="sudo -u pi rsync -avv --progress --relative $exclude_option $from/./$home_dir/ $target/"
+    echo "RSYNC: $from/./$home_dir/ >> $target/ ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         echo "?> $line"
         fullname="$target$line"
         if [[ $fullname != "$target" ]]; then
-            fullname="${fullname//$mnt\/$home_dir\//}"
+            fullname="${fullname//$from\/$home_dir\//}"
             if echo "$fullname" | grep -q '^[0-9a-zA-Z./_]*[0-9a-zA-Z]$'; then
                 echo "> $line -> $fullname"
                 handle_file "$fullname"
