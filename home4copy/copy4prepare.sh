@@ -68,10 +68,6 @@ handle_file() {
 run_rsync() {
     script_path=$(realpath "$0")
     exclude_path="$from/$home_dir/copy4prepare.sh"
-    if [ "$exclude_path" != "$script_path" ]; then
-        echo "Script path is not /home/pi/copy4prepare.sh"
-        exit 1
-    fi
     echo "Running rsync for home_dir ($script_path)"
     exclude_option="--exclude=$exclude_path"
     
