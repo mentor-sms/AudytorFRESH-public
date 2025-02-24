@@ -70,7 +70,7 @@ run_rsync() {
         if [[ $fullname != "$target" ]]; then
             fullname="${fullname//$mnt\/$home_dir\//}"
             echo "$fullname"
-            if echo "$fullname" | grep -q '^[0-9a-zA-Z._/]*[0-9a-zA-Z]$'; then
+            if echo "$fullname" | grep -q '^[0-9a-zA-Z./_]*[0-9a-zA-Z]$'; then
                 echo "> $line -> $fullname"
                 handle_file "$fullname"
             fi
