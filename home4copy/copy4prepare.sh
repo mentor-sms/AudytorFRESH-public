@@ -73,8 +73,9 @@ run_rsync() {
     rsync_cmd="sudo -u pi rsync -av --progress --relative --no-implied-dirs $exclude_option $from/$home_dir/./ $target/"
     echo "Executing: $rsync_cmd"
     eval "$rsync_cmd" | while read -r line; do
-        if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
-            source_file=$(echo "$line" | awk '{print $NF}')
+        fullname="$target"/"$line"
+        if echo "$fullname" | grep -q "$from" && echo "$fullname" | grep -q '^/' && ! echo "$fullname" | grep -q '/$'; then
+            source_file=$(echo "$fullname" | awk '{print $NF}')
             relative_path="${source_file#"$from"/"$home_dir"/}"
             effective_path="$target/$relative_path"
             echo "Handling file: $effective_path"
