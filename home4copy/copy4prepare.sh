@@ -159,7 +159,8 @@ main() {
     sleep 5
     lsblk
     
-
+    mnt_init
+    
     if [ "$nosync" -ne 1 ]; then
         run_rsync
     fi
