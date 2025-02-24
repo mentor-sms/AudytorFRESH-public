@@ -87,6 +87,49 @@ run_rsync() {
     ls -la "$target"
 }
 
+mnt_init() {
+  echo FROM: "$from"
+  if is_block_device "$from"; then
+      echo "$from is a block device"
+      if is_mounted "$from"; then
+          echo "$from is already mounted"
+          mnt=$(mount | grep "$from" | awk '{print $3}')
+          set_from "$mnt"
+      else
+          echo "Mounting $from"
+          do_umount=1
+          mount_device "$from"
+          set_from "$mnt"
+      fi
+      mkdir -p "$mnt"
+  elif is_directory "$from"; then
+      echo "$from is a directory"
+      mnt=""
+      set_from "$from"
+  else
+      # if $from ends with sd[a-z][0-9], iterate over /dev/sd* and rerun mnt_init and fix $mnt to be the path that will return true for is_block_device:
+      if echo "$from" | grep -q '/dev/sd[a-z][0-9]'; then
+          echo "Trying to find a block device for $from"
+          gotit=0
+          for dev in /dev/sd*; do
+              if is_block_device "$dev"; then
+                  echo "Found block device $dev"
+                  from="$dev"
+                  mnt=""
+                  mnt_init
+                  gotit=1
+                  break
+              fi
+          done
+          if [ "$gotit" -eq 0 ]; then
+              print_error "Failed to find a block device for $from"
+          fi
+      else
+        print_error "Invalid path: $from"
+      fi
+  fi
+}
+
 main() {
     echo "Starting script with arguments: $*"
     parse "$@"
@@ -115,28 +158,7 @@ main() {
     systemctl daemon-reload
     sleep 5
     lsblk
-    echo FROM: "$from"
-
-    if is_block_device "$from"; then
-        echo "$from is a block device"
-        if is_mounted "$from"; then
-            echo "$from is already mounted"
-            mnt=$(mount | grep "$from" | awk '{print $3}')
-            set_from "$mnt"
-        else
-            echo "Mounting $from"
-            do_umount=1
-            mount_device "$from"
-            set_from "$mnt"
-        fi
-        mkdir -p "$mnt"
-    elif is_directory "$from"; then
-        echo "$from is a directory"
-        mnt=""
-        set_from "$from"
-    else
-        print_error "Invalid path: $from"
-    fi
+    
 
     if [ "$nosync" -ne 1 ]; then
         run_rsync
