@@ -66,19 +66,26 @@ run_rsync() {
     echo "Listing contents of $target:"
     ls -la "$target"
     
-    rsync_cmd="sudo -u pi rsync -avv --progress --relative $exclude_option $from/./$home_dir/ $target/"
+    rsync_cmd="sudo -u pi rsync -avv --progress --relative $exclude_option $from/$home_dir/./ $target/"
     echo "RSYNC: $from/./$home_dir/ >> $target/ ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         echo "?> $line"
         fullname="$target$line"
         if [[ $fullname != "$target" ]]; then
             fullname="${fullname//$from\/$home_dir\//}"
-            if echo "$fullname" | grep -q '^[0-9a-zA-Z./_]*[0-9a-zA-Z]$'; then
-                echo "> $line -> $fullname"
-                handle_file "$fullname"
+            if [[ $line =~ ^$home_dir ]]; then
+                # Split the line at the first whitespace
+                first_part="${line%% *}"
+                second_part="${line#* }"
+    
+                if [[ -z $second_part || $second_part == *uptodate* ]]; then
+                    echo "> $line -> $first_part"
+                    handle_file "$first_part"
+                fi
             fi
         fi
     done
+
     
     echo "Listing contents of $from/$home_dir:"
     ls -la "$from/$home_dir"
