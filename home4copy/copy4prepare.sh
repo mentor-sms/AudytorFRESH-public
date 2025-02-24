@@ -104,7 +104,6 @@ mnt_init() {
       mkdir -p "$mnt"
   elif is_directory "$from"; then
       echo "$from is a directory"
-      mnt=""
       set_from "$from"
   else
       if echo "$from" | grep -q '/dev/sd[a-z]1'; then
@@ -113,8 +112,7 @@ mnt_init() {
           for dev in /dev/sd*1; do
               if is_block_device "$dev"; then
                   echo "Found block device $dev"
-                  from="$dev"
-                  mnt=""
+                  from="$mnt"
                   mnt_init
                   gotit=1
                   break
