@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=7.7.0
+WERSJA=0.0.1
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -82,7 +82,7 @@ run_rsync() {
         echo "Executing: $rsync_cmd"
         eval "$rsync_cmd" | while read -r line; do
             echo "Line: $line" # Debug output
-            if echo "$line" | grep -q "$from" && ! echo "$line" | grep -q '/$'; then
+            if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
                 file=$(echo "$line" | awk '{print $NF}')
                 echo "Handling file: $file"
                 handle_file "$file"
@@ -117,11 +117,6 @@ run_rsync() {
         ls -la "$from/$root_dir"
     fi
 }
-
-
-
-
-
 
 main() {
     echo "Starting script with arguments: $*"
