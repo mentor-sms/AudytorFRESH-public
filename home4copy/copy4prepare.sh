@@ -14,7 +14,6 @@ nosync=0
 restore=0
 job=release
 home_dir=home4copy
-root_dir=$home_dir/root4rpi
 timeout=30
 installed_file="/.mentor/installed"
 run="/home/pi/.mentor/prepare4lab.sh"
@@ -70,52 +69,27 @@ run_rsync() {
     exclude_path="$from/$home_dir/copy4prepare.sh"
     echo "Running rsync for home_dir ($script_path)"
     exclude_option="--exclude=$exclude_path"
-    
-    run_rsync_task() {
-        rsync_cmd=$1
-        from=$2
-        target=$3
-        echo "Executing: $rsync_cmd"
-        eval "$rsync_cmd" | while read -r line; do
-            if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
-                source_file=$(echo "$line" | awk '{print $NF}')
-                echo "source_file: $source_file"
-                echo "from: $from"
-                relative_path="${source_file#$from/}"
-                echo "relative_path: $relative_path"
-                effective_path="$target/$relative_path"
-                echo "Handling file: $effective_path"
-                handle_file "$effective_path"
-            fi
-        done
-    }
-    
-    if [ -n "$root_dir" ] && [ -n "$home_dir" ]; then
-        exclude_option="$exclude_option --exclude=$from/$root_dir"
-        rsync_cmd="sudo -u pi rsync -av --progress --relative $exclude_option $from/$home_dir/ $target/"
-        run_rsync_task "$rsync_cmd" "$from/$home_dir" "$target"
-    fi
-    
-    if [ -n "$home_dir" ] && [ -z "$root_dir" ]; then
-        rsync_cmd="sudo -u pi rsync -av --progress --relative $exclude_option $from/$home_dir/ $target/"
-        run_rsync_task "$rsync_cmd" "$from/$home_dir" "$target"
-    fi
-    
-    if [ -n "$root_dir" ]; then
-        rsync_cmd="sudo rsync -av --progress --relative $exclude_option $from/$root_dir/ /"
-        run_rsync_task "$rsync_cmd" "$from/$root_dir" "/"
-    fi
+
+    rsync_cmd="sudo -u pi rsync -av --progress --relative $exclude_option $from/$home_dir/ $target/"
+    echo "Executing: $rsync_cmd"
+    eval "$rsync_cmd" | while read -r line; do
+        if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
+            source_file=$(echo "$line" | awk '{print $NF}')
+            echo "source_file: $source_file"
+            echo "from: $from"
+            relative_path="${source_file#$from/}"
+            echo "relative_path: $relative_path"
+            effective_path="$target/$relative_path"
+            echo "Handling file: $effective_path"
+            handle_file "$effective_path"
+        fi
+    done
 
     echo "Listing contents of $from/$home_dir:"
     ls -la "$from/$home_dir"
     echo "Listing contents of $target:"
     ls -la "$target"
-    if [ -n "$root_dir" ]; then
-        echo "Listing contents of $from/$root_dir:"
-        ls -la "$from/$root_dir"
-    fi
 }
-
 
 main() {
     echo "Starting script with arguments: $*"
@@ -248,7 +222,6 @@ parse() {
                 ;;
             --home_dir)
                 home_dir="$2"
-                root_dir=$home_dir/root4rpi
                 echo "Option --home_dir with value $home_dir"
                 shift 2
                 ;;
