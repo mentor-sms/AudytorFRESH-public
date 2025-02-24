@@ -79,6 +79,8 @@ run_rsync() {
             effective_path="$target/$relative_path"
             echo "Handling file: $effective_path"
             handle_file "$effective_path"
+        else
+            echo "> $line"
         fi
     done
 
