@@ -74,12 +74,9 @@ run_rsync() {
     echo "Executing: $rsync_cmd"
     eval "$rsync_cmd" | while read -r line; do
         fullname="$target"/"$line"
-        if echo "$fullname" | grep -q "$from" && echo "$fullname" | grep -q '^/' && ! echo "$fullname" | grep -q '/$'; then
-            source_file=$(echo "$fullname" | awk '{print $NF}')
-            relative_path="${source_file#"$from"/"$home_dir"/}"
-            effective_path="$target/$relative_path"
-            echo "Handling file: $effective_path"
-            handle_file "$effective_path"
+        if echo "$fullname" | grep -q '^[0-9a-zA-Z._/]*[0-9a-zA-Z]$'; then
+            echo "Handling file: $fullname"
+            handle_file "$fullname"
         else
             echo "> $line"
         fi
