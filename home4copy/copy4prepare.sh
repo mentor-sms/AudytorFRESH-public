@@ -257,8 +257,6 @@ is_mounted() {
 mount_device() {
     echo "Mounting device $1 at $mnt"
     mkdir -p "$mnt"
-    sudo umount "$mnt" 2>/dev/null
-    sudo rm -rf "$mnt/*" 2>/dev/null
     if ! sudo mount "$1" "$mnt"; then
         print_error "Failed to mount $1 at $mnt"
     else 
