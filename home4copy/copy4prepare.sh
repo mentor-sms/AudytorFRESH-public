@@ -67,7 +67,7 @@ run_rsync() {
     ls -la "$target"
     
     rsync_cmd="sudo -u pi rsync -av --progress --relative --no-implied-dirs --include='*/' --include='.*' --exclude='*' $exclude_option $from/$home_dir/ $target/"
-    echo "Exec: $from/$home_dir/ $target/ ($exclude_option) -> sudo -u pi rsync -av --progress --relative --no-implied-dirs (<-)"
+    echo "RSYNC: $from/$home_dir/ $target/ ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         echo "?> $line"
         fullname="$target$line"
@@ -256,8 +256,14 @@ is_mounted() {
 
 mount_device() {
     echo "Mounting device $1 at $mnt"
+    mkdir -p "$mnt"
+    sudo umount "$mnt" 2>/dev/null
+    sudo rm -rf "$mnt/*" 2>/dev/null
     if ! mount "$1" "$mnt"; then
         print_error "Failed to mount $1 at $mnt"
+    else 
+        echo "Mounted $1 at $mnt"
+        ls -la "$mnt"
     fi
 }
 
