@@ -63,8 +63,8 @@ run_rsync() {
     echo "Running rsync for home_dir ($script_path)"
     exclude_option="--exclude=$exclude_path"
 
-    rsync_cmd="($exclude_option $from/$home_dir/ $target/ ->) sudo -u pi rsync -av --progress --relative --no-implied-dirs (<-)"
-    echo "Executing: $rsync_cmd"
+    rsync_cmd="sudo -u pi rsync -av --progress --relative --no-implied-dirs $exclude_option $from/$home_dir/ $target/"
+    echo "Exec: $from/$home_dir/ $target/ ($exclude_option) -> sudo -u pi rsync -av --progress --relative --no-implied-dirs (<-)"
     eval "$rsync_cmd" | while read -r line; do
         echo "?> $line"
         fullname="$target$line"
