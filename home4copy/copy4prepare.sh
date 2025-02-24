@@ -70,7 +70,7 @@ run_rsync() {
     echo "Running rsync for home_dir ($script_path)"
     exclude_option="--exclude=$exclude_path"
 
-    rsync_cmd="sudo -u pi rsync -av --progress --relative $exclude_option $from/$home_dir/ $target/"
+    rsync_cmd="sudo -u pi rsync -av --progress --relative --no-implied-dirs $exclude_option $from/$home_dir/./ $target/"
     echo "Executing: $rsync_cmd"
     eval "$rsync_cmd" | while read -r line; do
         if echo "$line" | grep -q "$from" && echo "$line" | grep -q '^/' && ! echo "$line" | grep -q '/$'; then
