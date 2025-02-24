@@ -259,17 +259,18 @@ mount_device() {
     mkdir -p "$mnt"
     sudo umount "$mnt" 2>/dev/null
     sudo rm -rf "$mnt/*" 2>/dev/null
-    if ! mount "$1" "$mnt"; then
+    if ! sudo mount "$1" "$mnt"; then
         print_error "Failed to mount $1 at $mnt"
     else 
         echo "Mounted $1 at $mnt"
+        echo "Listing contents of $mnt:"
         ls -la "$mnt"
     fi
 }
 
 set_from() {
     from="$1"
-    echo "Setting from to $from"
+    echo FROM: "$from"
 }
 
 main "$@"
