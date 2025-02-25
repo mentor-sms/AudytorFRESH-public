@@ -11,7 +11,6 @@ target=/home/pi
 quick=0
 norun=0
 nosync=0
-restore=0
 job=release
 home_dir=home4copy
 timeout=30
@@ -61,9 +60,9 @@ run_rsync() {
     script_path=$(realpath "$0")
     exclude_path="$home_dir/copy4prepare.sh"
     echo "Running rsync for home_dir ($script_path)"
-    exclude_option="--exclude=$exclude_path"
+    exclude_option="--exclude=$home_dir/root4rpi --exclude=$exclude_path"
 
-    echo "Listing contents of $target:"
+    echo "Listing contents of target $target:"
     ls -la "$target"
     
     rsync_cmd="sudo -u pi rsync -avv --progress --relative $exclude_option $from/$home_dir/./ $target/"
@@ -86,17 +85,29 @@ run_rsync() {
     done
 
     
-    echo "Listing contents of $from/$home_dir:"
+    echo "Listing contents of home4copy $from/$home_dir:"
     ls -la "$from/$home_dir"
-
-    echo "Listing contents of $target:"
+    echo ""
+    echo "Listing contents of root4rpi $from/$home_dir/root4rpi:"
+    mkdir -p "$from/$home_dir/root4rpi"
+    ls -la "$from/$home_dir"
+    echo ""
+    echo "Listing contents of target $target:"
     ls -la "$target"
+    echo ""
+    
+    if ! sudo bash -c "$script_path --from $from --mnt $mnt --file '' --target / --quick --norun --home_dir $home_dir/root4rpi --timeout 0"; then
+        echo "Error: The second run of the script failed."
+        exit 1
+    fi
 }
 
 mnt_init() {
   echo FROM: "$from"
   if is_block_device "$from"; then
       echo "$from is a block device"
+      echo "Creating mount directory $mnt"
+      mkdir -p "$mnt"
       if is_mounted "$from"; then
           echo "$from is already mounted"
           mnt=$(mount | grep "$from" | awk '{print $3}')
@@ -107,7 +118,6 @@ mnt_init() {
           mount_device "$from"
           set_from "$mnt"
       fi
-      mkdir -p "$mnt"
   elif is_directory "$from"; then
       echo "$from is a directory"
       set_from "$from"
@@ -148,14 +158,17 @@ main() {
       echo "Starting after $timeout seconds from pressing [Enter]. During this time, disconnect the keyboard and connect the USB drive with $home_dir."
       read -rp "Press [Enter] when ready..."
       echo "Now connect the USB drive containing $home_dir."
+      echo "It will be safe to disconnect the USB drive after the script asks you to press [Enter] again."
       if [ "$timeout" -gt 0 ]; then
           echo "Sleeping for $timeout seconds"
           sleep "$timeout"
       fi
     fi
 
-    echo "Creating target directory $target"
-    sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
+    echo "Creating target directory $target/$home_dir"
+    sudo -u pi mkdir -p "$target/$home_dir" || { print_error "Failed to write to $target/$home_dir"; }
+    ls -la "$target/$home_dir"
+    echo ""
 
     echo "Reloading systemd daemon"
     systemctl daemon-reload
@@ -282,13 +295,13 @@ is_mounted() {
 
 mount_device() {
     echo "Mounting device $1 at $mnt"
-    mkdir -p "$mnt"
     if ! sudo mount "$1" "$mnt"; then
         print_error "Failed to mount $1 at $mnt"
     else 
         echo "Mounted $1 at $mnt"
         echo "Listing contents of $mnt:"
         ls -la "$mnt"
+        echo ""
     fi
 }
 
