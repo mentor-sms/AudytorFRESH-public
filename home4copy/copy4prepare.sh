@@ -69,18 +69,22 @@ run_rsync() {
     echo "RSYNC: $from/./$home_dir/ >> $target/ ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         echo "?> $line"
-        fullname="$target$line"
-        if [[ $fullname != "$target" ]]; then
-            fullname="${fullname//$from\/$home_dir\//}"
-            if [[ $line =~ ^$home_dir ]]; then
-                first_part="${line%% *}"
-                second_part="${line#* }"
+        
+        if [[ ! $line =~ ^[0-9a-zA-Z.] ]]; then
+            continue
+        fi
+        
+        first_part="${line%% *}"
+        second_part="${line#* }"
     
-                if [[ -z $second_part || $second_part == *uptodate* ]]; then
-                    echo "+> $home_dir/$first_part"
-                    handle_file "$home_dir/$first_part"
-                fi
-            fi
+        # Check each character in first_part if it matches [a-zA-Z0-9./_]
+        if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
+            continue
+        fi
+    
+        if [[ -z $second_part || $second_part == *uptodate* ]]; then
+            echo "+> $home_dir/$first_part"
+            handle_file "$home_dir/$first_part"
         fi
     done
 
