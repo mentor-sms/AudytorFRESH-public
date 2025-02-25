@@ -132,9 +132,16 @@ mnt_init() {
           for dev in /dev/sd*1; do
               if is_block_device "$dev"; then
                   echo "Found block device $dev"
-                  from="$mnt"
-                  mnt_init
-                  gotit=1
+                  if is_mounted "$dev"; then
+                      echo "$dev is already mounted"
+                      mnt=$(mount | grep "$dev" | awk '{print $3}')
+                      set_from "$mnt"
+                  else
+                      echo "Mounting $dev"
+                      do_umount=1
+                      mount_device "$dev"
+                      set_from "$mnt"
+                  fi
                   break
               fi
           done
