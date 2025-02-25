@@ -63,7 +63,7 @@ run_rsync() {
     exclude_option="--exclude=$home_dir/root4rpi --exclude=$exclude_path"
 
     echo "Listing contents of target $target:"
-    ls -la "$target"
+    ls -a "$target"
     
     rsync_cmd="sudo -u pi rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     echo "RSYNC: $from/./$home_dir/ >> $target ($exclude_option)"
@@ -84,20 +84,20 @@ run_rsync() {
     
         if [[ -z $second_part || $second_part == *uptodate* ]]; then
             echo "+> $target/$home_dir/$first_part"
-            handle_file "$target/$home_dir/$first_part"
+            handle_file "$target/$first_part"
         fi
     done
 
     
     echo "Listing contents of home4copy $from/$home_dir:"
-    ls -la "$from/$home_dir"
+    ls -a "$from/$home_dir"
     echo ""
     echo "Listing contents of root4rpi $from/$home_dir/root4rpi:"
     mkdir -p "$from/$home_dir/root4rpi"
-    ls -la "$from/$home_dir"
+    ls -a "$from/$home_dir"
     echo ""
     echo "Listing contents of target $target:"
-    ls -la "$target"
+    ls -a "$target"
     echo ""
     
     if ! sudo bash -c "$script_path --from $from --mnt $mnt --file '' --target / --quick --norun --home_dir $home_dir/root4rpi --timeout 0"; then
@@ -171,7 +171,7 @@ main() {
 
     echo "Creating target directory $target/$home_dir"
     sudo -u pi mkdir -p "$target/$home_dir" || { print_error "Failed to write to $target/$home_dir"; }
-    ls -la "$target/$home_dir"
+    ls -a "$target/$home_dir"
     echo ""
 
     echo "Reloading systemd daemon"
@@ -304,7 +304,7 @@ mount_device() {
     else 
         echo "Mounted $1 at $mnt"
         echo "Listing contents of $mnt:"
-        ls -la "$mnt"
+        ls -a "$mnt"
         echo ""
     fi
 }
