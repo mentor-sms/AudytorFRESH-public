@@ -82,6 +82,7 @@ run_rsync() {
             echo "+> $target/$home_dir/$first_part"
             handle_file "$target/$first_part"
         fi
+        echo ""
     done
 
     
