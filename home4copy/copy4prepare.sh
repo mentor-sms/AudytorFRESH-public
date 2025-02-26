@@ -69,17 +69,16 @@ run_rsync() {
     eval "$rsync_cmd" | while read -r line; do
         echo "?> $line"
         
-        if [[ ! $line =~ ^[0-9a-zA-Z.] ]]; then
-            continue
-        fi
-        
         first_part="${line%% *}"
         second_part="${line#* }"
+        echo "1=$first_part"
+        echo "2=$second_part"
     
         # Check each character in first_part if it matches [a-zA-Z0-9./_]
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
             continue
         fi
+        echo "^ is path."
     
         if [[ -z $second_part || $second_part == *uptodate* ]]; then
             echo "+> $target/$home_dir/$first_part"
@@ -93,7 +92,7 @@ run_rsync() {
     echo ""
     echo "Listing contents of root4rpi $from/$home_dir/root4rpi:"
     mkdir -p "$from/$home_dir/root4rpi"
-    ls -a "$from/$home_dir"
+    ls -a "$from/$home_dir/root4rpi"
     echo ""
     echo "Listing contents of target $target:"
     ls -a "$target"
