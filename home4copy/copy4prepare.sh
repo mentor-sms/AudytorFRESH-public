@@ -106,7 +106,7 @@ run_rsync() {
 }
 
 mnt_mnt() {
-  local mnt_path=$1
+  local from_path=$1
   echo "Creating mount directory $mnt_path"
   mkdir -p "$mnt_path"
   if is_mounted "$from"; then
@@ -116,7 +116,16 @@ mnt_mnt() {
   else
       echo "Mounting $from"
       do_umount=1
-      mount_device "$from"
+      
+      echo "Mounting device $from at $mnt"
+      if ! sudo mount "$from" "$mnt"; then
+          print_error "Failed to mount $from at $mnt"
+      else 
+          echo "Mounted $from at $mnt"
+          echo "Listing contents of $mnt:"
+          ls -a "$mnt"
+          echo ""
+      fi
       set_from "$mnt_path"
   fi
 }
@@ -137,7 +146,8 @@ mnt_init() {
               if is_block_device "$dev"; then
                   echo "Found block device $dev"
                   gotit=1
-                  mnt_mnt "$dev"
+                  from=$dev
+                  mnt_mnt "$mnt"
                   break
               fi
           done
@@ -298,18 +308,6 @@ is_directory() {
 
 is_mounted() {
     mount | grep -q "on $1 "
-}
-
-mount_device() {
-    echo "Mounting device $1 at $mnt"
-    if ! sudo mount "$1" "$mnt"; then
-        print_error "Failed to mount $1 at $mnt"
-    else 
-        echo "Mounted $1 at $mnt"
-        echo "Listing contents of $mnt:"
-        ls -a "$mnt"
-        echo ""
-    fi
 }
 
 set_from() {
