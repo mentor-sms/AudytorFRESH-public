@@ -58,7 +58,7 @@ handle_file() {
 
 run_rsync() {
     exclude_path="$home_dir/copy4prepare.sh"
-    echo "Running rsync for home_dir ($script_path)"
+    echo "Running rsync for home_dir (copy4prepare)"
     exclude_option="--exclude=$home_dir/root4rpi --exclude=$exclude_path"
 
     echo "Listing contents of target $target:"
@@ -106,17 +106,18 @@ run_rsync() {
 }
 
 mnt_mnt() {
-  echo "Creating mount directory $mnt"
-  mkdir -p "$mnt"
+  local mnt_path=$1
+  echo "Creating mount directory $mnt_path"
+  mkdir -p "$mnt_path"
   if is_mounted "$from"; then
       echo "$from is already mounted"
-      mnt=$(mount | grep "$from" | awk '{print $3}')
-      set_from "$mnt"
+      mnt_path=$(mount | grep "$from" | awk '{print $3}')
+      set_from "$mnt_path"
   else
       echo "Mounting $from"
       do_umount=1
       mount_device "$from"
-      set_from "$mnt"
+      set_from "$mnt_path"
   fi
 }
 
@@ -124,7 +125,7 @@ mnt_init() {
   echo FROM: "$from"
   if is_block_device "$from"; then
       echo "$from is a block device"
-      mnt_mnt
+      mnt_mnt "$from"
   elif is_directory "$from"; then
       echo "$from is a directory"
       set_from "$from"
@@ -135,16 +136,8 @@ mnt_init() {
           for dev in /dev/sd*1; do
               if is_block_device "$dev"; then
                   echo "Found block device $dev"
-                  if is_mounted "$dev"; then
-                      echo "$dev is already mounted"
-                      mnt=$(mount | grep "$dev" | awk '{print $3}')
-                      set_from "$mnt"
-                  else
-                      echo "Mounting $dev"
-                      do_umount=1
-                      mount_device "$dev"
-                      set_from "$mnt"
-                  fi
+                  gotit=1
+                  mnt_mnt "$dev"
                   break
               fi
           done
