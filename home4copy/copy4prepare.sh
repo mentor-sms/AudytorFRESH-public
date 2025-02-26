@@ -99,7 +99,7 @@ run_rsync() {
     echo ""
     
     script_path=$(realpath "$0")
-    if ! sudo bash -c "$script_path --from $from/root4rpi --mnt $mnt/root4rpi --file '' --target / --quick --norun --home_dir $home_dir/root4rpi --timeout 0"; then
+    if ! sudo bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --home_dir root4rpi --timeout 0"; then
         echo "Error: The second run of the script failed."
         exit 1
     fi
