@@ -108,7 +108,7 @@ run_rsync() {
 mnt_mnt() {
   echo "Creating mount directory $mnt"
   mkdir -p "$mnt"
-  if is_mounted "$from"; then
+  if is_mounted "$from" "$mnt"; then
       echo "$from is already mounted"
       mnt=$(mount | grep "$from" | awk '{print $3}')
       set_from "$mnt"
@@ -306,7 +306,7 @@ is_directory() {
 }
 
 is_mounted() {
-    mount | grep -q "on $1 "
+    mount | grep -q "$1 on $2"
 }
 
 set_from() {
