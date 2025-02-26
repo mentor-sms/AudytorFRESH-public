@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=0.0.4
+WERSJA=0.0.5
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
