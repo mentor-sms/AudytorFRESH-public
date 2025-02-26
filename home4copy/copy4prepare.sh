@@ -99,7 +99,7 @@ run_rsync() {
     echo ""
     
     script_path=$(realpath "$0")
-    if ! sudo bash -c "$script_path --from $from --mnt $mnt --file '' --target / --quick --norun --home_dir $home_dir/root4rpi --timeout 0"; then
+    if ! sudo bash -c "$script_path --from $from/root4rpi --mnt $mnt/root4rpi --file '' --target / --quick --norun --home_dir $home_dir/root4rpi --timeout 0"; then
         echo "Error: The second run of the script failed."
         exit 1
     fi
@@ -182,7 +182,7 @@ main() {
     fi
 
     echo "Creating target directory $target"
-    sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target/$home_dir"; }
+    sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
     ls -a "$target"
     echo ""
 
