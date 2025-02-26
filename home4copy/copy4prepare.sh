@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=0.0.3
+WERSJA=0.0.4
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -78,7 +78,7 @@ run_rsync() {
         fi
         echo "^ is path."
     
-        if [[ -z $second_part || $second_part == *uptodate* ]]; then
+        if [[ $first_part == "$second_part" || $second_part == *uptodate* ]]; then
             echo "+> $target/$home_dir/$first_part"
             handle_file "$target/$first_part"
         fi
