@@ -71,8 +71,6 @@ run_rsync() {
         
         first_part="${line%% *}"
         second_part="${line#* }"
-        echo "1=$first_part"
-        echo "2=$second_part"
     
         # Check each character in first_part if it matches [a-zA-Z0-9./_]
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
