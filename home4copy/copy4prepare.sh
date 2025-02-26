@@ -57,7 +57,6 @@ handle_file() {
 }
 
 run_rsync() {
-    script_path=$(realpath "$0")
     exclude_path="$home_dir/copy4prepare.sh"
     echo "Running rsync for home_dir ($script_path)"
     exclude_option="--exclude=$home_dir/root4rpi --exclude=$exclude_path"
@@ -106,22 +105,26 @@ run_rsync() {
     fi
 }
 
+mnt_mnt() {
+  echo "Creating mount directory $mnt"
+  mkdir -p "$mnt"
+  if is_mounted "$from"; then
+      echo "$from is already mounted"
+      mnt=$(mount | grep "$from" | awk '{print $3}')
+      set_from "$mnt"
+  else
+      echo "Mounting $from"
+      do_umount=1
+      mount_device "$from"
+      set_from "$mnt"
+  fi
+}
+
 mnt_init() {
   echo FROM: "$from"
   if is_block_device "$from"; then
       echo "$from is a block device"
-      echo "Creating mount directory $mnt"
-      mkdir -p "$mnt"
-      if is_mounted "$from"; then
-          echo "$from is already mounted"
-          mnt=$(mount | grep "$from" | awk '{print $3}')
-          set_from "$mnt"
-      else
-          echo "Mounting $from"
-          do_umount=1
-          mount_device "$from"
-          set_from "$mnt"
-      fi
+      mnt_mnt
   elif is_directory "$from"; then
       echo "$from is a directory"
       set_from "$from"
@@ -176,9 +179,9 @@ main() {
       fi
     fi
 
-    echo "Creating target directory $target/$home_dir"
-    sudo -u pi mkdir -p "$target/$home_dir" || { print_error "Failed to write to $target/$home_dir"; }
-    ls -a "$target/$home_dir"
+    echo "Creating target directory $target"
+    sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target/$home_dir"; }
+    ls -a "$target"
     echo ""
 
     echo "Reloading systemd daemon"
