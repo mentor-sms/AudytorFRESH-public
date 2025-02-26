@@ -99,6 +99,7 @@ run_rsync() {
     ls -a "$target"
     echo ""
     
+    script_path=$(realpath "$0")
     if ! sudo bash -c "$script_path --from $from --mnt $mnt --file '' --target / --quick --norun --home_dir $home_dir/root4rpi --timeout 0"; then
         echo "Error: The second run of the script failed."
         exit 1
@@ -106,13 +107,12 @@ run_rsync() {
 }
 
 mnt_mnt() {
-  local from_path=$1
-  echo "Creating mount directory $mnt_path"
-  mkdir -p "$mnt_path"
+  echo "Creating mount directory $mnt"
+  mkdir -p "$mnt"
   if is_mounted "$from"; then
       echo "$from is already mounted"
-      mnt_path=$(mount | grep "$from" | awk '{print $3}')
-      set_from "$mnt_path"
+      mnt=$(mount | grep "$from" | awk '{print $3}')
+      set_from "$mnt"
   else
       echo "Mounting $from"
       do_umount=1
@@ -126,7 +126,7 @@ mnt_mnt() {
           ls -a "$mnt"
           echo ""
       fi
-      set_from "$mnt_path"
+      set_from "$mnt"
   fi
 }
 
