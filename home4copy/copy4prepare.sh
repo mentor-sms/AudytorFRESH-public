@@ -67,16 +67,14 @@ run_rsync() {
     rsync_cmd="sudo -u pi rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     echo "RSYNC: $from/./$home_dir/ >> $target ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
-        echo "?> $line"
-        
         first_part="${line%% *}"
         second_part="${line#* }"
     
         # Check each character in first_part if it matches [a-zA-Z0-9./_]
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
+            echo "_> $line"
             continue
         fi
-        echo "^ is path."
     
         if [[ $first_part == "$second_part" || $second_part == *uptodate* ]]; then
             echo "+> $target/$home_dir/$first_part"
