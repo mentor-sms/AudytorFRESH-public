@@ -276,6 +276,9 @@ parse() {
                 shift
                 break
                 ;;
+            --job)
+                break
+                ;;
             *)
                 echo "Unknown option: $1"
                 show_help
