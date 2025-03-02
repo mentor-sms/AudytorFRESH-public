@@ -272,11 +272,11 @@ parse() {
                 show_help
                 exit 0
                 ;;
-            --)
-                shift
+            --job)
                 break
                 ;;
-            --job)
+            --)
+                shift
                 break
                 ;;
             *)
