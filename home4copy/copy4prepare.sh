@@ -40,9 +40,7 @@ handle_file() {
 
     if file "$_file" | grep -q 'text'; then
         echo "Converting $_file to Unix format"
-        if ! dos2unix "$_file"; then
-            print_error "Failed to convert file to Unix format"
-        fi
+        dos2unix "$_file" || true
     fi
 
     if [[ "$_file" == *.sh ]]; then
