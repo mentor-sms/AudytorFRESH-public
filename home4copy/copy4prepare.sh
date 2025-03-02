@@ -273,6 +273,7 @@ parse() {
                 exit 0
                 ;;
             --job)
+                shift
                 break
                 ;;
             --)
