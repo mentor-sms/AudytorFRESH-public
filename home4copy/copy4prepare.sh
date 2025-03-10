@@ -81,7 +81,6 @@ run_rsync() {
         echo ""
     done
 
-    
     echo "Listing contents of home4copy $from/$home_dir:"
     ls -a "$from/$home_dir"
     echo ""
