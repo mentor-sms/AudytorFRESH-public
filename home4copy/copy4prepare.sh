@@ -48,7 +48,7 @@ handle_file() {
         chmod +x "$_file" || { print_error "Failed to make $_file executable"; }
 
         echo "Checking if $_file is a valid bash script"
-        if ! sudo -u pi bash -n "$_file"; then
+        if ! sudo -E -u pi bash -n "$_file"; then
             print_error "$_file is not a valid bash script"
         fi
     fi
@@ -62,7 +62,7 @@ run_rsync() {
     echo "Listing contents of target $target:"
     ls -a "$target"
     
-    rsync_cmd="sudo -u pi rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+    rsync_cmd="sudo -E -u pi rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     echo "RSYNC: $from/./$home_dir/ >> $target ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
@@ -94,7 +94,7 @@ run_rsync() {
     
     if [ "$norun" -eq 1 ]; then
       script_path=$(realpath "$0")
-      if ! sudo bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --home_dir root4rpi --timeout 0"; then
+      if ! sudo -E bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --home_dir root4rpi --timeout 0"; then
           echo "Error: The second run of the script failed."
           exit 1
       fi
@@ -179,7 +179,7 @@ main() {
     fi
 
     echo "Creating target directory $target"
-    sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
+    sudo -E -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
     ls -a "$target"
     echo ""
 
@@ -210,7 +210,7 @@ main() {
             sleep 3
         fi
         echo "Running $run with job $job..."
-        sudo "$run" "$job"
+        sudo -E "$run" "$job"
     fi
 }
 
