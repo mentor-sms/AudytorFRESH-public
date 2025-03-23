@@ -210,7 +210,7 @@ main() {
             sleep 3
         fi
         echo "Running $run with job $job..."
-        sudo -E "$run" "$job"
+        sudo -E "$run" "$job" | sudo tee -a /home/pi/.mentor/prepare4lab.log
     fi
 }
 
