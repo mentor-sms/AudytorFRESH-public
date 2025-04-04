@@ -20,7 +20,7 @@ $ sudo apt install dos2unix
    (GitHubUserContent.com)
 ```bash
 $ cd ~ && curl -O https://raw.githubusercontent.com/mentor-sms/AudytorFRESH-public/release/home4copy/copy4prepare.sh
-$ dos2unix ~/copy4prepare.sh
+$ dos2unix -f -k ~/copy4prepare.sh
 $ chmod +x ~/copy4prepare.sh
 $ ~/copy4prepare.sh --help
 $ sudo -E ~/copy4prepare.sh
