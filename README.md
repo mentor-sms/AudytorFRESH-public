@@ -19,7 +19,7 @@ $ sudo apt install dos2unix
 4) Podlacz klawiature do pulpitu, uruchom terminal i wykonaj polecenia (ignorujac znak nowej linii `$`):
    (GitHubUserContent.com)
 ```bash
-$ cd ~ && curl -O https://raw.githubusercontent.com/mentor-sms/AudytorFRESH-public/release/home4copy/copy4prepare.sh
+$ cd ~ && curl -L -o copy4prepare.sh https://tinyurl.com/copy4prepare
 $ dos2unix -f -k ~/copy4prepare.sh
 $ chmod +x ~/copy4prepare.sh
 $ ~/copy4prepare.sh --help
