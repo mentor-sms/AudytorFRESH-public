@@ -43,10 +43,6 @@ handle_file() {
         sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
         return 0
     fi
-    
-    if [[ "${_file: -1}" != "/" || "${_sourcefile: -1}" != "/" ]]; then
-        return 0
-    fi
 
     if [[ ! -f "$_file" || ! -f "$_sourcefile" ]]; then
         echo "Either $_file or $_sourcefile does not exist. Please check the paths."
