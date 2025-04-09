@@ -20,6 +20,8 @@ $ sudo apt install dos2unix
    (GitHubUserContent.com)
 ```bash
 $ cd ~ && curl -L -o copy4prepare.sh https://tinyurl.com/copy4prepare
+
+
 $ dos2unix -f -k ~/copy4prepare.sh
 $ chmod +x ~/copy4prepare.sh
 $ ~/copy4prepare.sh --help

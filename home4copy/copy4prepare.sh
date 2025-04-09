@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.0
+WERSJA=1.0.1
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -38,6 +38,14 @@ show_help() {
 handle_file() {
     local _file=$1
     local _sourcefile=$2
+    
+    if [[ ! -d "$_file" ]]; then
+        sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
+    fi
+    
+    if [[ "${_file: -1}" != "/" || "${_sourcefile: -1}" != "/" ]]; then
+        return 0
+    fi
 
     if [[ ! -f "$_file" || ! -f "$_sourcefile" ]]; then
         echo "Either $_file or $_sourcefile does not exist. Please check the paths."
