@@ -41,6 +41,7 @@ handle_file() {
     
     if [[ ! -d "$_file" ]]; then
         sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
+        return 0
     fi
     
     if [[ "${_file: -1}" != "/" || "${_sourcefile: -1}" != "/" ]]; then
