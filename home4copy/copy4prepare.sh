@@ -202,7 +202,7 @@ main() {
 
     echo "Creating target directory $target"
     sudo -E mkdir -p "$target" || { print_error "Failed to write to $target"; }
-    sudo -E chown -R pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
+    sudo -E chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
     ls -a "$target"
     echo ""
 
