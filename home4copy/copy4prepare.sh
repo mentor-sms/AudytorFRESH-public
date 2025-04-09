@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.2
+WERSJA=1.0.5
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -43,6 +43,11 @@ handle_file() {
         sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
         return 0
     fi
+    
+    if [[ "${_file: -1}" == "/" || "${_sourcefile: -1}" == "/" ]]; then
+        echo "Ignoring directory $_file"
+        return 0
+    fi
 
     if [[ ! -f "$_file" || ! -f "$_sourcefile" ]]; then
         echo "Either $_file or $_sourcefile does not exist. Please check the paths."
@@ -56,10 +61,11 @@ handle_file() {
 
     if [[ "$file_hash" != "$sourcefile_hash" ]]; then
         echo "Files are different. Updating $_file with $_sourcefile."
-        sudo cp -rf "$_sourcefile" "$_file"
+        sudo rm -f "$_file" || { print_error "Failed to remove $_file"; }
+        sudo cp -rf "$_sourcefile" "$_file" || { print_error "Failed to copy $_sourcefile to $_file"; }
     fi
         
-    sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
+    sudo chown pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
     
     if file "$_file" | grep -q 'text'; then
         echo "Converting $_file to Unix format"
@@ -85,7 +91,7 @@ run_rsync() {
     echo "Listing contents of target $target:"
     ls -a "$target"
     
-    rsync_cmd="sudo rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+    rsync_cmd="sudo -E rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
@@ -108,17 +114,6 @@ run_rsync() {
         fi
         echo ""
     done
-
-    echo "Listing contents of home4copy $from/$home_dir:"
-    ls -a "$from/$home_dir"
-    echo ""
-    echo "Listing contents of root4rpi $from/$home_dir/root4rpi:"
-    mkdir -p "$from/$home_dir/root4rpi"
-    ls -a "$from/$home_dir/root4rpi"
-    echo ""
-    echo "Listing contents of target $target:"
-    ls -a "$target"
-    echo ""
     
     if [ "$norun" -eq 1 ]; then
       script_path=$(realpath "$0")
@@ -127,12 +122,11 @@ run_rsync() {
           exit 1
       fi
     fi
-    
 }
 
 mnt_mnt() {
   echo "Creating mount directory $mnt"
-  mkdir -p "$mnt"
+  sudo -E -u pi mkdir -p "$mnt"
   if is_mounted "$from" "$mnt"; then
       echo "$from is already mounted"
       mnt=$(mount | grep "$from" | awk '{print $3}')
@@ -207,7 +201,8 @@ main() {
     fi
 
     echo "Creating target directory $target"
-    sudo -E -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
+    sudo -E mkdir -p "$target" || { print_error "Failed to write to $target"; }
+    sudo -E chown -R pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
     ls -a "$target"
     echo ""
 
@@ -238,7 +233,7 @@ main() {
             sleep 3
         fi
         echo "Running $run with job $job..."
-        sudo -E "$run" "$job" | sudo tee -a /home/pi/.mentor/prepare4lab.log
+        sudo -E "$run" "$job" | tee -a "$target"/.mentor/prepare4lab.log
     fi
 }
 
