@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.1
+WERSJA=1.0.2
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -85,7 +85,7 @@ run_rsync() {
     echo "Listing contents of target $target:"
     ls -a "$target"
     
-    rsync_cmd="rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+    rsync_cmd="sudo rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
