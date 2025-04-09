@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.5
+WERSJA=2.0.0
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -40,7 +40,7 @@ handle_file() {
     local _sourcefile=$2
     
     if [[ ! -d "$_file" ]]; then
-        sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
+        # sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
         return 0
     fi
     
@@ -65,7 +65,7 @@ handle_file() {
         sudo cp -rf "$_sourcefile" "$_file" || { print_error "Failed to copy $_sourcefile to $_file"; }
     fi
         
-    sudo chown pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
+    # sudo chown pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
     
     if file "$_file" | grep -q 'text'; then
         echo "Converting $_file to Unix format"
@@ -84,14 +84,13 @@ handle_file() {
 }
 
 run_rsync() {
-    exclude_path="$home_dir/copy4prepare.sh"
     echo "Running rsync for home_dir (copy4prepare)"
-    exclude_option="--exclude=$home_dir/root4rpi --exclude=$exclude_path"
+    exclude_option="--exclude=$target/root4rpi --exclude=$target/copy4prepare.sh --exclude=$mnt"
 
     echo "Listing contents of target $target:"
     ls -a "$target"
     
-    rsync_cmd="sudo -E rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+    rsync_cmd="sudo -E rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
     echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
@@ -112,7 +111,7 @@ run_rsync() {
                 handle_file "$target/$first_part" "$from/$home_dir/$first_part"
             fi
         fi
-        echo ""
+        echo "x> $line"
     done
     
     if [ "$norun" -eq 1 ]; then
@@ -317,6 +316,7 @@ parse() {
 }
 
 print_error() {
+    umount "$mnt" || true
     echo "Error: $1"
     exit 1
 }
