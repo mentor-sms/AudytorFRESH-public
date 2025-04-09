@@ -86,6 +86,9 @@ handle_file() {
 run_rsync() {
     echo "Running rsync for home_dir (copy4prepare)"
     exclude_option="--exclude=$target/root4rpi --exclude=$target/copy4prepare.sh --exclude=$mnt"
+    
+    umount "$mnt" || true
+    sudo chown -R pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
 
     echo "Listing contents of target $target:"
     ls -a "$target"
