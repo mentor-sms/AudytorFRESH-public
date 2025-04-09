@@ -37,7 +37,25 @@ show_help() {
 
 handle_file() {
     local _file=$1
+    local _sourcefile=$2
 
+    if [[ ! -f "$_file" || ! -f "$_sourcefile" ]]; then
+        echo "Either $_file or $_sourcefile does not exist. Please check the paths."
+        return 1
+    fi
+    
+    local file_hash
+    local sourcefile_hash
+    file_hash=$(sha256sum "$_file" | awk '{print $1}')
+    sourcefile_hash=$(sha256sum "$_sourcefile" | awk '{print $1}')
+
+    if [[ "$file_hash" != "$sourcefile_hash" ]]; then
+        echo "Files are different. Updating $_file with $_sourcefile."
+        sudo cp -rf "$_sourcefile" "$_file"
+    fi
+        
+    sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
+    
     if file "$_file" | grep -q 'text'; then
         echo "Converting $_file to Unix format"
         dos2unix -f -k "$_file" || true
@@ -62,8 +80,8 @@ run_rsync() {
     echo "Listing contents of target $target:"
     ls -a "$target"
     
-    rsync_cmd="sudo -E -u pi rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
-    echo "RSYNC: $from/./$home_dir/ >> $target ($exclude_option)"
+    rsync_cmd="rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+    echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
         second_part="${line#* }"
@@ -74,9 +92,14 @@ run_rsync() {
             continue
         fi
     
-        if [[ $first_part == "$second_part" || $second_part == *uptodate* ]]; then
-            echo "+> $target/$home_dir/$first_part"
-            handle_file "$target/$first_part"
+        if [[ $first_part == "$second_part" ]]; then
+            echo "+> $target/$first_part"
+            handle_file "$target/$first_part" "$from/$home_dir/$first_part"
+        else
+            if [[ $second_part == *uptodate* ]]; then
+                echo ".> $target/$first_part"
+                handle_file "$target/$first_part" "$from/$home_dir/$first_part"
+            fi
         fi
         echo ""
     done
