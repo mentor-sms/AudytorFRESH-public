@@ -117,18 +117,24 @@ run_rsync() {
         echo "x> $line" | tee -a copy4prepare.log
     done
 
-    if [ "$norun" -eq 1 ]; then
+    if [[ "$norun" -eq 0 ]] && [[ -d $from/$home_dir/root4rpi ]]; then
       script_path=$(realpath "$0")
       if ! sudo -E bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --root --home_dir root4rpi --timeout 0" | tee copy4root.log; then
           echo "Error: The second run of the script failed." | tee -a copy4prepare.log
           exit 1
       fi
+    elif [[ "$norun" -eq 0 ]]; then
+      echo "No root4rpi directory found in $from/$home_dir. Skipping the second run." | tee -a copy4prepare.log
     fi
 }
 
 mnt_mnt() {
   echo "Creating mount directory $mnt" | tee -a copy4prepare.log
-  sudo -E "$([ "$use_root" -eq 1 ] && echo "" || echo "-u pi")" mkdir -p "$mnt"
+  if [[ $use_root -eq 1 ]]; then
+      sudo -E -u pi mkdir -p "$mnt"
+  else
+      sudo -E mkdir -p "$mnt"
+  fi
   if is_mounted "$from" "$mnt"; then
       echo "$from is already mounted" | tee -a copy4prepare.log
       mnt=$(mount | grep "$from" | awk '{print $3}')
