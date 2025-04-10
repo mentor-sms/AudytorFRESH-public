@@ -94,7 +94,6 @@ run_rsync() {
         exclude_option="$exclude_option --exclude=${mntdir#"$target"/}"
     fi
     
-    umount "$mntdir" || true
     if [ "$use_root" -eq 1 ]; then
         rsync_cmd="sudo -E rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     else
@@ -133,6 +132,13 @@ run_rsync() {
       fi
     elif [[ "$norun" -eq 0 ]]; then
       echo "No root4rpi directory found in $from/$home_dir. Skipping the second run." | tee -a copy4prepare.log
+    fi
+    
+    if [ "$do_umount" -eq 1 ]; then
+        echo "Unmounting $mntdir" | tee -a copy4prepare.log
+        if ! umount "$mntdir"; then
+            print_error "Failed to unmount $mntdir"
+        fi
     fi
 }
 
@@ -333,7 +339,12 @@ parse() {
 }
 
 print_error() {
-    umount "$mntdir" || true
+    if [ "$do_umount" -eq 1 ]; then
+        echo "Unmounting $mntdir" | tee -a copy4prepare.log
+        if ! umount "$mntdir"; then
+            print_error "Failed to unmount $mntdir"
+        fi
+    fi
     echo "Error: $1" | tee -a copy4prepare.log
     exit 1
 }
