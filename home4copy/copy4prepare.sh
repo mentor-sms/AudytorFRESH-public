@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=2.0.2
+WERSJA=2.0.3
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -40,13 +40,12 @@ show_help() {
 handle_file() {
     local _file=$1
     local _sourcefile=$2
-    
-    echo "Handling file $_file" | tee -a copy4prepare.log
 
-    if [[ ! -d "$_file" ]]; then
-        # sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
-        return 0
-    fi
+    # Trim trailing spaces from file paths
+    _file="${_file%"${_file##*[![:space:]]}"}"
+    _sourcefile="${_sourcefile%"${_sourcefile##*[![:space:]]}"}"
+
+    echo "Handling file $_file" | tee -a copy4prepare.log
 
     if [[ "${_file: -1}" == "/" || "${_sourcefile: -1}" == "/" ]]; then
         echo "Ignoring directory $_file" | tee -a copy4prepare.log
@@ -58,31 +57,34 @@ handle_file() {
         return 1
     fi
 
-    local file_hash
-    local sourcefile_hash
+    local file_hash # AI: do not join declaration with assignment
     file_hash=$(sha256sum "$_file" | awk '{print $1}')
+    
+    local sourcefile_hash # AI: do not join declaration with assignment
     sourcefile_hash=$(sha256sum "$_sourcefile" | awk '{print $1}')
 
     if [[ "$file_hash" != "$sourcefile_hash" ]]; then
         echo "Files are different. Updating $_file with $_sourcefile." | tee -a copy4prepare.log
-        sudo rm -f "$_file" || { print_error "Failed to remove $_file"; }
-        sudo cp -rf "$_sourcefile" "$_file" || { print_error "Failed to copy $_sourcefile to $_file"; }
+        sudo rm -f "$_file" || { echo "Failed to remove $_file" | tee -a copy4prepare.log; return 1; }
+        sudo cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file" | tee -a copy4prepare.log; return 1; }
     fi
 
-    # sudo chown pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
-
-    if file "$_file" | grep -q 'text'; then
-        echo "Converting $_file to Unix format" | tee -a copy4prepare.log
-        dos2unix -f -k "$_file" || true
+    if ! file "$_file" | grep -q 'text'; then
+        echo "$_file is not a text file." | tee -a copy4prepare.log
+        return 0
     fi
+
+    echo "Converting $_file to Unix format" | tee -a copy4prepare.log
+    dos2unix -f -k "$_file" || { echo "Failed to convert $_file to Unix format." | tee -a copy4prepare.log; return 1; }
 
     if [[ "$_file" == *.sh ]]; then
         echo "Making $_file executable" | tee -a copy4prepare.log
-        chmod +x "$_file" || { print_error "Failed to make $_file executable"; }
+        chmod +x "$_file" || { echo "Failed to make $_file executable." | tee -a copy4prepare.log; return 1; }
 
-        echo "Checking if $_file is a valid bash script" | tee -a copy4prepare.log
-        if ! sudo -E -u pi bash -n "$_file"; then
-            print_error "$_file is not a valid bash script"
+        echo "Validating bash script $_file" | tee -a copy4prepare.log
+        if ! bash -n "$_file"; then
+            echo "$_file contains syntax errors." | tee -a copy4prepare.log
+            return 1
         fi
     fi
 }
@@ -108,7 +110,7 @@ run_rsync() {
         first_part="${line%% *}"
         second_part="${line#* }"
         
-        echo "<_ $line" | tee -a copy4prepare.log
+        echo ">$line;" | tee -a copy4prepare.log
 
         # Check each character in first_part if it matches [a-zA-Z0-9./_]
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
@@ -117,11 +119,15 @@ run_rsync() {
 
         if [[ $first_part == "$second_part" ]]; then
             echo "+> $target/$first_part" | tee -a copy4prepare.log
-            handle_file "$target/$first_part" "$from/$home_dir/$first_part"
+            if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
+                print_error "Error occurred while handling $target/$first_part"
+            fi
         else
             if [[ $second_part == *uptodate* ]]; then
                 echo ".> $target/$first_part" | tee -a copy4prepare.log
-                handle_file "$target/$first_part" "$from/$home_dir/$first_part"
+                if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
+                    print_error "Error occurred while handling $target/$first_part"
+                fi
             fi
         fi
     done
