@@ -134,8 +134,13 @@ run_rsync() {
       echo "No root4rpi directory found in $from/$home_dir. Skipping the second run." | tee -a copy4prepare.log
     fi
     
+    un_un
+}
+
+un_un() {
     if [ "$do_umount" -eq 1 ]; then
         echo "Unmounting $mntdir" | tee -a copy4prepare.log
+        do_umount=0
         if ! umount "$mntdir"; then
             print_error "Failed to unmount $mntdir"
         fi
@@ -234,12 +239,7 @@ main() {
         run_rsync
     fi
 
-    if [ "$do_umount" -eq 1 ]; then
-        echo "Unmounting $mntdir" | tee -a copy4prepare.log
-        if ! umount "$mntdir"; then
-            print_error "Failed to unmount $mntdir"
-        fi
-    fi
+    un_un
 
     if [ "$norun" -ne 1 ]; then
         echo "Will run $run with job $job" | tee -a copy4prepare.log
