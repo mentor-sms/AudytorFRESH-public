@@ -99,10 +99,10 @@ run_rsync() {
     fi
     
     if [ "$use_root" -eq 1 ]; then
-        rsync_cmd="sudo -E rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+        rsync_cmd="sudo rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     else
         sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
-        rsync_cmd="sudo -E rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
+        rsync_cmd="sudo rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
     fi
     echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)" | tee -a copy4prepare.log
     echo "CMD: $rsync_cmd" | tee -a copy4prepare.log
@@ -134,7 +134,7 @@ run_rsync() {
 
     if [[ "$norun" -eq 0 ]] && [[ -d $from/$home_dir/root4rpi ]]; then
       script_path=$(realpath "$0")
-      if ! sudo -E bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --root --home_dir root4rpi --timeout 0" | tee copy4root.log; then
+      if ! sudo bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --root --home_dir root4rpi --timeout 0" | tee copy4root.log; then
           echo "Error: The second run of the script failed." | tee -a copy4prepare.log
           exit 1
       fi
@@ -158,9 +158,9 @@ un_un() {
 mnt_mnt() {
   echo "Creating mount directory $mntdir" | tee -a copy4prepare.log
   if [[ $use_root -eq 1 ]]; then
-      sudo -E -u pi mkdir -p "$mntdir"
+      sudo -u pi mkdir -p "$mntdir"
   else
-      sudo -E mkdir -p "$mntdir"
+      sudo mkdir -p "$mntdir"
   fi
   if is_mounted "$from" "$mntdir"; then
       echo "$from is already mounted" | tee -a copy4prepare.log
@@ -232,12 +232,12 @@ main() {
     fi
 
     echo "Creating target directory $target" | tee -a copy4prepare.log
-    sudo -E mkdir -p "$target" || { print_error "Failed to write to $target"; }
+    sudo mkdir -p "$target" || { print_error "Failed to write to $target"; }
     if [ "$use_root" -ne 1 ]; then
-        sudo -E chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
+        sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
     fi
     echo "Reloading systemd daemon" | tee -a copy4prepare.log
-    systemctl daemon-reload
+    sudo systemctl daemon-reload
     sleep 5
     lsblk
 
@@ -258,7 +258,7 @@ main() {
             sleep 3
         fi
         echo "Running $run with job $job..." | tee -a copy4prepare.log
-        sudo -E "$run" "$job" | tee -a "$target"/.mentor/prepare4lab.log
+        sudo -E bash -c "$run \"$job\" | tee -a \"$target\"/.mentor/prepare4lab.log"
     fi
 }
 
