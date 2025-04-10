@@ -105,10 +105,12 @@ run_rsync() {
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
         second_part="${line#* }"
+        
+        echo "<_ $line" | tee -a copy4prepare.log
 
         # Check each character in first_part if it matches [a-zA-Z0-9./_]
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
-            echo "_> $line" | tee -a copy4prepare.log
+            echo "_> ignored" | tee -a copy4prepare.log
             continue
         fi
 
@@ -119,9 +121,10 @@ run_rsync() {
             if [[ $second_part == *uptodate* ]]; then
                 echo ".> $target/$first_part" | tee -a copy4prepare.log
                 handle_file "$target/$first_part" "$from/$home_dir/$first_part"
+            else
+                echo "x> unknown" | tee -a copy4prepare.log
             fi
         fi
-        echo "x> $line" | tee -a copy4prepare.log
     done
 
     if [[ "$norun" -eq 0 ]] && [[ -d $from/$home_dir/root4rpi ]]; then
