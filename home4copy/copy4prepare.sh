@@ -40,6 +40,8 @@ show_help() {
 handle_file() {
     local _file=$1
     local _sourcefile=$2
+    
+    echo "Handling file $_file" | tee -a copy4prepare.log
 
     if [[ ! -d "$_file" ]]; then
         # sudo chown -R pi:pi "$_file" || { print_error "Failed to change ownership of $_file"; }
