@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=2.0.0
+WERSJA=2.0.1
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -90,11 +90,14 @@ run_rsync() {
     exclude_option="--exclude=$target/root4rpi --exclude=$target/copy4prepare.sh --exclude=$mnt"
 
     umount "$mnt" || true
-    if [ "$use_root" -ne 1 ]; then
-        sudo chown -R pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
+    if [ "$use_root" -eq 1 ]; then
+        rsync_cmd="sudo -E rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+    else
+        sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
+        rsync_cmd="sudo -E rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
     fi
-    rsync_cmd="sudo -E rsync -avv $([ "$use_root" -eq 1 ] && echo "" || echo "--chown=pi:pi") --relative $exclude_option $from/$home_dir/./ $target"
-    echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
+    echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)" | tee -a copy4prepare.log
+    echo "CMD: $rsync_cmd" | tee -a copy4prepare.log
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
         second_part="${line#* }"
