@@ -5,7 +5,7 @@ echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
 from=/dev/sda1
-mnt=/home/pi/mnt
+mntdir=/home/pi/mnt
 file=prepare4lab.sh
 target=/home/pi
 quick=0
@@ -87,9 +87,14 @@ handle_file() {
 
 run_rsync() {
     echo "Running rsync for home_dir (copy4prepare)" | tee -a copy4prepare.log
-    exclude_option="--exclude=$target/root4rpi --exclude=$target/copy4prepare.sh --exclude=$mnt"
-
-    umount "$mnt" || true
+    
+    exclude_option="--exclude=$home_dir/root4rpi --exclude=$target/copy4prepare.sh"
+    
+    if [[ "$mntdir" == "$target/"* ]]; then
+        exclude_option="$exclude_option --exclude=${mntdir#"$target"/}"
+    fi
+    
+    umount "$mntdir" || true
     if [ "$use_root" -eq 1 ]; then
         rsync_cmd="sudo -E rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     else
@@ -132,27 +137,27 @@ run_rsync() {
 }
 
 mnt_mnt() {
-  echo "Creating mount directory $mnt" | tee -a copy4prepare.log
+  echo "Creating mount directory $mntdir" | tee -a copy4prepare.log
   if [[ $use_root -eq 1 ]]; then
-      sudo -E -u pi mkdir -p "$mnt"
+      sudo -E -u pi mkdir -p "$mntdir"
   else
-      sudo -E mkdir -p "$mnt"
+      sudo -E mkdir -p "$mntdir"
   fi
-  if is_mounted "$from" "$mnt"; then
+  if is_mounted "$from" "$mntdir"; then
       echo "$from is already mounted" | tee -a copy4prepare.log
-      mnt=$(mount | grep "$from" | awk '{print $3}')
-      set_from "$mnt"
+      mntdir=$(mount | grep "$from" | awk '{print $3}')
+      set_from "$mntdir"
   else
       echo "Mounting $from" | tee -a copy4prepare.log
       do_umount=1
 
-      echo "Mounting device $from at $mnt" | tee -a copy4prepare.log
-      if ! sudo mount "$from" "$mnt"; then
-          print_error "Failed to mount $from at $mnt"
+      echo "Mounting device $from at $mntdir" | tee -a copy4prepare.log
+      if ! sudo mount "$from" "$mntdir"; then
+          print_error "Failed to mount $from at $mntdir"
       else
-          echo "Mounted $from at $mnt" | tee -a copy4prepare.log
+          echo "Mounted $from at $mntdir" | tee -a copy4prepare.log
       fi
-      set_from "$mnt"
+      set_from "$mntdir"
   fi
 }
 
@@ -172,7 +177,7 @@ mnt_init() {
                   echo "Found block device $dev" | tee -a copy4prepare.log
                   gotit=1
                   from=$dev
-                  mnt_mnt "$mnt"
+                  mnt_mnt "$mntdir"
                   break
               fi
           done
@@ -224,9 +229,9 @@ main() {
     fi
 
     if [ "$do_umount" -eq 1 ]; then
-        echo "Unmounting $mnt" | tee -a copy4prepare.log
-        if ! umount "$mnt"; then
-            print_error "Failed to unmount $mnt"
+        echo "Unmounting $mntdir" | tee -a copy4prepare.log
+        if ! umount "$mntdir"; then
+            print_error "Failed to unmount $mntdir"
         fi
     fi
 
@@ -252,8 +257,8 @@ parse() {
                 shift 2
                 ;;
             --mnt)
-                mnt="$2"
-                echo "Option --mnt with value $mnt" | tee -a copy4prepare.log
+                mntdir="$2"
+                echo "Option --mnt with value $mntdir" | tee -a copy4prepare.log
                 shift 2
                 ;;
             --file)
@@ -328,7 +333,7 @@ parse() {
 }
 
 print_error() {
-    umount "$mnt" || true
+    umount "$mntdir" || true
     echo "Error: $1" | tee -a copy4prepare.log
     exit 1
 }
