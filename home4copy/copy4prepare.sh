@@ -110,7 +110,6 @@ run_rsync() {
 
         # Check each character in first_part if it matches [a-zA-Z0-9./_]
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
-            echo "_> ignored" | tee -a copy4prepare.log
             continue
         fi
 
@@ -121,8 +120,6 @@ run_rsync() {
             if [[ $second_part == *uptodate* ]]; then
                 echo ".> $target/$first_part" | tee -a copy4prepare.log
                 handle_file "$target/$first_part" "$from/$home_dir/$first_part"
-            else
-                echo "x> unknown" | tee -a copy4prepare.log
             fi
         fi
     done
@@ -163,13 +160,13 @@ mnt_mnt() {
       set_from "$mntdir"
   else
       echo "Mounting $from" | tee -a copy4prepare.log
-      do_umount=1
 
       echo "Mounting device $from at $mntdir" | tee -a copy4prepare.log
       if ! sudo mount "$from" "$mntdir"; then
           print_error "Failed to mount $from at $mntdir"
       else
           echo "Mounted $from at $mntdir" | tee -a copy4prepare.log
+          do_umount=1
       fi
       set_from "$mntdir"
   fi
