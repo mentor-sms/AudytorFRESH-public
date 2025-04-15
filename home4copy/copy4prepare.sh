@@ -160,7 +160,7 @@ mnt_mnt() {
   if [[ $use_root -eq 1 ]]; then
       sudo -u pi mkdir -p "$mntdir"
   else
-      sudo mkdir -p "$mntdir"
+      mkdir -p "$mntdir"
   fi
   if is_mounted "$from" "$mntdir"; then
       echo "$from is already mounted" | tee -a copy4prepare.log
@@ -258,7 +258,7 @@ main() {
             sleep 3
         fi
         echo "Running $run with job $job..." | tee -a copy4prepare.log
-        sudo -E bash -c "$run \"$job\" | tee -a \"$target\"/.mentor/prepare4lab.log"
+        bash -c "$run \"$job\" | tee -a \"$target\"/.mentor/prepare4lab.log"
     fi
 }
 
