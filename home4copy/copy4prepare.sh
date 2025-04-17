@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=2.0.3
+WERSJA=2.0.0
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -257,8 +257,13 @@ main() {
             echo "Will run $run in 3, 2, 1..." | tee -a copy4prepare.log
             sleep 3
         fi
-        echo "Running $run with job $job..." | tee -a copy4prepare.log
-        bash -c "$run \"$job\" | tee -a \"$target\"/.mentor/prepare4lab.log"
+        if [[ -z "${job//[[:space:]]/}" ]]; then
+            echo "Running $run with job \"$job\"..." | tee -a copy4prepare.log
+            bash -c "$run \"$job\" | tee -a \"$target\"/.mentor/prepare4lab.log"
+        else
+            echo "Running $run with job \"auto\"..." | tee -a copy4prepare.log
+            bash -c "$run | tee -a \"$target\"/.mentor/prepare4lab.log"
+        fi
     fi
 }
 
