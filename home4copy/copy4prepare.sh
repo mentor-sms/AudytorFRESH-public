@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=5.0.0
+WERSJA=6.6.6
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -11,7 +11,7 @@ target=/home/pi
 quick=0
 norun=0
 nosync=0
-job="release"
+job="user"
 home_dir=home4copy
 timeout=30
 run="/home/pi/.mentor/prepare4lab.sh"
