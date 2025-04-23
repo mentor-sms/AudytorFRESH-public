@@ -57,9 +57,9 @@ handle_file() {
         return 1
     fi
 
-    echo "Files are different. Updating $_file with $_sourcefile." | tee -a copy4prepare.log
-    sudo rm -f "$_file" || { echo "Failed to remove $_file" | tee -a copy4prepare.log; return 1; }
-    sudo cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file" | tee -a copy4prepare.log; return 1; }
+    #echo "Files are different. Updating $_file with $_sourcefile." | tee -a copy4prepare.log
+    #sudo rm -f "$_file" || { echo "Failed to remove $_file" | tee -a copy4prepare.log; return 1; }
+    #sudo cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file" | tee -a copy4prepare.log; return 1; }
 
     if ! file "$_file" | grep -q 'text'; then
         echo "$_file is not a text file." | tee -a copy4prepare.log
