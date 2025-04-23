@@ -11,7 +11,7 @@ target=/home/pi
 quick=0
 norun=0
 nosync=0
-job=""
+job="release"
 home_dir=home4copy
 timeout=30
 run="/home/pi/.mentor/prepare4lab.sh"
@@ -336,11 +336,6 @@ parse() {
                 ;;
         esac
     done
-
-    if [[ $# -gt 0 ]]; then
-        job="$*"
-        echo "Option --job with value $job" | tee -a copy4prepare.log
-    fi
 }
 
 print_error() {
