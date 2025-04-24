@@ -4,8 +4,15 @@ To use with AudytorFRESH/installer4lab
 
 # Przygotowanie pulpitu:
 
-Świeży, zaktualizowany system Debian Raspberry. Dodatkowo (ignorujac znak nowej linii `$`):
+Świeży, zaktualizowany system Debian Raspberry (ignorujac znak nowej linii `$`):
+```bash
+$ sudo apt update
+$ sudo apt full-upgrade
+$ sudo apt autoremove
+$ sudo apt clean
+```
 
+Dodatkowo:
 ```bash
 $ sudo apt install dos2unix
 ```
