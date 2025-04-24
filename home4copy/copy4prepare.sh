@@ -96,38 +96,62 @@ create_backup() {
 
 run_rsync() {
     echo "Running rsync for home_dir (copy4prepare)"
-    
+
     exclude_option="--exclude=$home_dir/root4rpi --exclude=$target/copy4prepare.sh"
-    
+
     if [[ "$mntdir" == "$target/"* ]]; then
         exclude_option="$exclude_option --exclude=${mntdir#"$target"/}"
     fi
-    
+
     if [ "$use_root" -eq 1 ]; then
         rsync_cmd="sudo rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
     else
         sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
         rsync_cmd="sudo rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
     fi
-    
-    # Iterate through files in target directory and create .bak files
-    find "$target" -type f | while read -r file; do
-        create_backup "$file"
+
+    # Perform a dry-run to identify files being replaced or updated
+    dry_run_output=$(mktemp)
+    eval "$rsync_cmd --dry-run" | while read -r line; do
+        first_part="${line%% *}"  # Extract the first part
+        second_part="${line#* }"  # Extract the second part
+
+        echo "Dry-run output: >$line;"
+
+        # Check if first_part is valid (matches [a-zA-Z0-9./_])
+        if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
+            continue
+        fi
+
+        # Create backups for files that are being replaced or updated
+        if [[ $first_part == "$second_part" ]]; then
+            echo "Creating backup for: $target/$first_part"
+            create_backup "$target/$first_part"
+        else
+            if [[ $second_part == *uptodate* ]]; then
+                echo "Creating backup for: $target/$first_part (uptodate)"
+                create_backup "$target/$first_part"
+            fi
+        fi
     done
-    
+
+    rm "$dry_run_output"
+
+    # Now perform the actual rsync operation
     echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     echo "CMD: $rsync_cmd"
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
         second_part="${line#* }"
-        
+
         echo ">$line;"
 
-        # Check each character in first_part if it matches [a-zA-Z0-9./_]
+        # Check if first_part is valid (matches [a-zA-Z0-9./_])
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
             continue
         fi
 
+        # Handle files as needed during the actual rsync
         if [[ $first_part == "$second_part" ]]; then
             echo "+> $target/$first_part"
             if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
@@ -143,16 +167,17 @@ run_rsync() {
         fi
     done
 
+    # Post-rsync operations
     if [[ "$norun" -eq 0 ]] && [[ -d $from/$home_dir/root4rpi ]]; then
-      script_path=$(realpath "$0")
-      if ! sudo bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --root --home_dir root4rpi --timeout 0" | tee copy4root.log; then
-          echo "Error: The second run of the script failed."
-          exit 1
-      fi
+        script_path=$(realpath "$0")
+        if ! sudo bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --root --home_dir root4rpi --timeout 0" | tee copy4root.log; then
+            echo "Error: The second run of the script failed."
+            exit 1
+        fi
     elif [[ "$norun" -eq 0 ]]; then
-      echo "No root4rpi directory found in $from/$home_dir. Skipping the second run."
+        echo "No root4rpi directory found in $from/$home_dir. Skipping the second run."
     fi
-    
+
     un_un
 }
 
@@ -253,9 +278,8 @@ main() {
     sudo rm -rf "$target"/.mentor || { true; }
     
     echo "Reloading systemd daemon"
-    sleep 10
     sudo systemctl daemon-reload
-    sleep 10
+    sleep 4
     lsblk
 
     mnt_init
