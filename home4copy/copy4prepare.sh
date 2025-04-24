@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.1
+WERSJA=1.0.2
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -261,10 +261,11 @@ main() {
           job=" $job"
         fi
     
-        log_file="/home/pi/.mentor/$(basename "$run").log"
+        log_file="/home/pi/.mentor/$run.log"
         echo "Running \"$run\" with job \"$job\"..."
         sleep 4
-        "$run""$job"
+        
+        "$run""$job" 2>&1 | tee "$log_file"
         
         # Fix ownership of the log file
         sudo chown pi:pi "$log_file"
