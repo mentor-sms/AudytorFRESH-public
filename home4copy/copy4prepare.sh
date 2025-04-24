@@ -30,8 +30,8 @@ show_help() {
     echo "  --home_dir <name>      Source directory in from (default: home4copy)"
     echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
     echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
-    echo "  --job <args>           Argumenty dla skryptu (default: \"\")"
-    echo "                                               (alternatywy prepare4lab: release, devel, debug)"
+    echo "  --job <args>           Argumenty dla skryptu (default: user)"
+    echo "                                               (alternatywy prepare4lab: debug)"
     echo "  --root                 Use root user instead of pi"
     echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
     echo "  --help                 Show this help message"
@@ -261,8 +261,8 @@ main() {
           job=" $job"
         fi
     
-        echo "Running $run with job \"$job\"..."
-        eval "$run" "$job" 2>&1 | tee /home/pi/.mentor/"$run".log
+        echo "Running \"$run\" with job \"$job\"..."
+        eval "$run$job" 2>&1 | tee /home/pi/.mentor/"$run".log
         sudo chown pi:pi /home/pi/.mentor/"$run".log
     fi
 }
