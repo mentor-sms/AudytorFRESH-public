@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.0
+WERSJA=1.0.1
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -261,10 +261,15 @@ main() {
           job=" $job"
         fi
     
+        log_file="/home/pi/.mentor/$(basename "$run").log"
         echo "Running \"$run\" with job \"$job\"..."
         sleep 4
-        "$run""$job" | tee /home/pi/.mentor/"$(basename "$run").log"
-        sudo chown pi:pi /home/pi/.mentor/"$run".log
+        
+        # Run the script with standard input preserved for interaction
+        stdbuf -i0 -o0 -e0 "$run""$job" 2>&1 | tee "$log_file"
+        
+        # Fix ownership of the log file
+        sudo chown pi:pi "$log_file"
     fi
 }
 
