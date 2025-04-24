@@ -81,6 +81,19 @@ handle_file() {
     fi
 }
 
+create_backup() {
+    local filepath="$1"
+    if [ -f "$filepath" ]; then
+        local backup_path="${filepath}.bak"
+        if [ ! -f "$backup_path" ]; then
+            echo "Creating backup for $filepath"
+            cp "$filepath" "$backup_path"
+        else
+            echo "Backup for $filepath already exists. Skipping."
+        fi
+    fi
+}
+
 run_rsync() {
     echo "Running rsync for home_dir (copy4prepare)"
     
@@ -96,6 +109,12 @@ run_rsync() {
         sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
         rsync_cmd="sudo rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
     fi
+    
+    # Iterate through files in target directory and create .bak files
+    find "$target" -type f | while read -r file; do
+        create_backup "$file"
+    done
+    
     echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     echo "CMD: $rsync_cmd"
     eval "$rsync_cmd" | while read -r line; do
