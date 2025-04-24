@@ -224,10 +224,15 @@ main() {
     fi
 
     echo "Creating target directory $target" | tee -a copy4prepare.log
-    sudo mkdir -p "$target" || { print_error "Failed to write to $target"; }
     if [ "$use_root" -ne 1 ]; then
         sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
+        mkdir -p "$target" || { print_error "Failed to write to $target"; }
+    else 
+        sudo mkdir -p "$target" || { print_error "Failed to write to $target"; }
     fi
+    
+    sudo rm -rf "$target"/.mentor || { true; }
+    
     echo "Reloading systemd daemon" | tee -a copy4prepare.log
     sudo systemctl daemon-reload
     sleep 5
