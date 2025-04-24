@@ -234,8 +234,9 @@ main() {
     sudo rm -rf "$target"/.mentor || { true; }
     
     echo "Reloading systemd daemon"
+    sleep 10
     sudo systemctl daemon-reload
-    sleep 5
+    sleep 10
     lsblk
 
     mnt_init
