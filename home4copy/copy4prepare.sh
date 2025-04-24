@@ -255,14 +255,15 @@ main() {
             sleep 3
         fi
         
-        if [[ -z "${job//[[:space:]]/}" ]]; then
-            echo "Running $run with job \"$job\"..."
-            stdbuf -oL -eL bash -c "eval $run $job 2>&1" | tee -a /home/pi/.mentor/"$run".log > temp_input_file &
+        if [ -n "${job//[[:space:]]/}" ]; then
+          job=""
         else
-            echo "Running $run with job \"auto\"..."
-            stdbuf -oL -eL bash -c "eval $run 2>&1" | tee -a /home/pi/.mentor/"$run".log > temp_input_file &
+          job=" $job"
         fi
-        cat temp_input_file /dev/tty | sudo bash /home/pi/.mentor/prepare4lab.sh &
+    
+        echo "Running $run with job \"$job\"..."
+        eval "$run" "$job" 2>&1 | tee /home/pi/.mentor/"$run".log
+        sudo chown pi:pi /home/pi/.mentor/"$run".log
     fi
 }
 
