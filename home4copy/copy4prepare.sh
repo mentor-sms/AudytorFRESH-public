@@ -264,9 +264,7 @@ main() {
         log_file="/home/pi/.mentor/$(basename "$run").log"
         echo "Running \"$run\" with job \"$job\"..."
         sleep 4
-        
-        # Run the script with standard input preserved for interaction
-        stdbuf -i0 -o0 -e0 "$run""$job" 2>&1 | tee "$log_file"
+        "$run""$job"
         
         # Fix ownership of the log file
         sudo chown pi:pi "$log_file"
