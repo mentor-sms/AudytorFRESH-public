@@ -45,44 +45,44 @@ handle_file() {
     _file="${_file%"${_file##*[![:space:]]}"}"
     _sourcefile="${_sourcefile%"${_sourcefile##*[![:space:]]}"}"
 
-    echo "Handling file $_file" | tee -a copy4prepare.log
+    echo "Handling file $_file"
 
     if [[ "${_file: -1}" == "/" || "${_sourcefile: -1}" == "/" ]]; then
-        echo "Ignoring directory $_file" | tee -a copy4prepare.log
+        echo "Ignoring directory $_file"
         return 0
     fi
 
     if [[ ! -f "$_file" || ! -f "$_sourcefile" ]]; then
-        echo "Either $_file or $_sourcefile does not exist. Please check the paths." | tee -a copy4prepare.log
+        echo "Either $_file or $_sourcefile does not exist. Please check the paths."
         return 1
     fi
 
-    #echo "Files are different. Updating $_file with $_sourcefile." | tee -a copy4prepare.log
-    #sudo rm -f "$_file" || { echo "Failed to remove $_file" | tee -a copy4prepare.log; return 1; }
-    #sudo cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file" | tee -a copy4prepare.log; return 1; }
+    #echo "Files are different. Updating $_file with $_sourcefile."
+    #sudo rm -f "$_file" || { echo "Failed to remove $_file"; return 1; }
+    #sudo cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file"; return 1; }
 
     if ! file "$_file" | grep -q 'text'; then
-        echo "$_file is not a text file." | tee -a copy4prepare.log
+        echo "$_file is not a text file."
         return 0
     fi
 
-    echo "Converting $_file to Unix format" | tee -a copy4prepare.log
-    dos2unix -f -k "$_file" || { echo "Failed to convert $_file to Unix format." | tee -a copy4prepare.log; return 1; }
+    echo "Converting $_file to Unix format"
+    dos2unix -f -k "$_file" || { echo "Failed to convert $_file to Unix format."; return 1; }
 
     if [[ "$_file" == *.sh ]]; then
-        echo "Making $_file executable" | tee -a copy4prepare.log
-        chmod +x "$_file" || { echo "Failed to make $_file executable." | tee -a copy4prepare.log; return 1; }
+        echo "Making $_file executable"
+        chmod +x "$_file" || { echo "Failed to make $_file executable."; return 1; }
 
-        echo "Validating bash script $_file" | tee -a copy4prepare.log
+        echo "Validating bash script $_file"
         if ! bash -n "$_file"; then
-            echo "$_file contains syntax errors." | tee -a copy4prepare.log
+            echo "$_file contains syntax errors."
             return 1
         fi
     fi
 }
 
 run_rsync() {
-    echo "Running rsync for home_dir (copy4prepare)" | tee -a copy4prepare.log
+    echo "Running rsync for home_dir (copy4prepare)"
     
     exclude_option="--exclude=$home_dir/root4rpi --exclude=$target/copy4prepare.sh"
     
@@ -96,13 +96,13 @@ run_rsync() {
         sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
         rsync_cmd="sudo rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
     fi
-    echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)" | tee -a copy4prepare.log
-    echo "CMD: $rsync_cmd" | tee -a copy4prepare.log
+    echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
+    echo "CMD: $rsync_cmd"
     eval "$rsync_cmd" | while read -r line; do
         first_part="${line%% *}"
         second_part="${line#* }"
         
-        echo ">$line;" | tee -a copy4prepare.log
+        echo ">$line;"
 
         # Check each character in first_part if it matches [a-zA-Z0-9./_]
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
@@ -110,13 +110,13 @@ run_rsync() {
         fi
 
         if [[ $first_part == "$second_part" ]]; then
-            echo "+> $target/$first_part" | tee -a copy4prepare.log
+            echo "+> $target/$first_part"
             if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
                 print_error "Error occurred while handling $target/$first_part"
             fi
         else
             if [[ $second_part == *uptodate* ]]; then
-                echo ".> $target/$first_part" | tee -a copy4prepare.log
+                echo ".> $target/$first_part"
                 if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
                     print_error "Error occurred while handling $target/$first_part"
                 fi
@@ -127,11 +127,11 @@ run_rsync() {
     if [[ "$norun" -eq 0 ]] && [[ -d $from/$home_dir/root4rpi ]]; then
       script_path=$(realpath "$0")
       if ! sudo bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --root --home_dir root4rpi --timeout 0" | tee copy4root.log; then
-          echo "Error: The second run of the script failed." | tee -a copy4prepare.log
+          echo "Error: The second run of the script failed."
           exit 1
       fi
     elif [[ "$norun" -eq 0 ]]; then
-      echo "No root4rpi directory found in $from/$home_dir. Skipping the second run." | tee -a copy4prepare.log
+      echo "No root4rpi directory found in $from/$home_dir. Skipping the second run."
     fi
     
     un_un
@@ -139,7 +139,7 @@ run_rsync() {
 
 un_un() {
     if [ "$do_umount" -eq 1 ]; then
-        echo "Unmounting $mntdir" | tee -a copy4prepare.log
+        echo "Unmounting $mntdir"
         do_umount=0
         if ! umount "$mntdir"; then
             print_error "Failed to unmount $mntdir"
@@ -148,24 +148,24 @@ un_un() {
 }
 
 mnt_mnt() {
-  echo "Creating mount directory $mntdir" | tee -a copy4prepare.log
+  echo "Creating mount directory $mntdir"
   if [[ $use_root -eq 1 ]]; then
       sudo -u pi mkdir -p "$mntdir"
   else
       mkdir -p "$mntdir"
   fi
   if is_mounted "$from" "$mntdir"; then
-      echo "$from is already mounted" | tee -a copy4prepare.log
+      echo "$from is already mounted"
       mntdir=$(mount | grep "$from" | awk '{print $3}')
       set_from "$mntdir"
   else
-      echo "Mounting $from" | tee -a copy4prepare.log
+      echo "Mounting $from"
 
-      echo "Mounting device $from at $mntdir" | tee -a copy4prepare.log
+      echo "Mounting device $from at $mntdir"
       if ! sudo mount "$from" "$mntdir"; then
           print_error "Failed to mount $from at $mntdir"
       else
-          echo "Mounted $from at $mntdir" | tee -a copy4prepare.log
+          echo "Mounted $from at $mntdir"
           do_umount=1
       fi
       set_from "$mntdir"
@@ -174,18 +174,18 @@ mnt_mnt() {
 
 mnt_init() {
   if is_block_device "$from"; then
-      echo "$from is a block device" | tee -a copy4prepare.log
+      echo "$from is a block device"
       mnt_mnt "$from"
   elif is_directory "$from"; then
-      echo "$from is a directory" | tee -a copy4prepare.log
+      echo "$from is a directory"
       set_from "$from"
   else
       if echo "$from" | grep -q '/dev/sd[a-z]1'; then
-          echo "Trying to find a block device for $from" | tee -a copy4prepare.log
+          echo "Trying to find a block device for $from"
           gotit=0
           for dev in /dev/sd*1; do
               if is_block_device "$dev"; then
-                  echo "Found block device $dev" | tee -a copy4prepare.log
+                  echo "Found block device $dev"
                   gotit=1
                   from=$dev
                   mnt_mnt "$mntdir"
@@ -202,11 +202,11 @@ mnt_init() {
 }
 
 main() {
-    echo "Starting script with arguments: $*" | tee -a copy4prepare.log
+    echo "Starting script with arguments: $*"
     parse "$@"
 
     if [ "$(id -u)" -ne 0 ]; then
-      echo "Requires sudo!" | tee -a copy4prepare.log
+      echo "Requires sudo!"
       show_help
       echo "Requires sudo!"
       exit 1
@@ -218,12 +218,12 @@ main() {
       echo "Now connect the USB drive containing $home_dir."
       echo "It will be safe to disconnect the USB drive after the script asks you to press [Enter] again."
       if [ "$timeout" -gt 0 ]; then
-          echo "Sleeping for $timeout seconds" | tee -a copy4prepare.log
+          echo "Sleeping for $timeout seconds"
           sleep "$timeout"
       fi
     fi
 
-    echo "Creating target directory $target" | tee -a copy4prepare.log
+    echo "Creating target directory $target"
     if [ "$use_root" -ne 1 ]; then
         sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
         mkdir -p "$target" || { print_error "Failed to write to $target"; }
@@ -233,7 +233,7 @@ main() {
     
     sudo rm -rf "$target"/.mentor || { true; }
     
-    echo "Reloading systemd daemon" | tee -a copy4prepare.log
+    echo "Reloading systemd daemon"
     sudo systemctl daemon-reload
     sleep 5
     lsblk
@@ -247,18 +247,18 @@ main() {
     un_un
 
     if [ "$norun" -ne 1 ]; then
-        echo "Will run $run with job $job" | tee -a copy4prepare.log
+        echo "Will run $run with job $job"
 
         if [ "$quick" -eq 0 ]; then
             read -rp "Press [Enter] to continue..."
-            echo "Will run $run in 3, 2, 1..." | tee -a copy4prepare.log
+            echo "Will run $run in 3, 2, 1..."
             sleep 3
         fi
         if [[ -z "${job//[[:space:]]/}" ]]; then
-            echo "Running $run with job \"$job\"..." | tee -a copy4prepare.log
+            echo "Running $run with job \"$job\"..."
             bash -c "$run \"$job\" | tee -a \"$target\"/.mentor/prepare4lab.log"
         else
-            echo "Running $run with job \"auto\"..." | tee -a copy4prepare.log
+            echo "Running $run with job \"auto\"..."
             bash -c "$run | tee -a \"$target\"/.mentor/prepare4lab.log"
         fi
     fi
@@ -269,57 +269,57 @@ parse() {
         case $1 in
             --from)
                 from="$2"
-                echo "Option --from with value $from" | tee -a copy4prepare.log
+                echo "Option --from with value $from"
                 shift 2
                 ;;
             --mnt)
                 mntdir="$2"
-                echo "Option --mnt with value $mntdir" | tee -a copy4prepare.log
+                echo "Option --mnt with value $mntdir"
                 shift 2
                 ;;
             --file)
                 file="$2"
-                echo "Option --file with value $file" | tee -a copy4prepare.log
+                echo "Option --file with value $file"
                 shift 2
                 ;;
             --target)
                 target="$2"
-                echo "Option --target with value $target" | tee -a copy4prepare.log
+                echo "Option --target with value $target"
                 shift 2
                 ;;
             --quick)
                 quick=1
-                echo "Option --quick" | tee -a copy4prepare.log
+                echo "Option --quick"
                 shift
                 ;;
             --norun)
                 norun=1
-                echo "Option --norun" | tee -a copy4prepare.log
+                echo "Option --norun"
                 shift
                 ;;
             --nosync)
                 nosync=1
-                echo "Option --nosync" | tee -a copy4prepare.log
+                echo "Option --nosync"
                 shift
                 ;;
             --home_dir)
                 home_dir="$2"
-                echo "Option --home_dir with value $home_dir" | tee -a copy4prepare.log
+                echo "Option --home_dir with value $home_dir"
                 shift 2
                 ;;
             --timeout)
                 timeout="$2"
-                echo "Option --timeout with value $timeout" | tee -a copy4prepare.log
+                echo "Option --timeout with value $timeout"
                 shift 2
                 ;;
             --run)
                 run="$2"
-                echo "Option --run with value $run" | tee -a copy4prepare.log
+                echo "Option --run with value $run"
                 shift 2
                 ;;
             --root)
                 use_root=1
-                echo "Option --root" | tee -a copy4prepare.log
+                echo "Option --root"
                 shift
                 ;;
             --help)
@@ -335,7 +335,7 @@ parse() {
                 break
                 ;;
             *)
-                echo "Unknown option: $1" | tee -a copy4prepare.log
+                echo "Unknown option: $1"
                 show_help
                 exit 1
                 ;;
@@ -345,12 +345,12 @@ parse() {
 
 print_error() {
     if [ "$do_umount" -eq 1 ]; then
-        echo "Unmounting $mntdir" | tee -a copy4prepare.log
+        echo "Unmounting $mntdir"
         if ! umount "$mntdir"; then
             print_error "Failed to unmount $mntdir"
         fi
     fi
-    echo "Error: $1" | tee -a copy4prepare.log
+    echo "Error: $1"
     exit 1
 }
 
@@ -368,7 +368,7 @@ is_mounted() {
 
 set_from() {
     from="$1"
-    echo FROM: "$from" | tee -a copy4prepare.log
+    echo FROM: "$from"
 }
 
 main "$@"
