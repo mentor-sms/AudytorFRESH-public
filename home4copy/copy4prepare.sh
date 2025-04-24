@@ -254,13 +254,15 @@ main() {
             echo "Will run $run in 3, 2, 1..."
             sleep 3
         fi
+        
         if [[ -z "${job//[[:space:]]/}" ]]; then
             echo "Running $run with job \"$job\"..."
-            sudo stdbuf -oL -eL bash -c "eval $run $job 2>&1" | tee -a /home/pi/.mentor/prepare4lab.log
+            stdbuf -oL -eL bash -c "eval $run $job 2>&1" | tee -a /home/pi/.mentor/"$run".log > temp_input_file &
         else
             echo "Running $run with job \"auto\"..."
-            sudo stdbuf -oL -eL bash -c "eval $run 2>&1" | tee -a /home/pi/.mentor/prepare4lab.log
+            stdbuf -oL -eL bash -c "eval $run 2>&1" | tee -a /home/pi/.mentor/"$run".log > temp_input_file &
         fi
+        cat temp_input_file /dev/tty | sudo bash /home/pi/.mentor/prepare4lab.sh &
     fi
 }
 
