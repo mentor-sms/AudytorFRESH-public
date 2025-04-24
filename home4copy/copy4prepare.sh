@@ -256,10 +256,10 @@ main() {
         fi
         if [[ -z "${job//[[:space:]]/}" ]]; then
             echo "Running $run with job \"$job\"..."
-            bash -c "$run \"$job\" | tee -a \"$target\"/.mentor/prepare4lab.log"
+            sudo stdbuf -oL -eL bash -c "eval $run $job 2>&1" | tee -a /home/pi/.mentor/prepare4lab.log
         else
             echo "Running $run with job \"auto\"..."
-            bash -c "$run | tee -a \"$target\"/.mentor/prepare4lab.log"
+            sudo stdbuf -oL -eL bash -c "eval $run 2>&1" | tee -a /home/pi/.mentor/prepare4lab.log
         fi
     fi
 }
