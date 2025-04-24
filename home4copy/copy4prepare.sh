@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=6.6.6
+WERSJA=1.0.0
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -262,7 +262,8 @@ main() {
         fi
     
         echo "Running \"$run\" with job \"$job\"..."
-        "$run""$job" 2>&1 | tee /home/pi/.mentor/"$run".log
+        sleep 4
+        "$run""$job" | tee /home/pi/.mentor/"$(basename "$run").log"
         sudo chown pi:pi /home/pi/.mentor/"$run".log
     fi
 }
