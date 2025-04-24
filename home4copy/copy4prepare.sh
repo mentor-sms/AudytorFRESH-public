@@ -262,7 +262,7 @@ main() {
         fi
     
         echo "Running \"$run\" with job \"$job\"..."
-        eval "$run$job" 2>&1 | tee /home/pi/.mentor/"$run".log
+        "$run""$job" 2>&1 | tee /home/pi/.mentor/"$run".log
         sudo chown pi:pi /home/pi/.mentor/"$run".log
     fi
 }
