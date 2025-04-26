@@ -62,13 +62,8 @@ handle_file() {
     #sudo rm -f "$_file" || { echo "Failed to remove $_file"; return 1; }
     #sudo cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file"; return 1; }
 
-    if ! file "$_file" | grep -q 'text'; then
-        echo "$_file is not a text file."
-        return 0
-    fi
-
     echo "Converting $_file to Unix format"
-    dos2unix -f -k "$_file" || { echo "Failed to convert $_file to Unix format."; return 1; }
+    dos2unix -f -k "$_file" || { echo "Failed to convert $_file to Unix format."; }
 
     if [[ "$_file" == *.sh ]]; then
         echo "Making $_file executable"
@@ -98,79 +93,81 @@ create_backup() {
 }
 
 run_rsync() {
-    echo "Running rsync for home_dir (copy4prepare)"
+  echo "Running rsync for home_dir (copy4prepare)"
 
-    exclude_option="--exclude=$home_dir/root4rpi --exclude=$target/copy4prepare.sh"
+  exclude_option="--exclude=$home_dir/root4rpi --exclude=$target/copy4prepare.sh"
 
-    if [[ "$mntdir" == "$target/"* ]]; then
-        exclude_option="$exclude_option --exclude=${mntdir#"$target"/}"
+  if [[ "$mntdir" == "$target/"* ]]; then
+      exclude_option="$exclude_option --exclude=${mntdir#"$target"/}"
+  fi
+
+  if [ "$use_root" -eq 1 ]; then
+      rsync_cmd="sudo rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+  else
+      sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
+      rsync_cmd="sudo rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
+  fi
+
+  # Perform a dry-run to identify files being replaced or updated
+  eval "$rsync_cmd --dry-run" | while read -r line; do
+    first_part="${line%% *}"  # Extract the first part
+    second_part="${line#* }"  # Extract the second part
+
+    echo "test>$line;"
+
+    # Check if first_part is valid (matches [a-zA-Z0-9./_])
+    if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
+      continue
     fi
 
-    if [ "$use_root" -eq 1 ]; then
-        rsync_cmd="sudo rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+    # Create backups for files that are being replaced or updated
+    if [[ $first_part == "$second_part" ]]; then
+      echo ""
+      echo "+> $target/$first_part"
+      create_backup "$target/$first_part"
+      echo ""
     else
-        sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
-        rsync_cmd="sudo rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
+      if [[ $second_part == *uptodate* ]]; then
+        echo ""
+        echo ".> $target/$first_part"
+        echo ""
+      fi
     fi
+  done
 
-    # Perform a dry-run to identify files being replaced or updated
-    dry_run_output=$(mktemp)
-    eval "$rsync_cmd --dry-run" | while read -r line; do
-        first_part="${line%% *}"  # Extract the first part
-        second_part="${line#* }"  # Extract the second part
+  # Now perform the actual rsync operation
+  if [ "$dry" -eq 0 ]; then
+    echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
+    echo "CMD: $rsync_cmd"
+    eval "$rsync_cmd" | while read -r line; do
+      first_part="${line%% *}"
+      second_part="${line#* }"
 
-        echo "test>$line;"
+      echo ">$line;"
 
-        # Check if first_part is valid (matches [a-zA-Z0-9./_])
-        if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
-            continue
+      # Check if first_part is valid (matches [a-zA-Z0-9./_])
+      if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
+        continue
+      fi
+
+      # Handle files as needed during the actual rsync
+      if [[ $first_part == "$second_part" ]]; then
+        echo "+> $target/$first_part"
+        if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
+          print_error "Error occurred while handling $target/$first_part"
         fi
-
-        # Create backups for files that are being replaced or updated
-        if [[ $first_part == "$second_part" ]]; then
-            create_backup "$target/$first_part"
-        else
-            if [[ $second_part == *uptodate* ]]; then
-                create_backup "$target/$first_part"
-            fi
+      else
+        if [[ $second_part == *uptodate* ]]; then
+          echo ".> $target/$first_part"
+          if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
+            print_error "Error occurred while handling $target/$first_part"
+          fi
         fi
+      fi
     done
-
-    rm "$dry_run_output"
-
-    # Now perform the actual rsync operation
-    if [ "$dry" -eq 0 ]; then
-        echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
-        echo "CMD: $rsync_cmd"
-        eval "$rsync_cmd" | while read -r line; do
-            first_part="${line%% *}"
-            second_part="${line#* }"
-    
-            echo ">$line;"
-    
-            # Check if first_part is valid (matches [a-zA-Z0-9./_])
-            if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
-                continue
-            fi
-    
-            # Handle files as needed during the actual rsync
-            if [[ $first_part == "$second_part" ]]; then
-                echo "+> $target/$first_part"
-                if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
-                    print_error "Error occurred while handling $target/$first_part"
-                fi
-            else
-                if [[ $second_part == *uptodate* ]]; then
-                    echo ".> $target/$first_part"
-                    if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
-                        print_error "Error occurred while handling $target/$first_part"
-                    fi
-                fi
-            fi
-        done
-    else
-        echo "--dry mode enabled. Skipping actual rsync operation."
-    fi
+  else
+    echo "--dry mode enabled. Skipping actual rsync operation."
+  fi
 }
 
 un_un() {
