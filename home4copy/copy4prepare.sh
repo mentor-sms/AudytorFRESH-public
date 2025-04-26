@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.2
+WERSJA=2.0.0
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -11,7 +11,7 @@ target=/home/pi
 quick=0
 norun=0
 nosync=0
-job="user"
+job="release"
 home_dir=home4copy
 timeout=30
 run="/home/pi/.mentor/prepare4lab.sh"
@@ -30,8 +30,8 @@ show_help() {
     echo "  --home_dir <name>      Source directory in from (default: home4copy)"
     echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
     echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
-    echo "  --job <args>           Argumenty dla skryptu (default: user)"
-    echo "                                               (alternatywy prepare4lab: debug)"
+    echo "  --job <args>           Argumenty dla skryptu (default: release)"
+    echo "                                               (alternatywy prepare4lab: devel, debug, RELEASE...)"
     echo "  --root                 Use root user instead of pi"
     echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
     echo "  --help                 Show this help message"
