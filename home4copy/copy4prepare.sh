@@ -84,7 +84,9 @@ handle_file() {
 
 create_backup() {
     local filepath="$1"
-    if [ -f "$filepath" ]; then
+    if [ -d "$filepath" ]; then
+        echo "Skipping directory $filepath"
+    elif [ -f "$filepath" ]; then
         local backup_path="${filepath}.bak"
         if [ ! -f "$backup_path" ]; then
             echo "Creating backup for $filepath"
@@ -92,6 +94,8 @@ create_backup() {
         else
             echo "Backup for $filepath already exists. Skipping."
         fi
+    else
+        echo "$filepath is not a valid file or directory"
     fi
 }
 
