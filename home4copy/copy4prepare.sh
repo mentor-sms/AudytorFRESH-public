@@ -302,9 +302,7 @@ main() {
         echo "Log file: $log_file"
         sleep 4
     
-        sudo "$run""$job" 2>&1 | tee "$log_file"
-        sudo chown pi:pi "$log_file" || { print_error "Failed to change ownership of $log_file"; }
-        cat "$log_file" | grep -vE '^\s*$' | tail -n 20
+        eval "$run""$job"
     else
         echo "--dry mode enabled or --norun specified. Skipping script execution."
     fi
