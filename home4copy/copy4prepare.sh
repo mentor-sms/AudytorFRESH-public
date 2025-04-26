@@ -85,7 +85,7 @@ handle_file() {
 create_backup() {
     local filepath="$1"
     if [ -d "$filepath" ]; then
-        echo "Skipping directory $filepath"
+        true
     elif [ -f "$filepath" ]; then
         local backup_path="${filepath}.bak"
         if [ ! -f "$backup_path" ]; then
@@ -94,8 +94,6 @@ create_backup() {
         else
             echo "Backup for $filepath already exists. Skipping."
         fi
-    else
-        echo "$filepath is not a valid file or directory"
     fi
 }
 
@@ -130,11 +128,9 @@ run_rsync() {
 
         # Create backups for files that are being replaced or updated
         if [[ $first_part == "$second_part" ]]; then
-            echo "Creating backup for: $target/$first_part"
             create_backup "$target/$first_part"
         else
             if [[ $second_part == *uptodate* ]]; then
-                echo "Creating backup for: $target/$first_part (uptodate)"
                 create_backup "$target/$first_part"
             fi
         fi
