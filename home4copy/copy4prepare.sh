@@ -286,15 +286,15 @@ main() {
         echo "Will run $run with job $job"
     
         if [ "$quick" -eq 0 ]; then
-            read -rp "Press [Enter] to continue..."
-            echo "Will run $run in 3, 2, 1..."
-            sleep 3
+            read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
+            echo "3, 2, 1..."
+            sleep 4
         fi
     
         if [ -n "${job//[[:space:]]/}" ]; then
-            job=""
-        else
             job=" $job"
+        else
+            job=""
         fi
     
         log_file="/home/pi/copy4prepare.log"
