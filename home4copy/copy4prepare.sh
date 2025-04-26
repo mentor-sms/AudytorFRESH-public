@@ -296,7 +296,7 @@ main() {
           job=""
       fi
   
-      log_file="/home/pi/copy4prepare.log"
+      log_file="/home/pi/copy4prepare.run"
       echo "Running \"$run\" with job \"$job\"..."
       echo "Log file: $log_file"
       if [ "$dry" -eq 0 ]; then
