@@ -14,8 +14,9 @@ nosync=0
 job="release"
 home_dir=home4copy
 timeout=30
-run="/home/pi/.mentor/prepare4lab.sh"
+run="sudo /home/pi/.mentor/prepare4lab.sh"
 use_root=0
+dry=0
 
 show_help() {
     echo "Usage: sudo $0 [options]"
@@ -29,7 +30,7 @@ show_help() {
     echo "  --nosync               Do not sync directories before copying"
     echo "  --home_dir <name>      Source directory in from (default: home4copy)"
     echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
-    echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
+    echo "  --run <path>           Path to the script to run (default: sudo /home/pi/.mentor/prepare4lab.sh)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
     echo "                                               (alternatywy prepare4lab: devel, debug, RELEASE...)"
     echo "  --root                 Use root user instead of pi"
@@ -116,7 +117,7 @@ run_rsync() {
         first_part="${line%% *}"  # Extract the first part
         second_part="${line#* }"  # Extract the second part
 
-        echo "Dry-run output: >$line;"
+        echo "test>$line;"
 
         # Check if first_part is valid (matches [a-zA-Z0-9./_])
         if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
@@ -138,47 +139,38 @@ run_rsync() {
     rm "$dry_run_output"
 
     # Now perform the actual rsync operation
-    echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
-    echo "CMD: $rsync_cmd"
-    eval "$rsync_cmd" | while read -r line; do
-        first_part="${line%% *}"
-        second_part="${line#* }"
-
-        echo ">$line;"
-
-        # Check if first_part is valid (matches [a-zA-Z0-9./_])
-        if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
-            continue
-        fi
-
-        # Handle files as needed during the actual rsync
-        if [[ $first_part == "$second_part" ]]; then
-            echo "+> $target/$first_part"
-            if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
-                print_error "Error occurred while handling $target/$first_part"
+    if [ "$dry" -eq 0 ]; then
+        echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
+        echo "CMD: $rsync_cmd"
+        eval "$rsync_cmd" | while read -r line; do
+            first_part="${line%% *}"
+            second_part="${line#* }"
+    
+            echo ">$line;"
+    
+            # Check if first_part is valid (matches [a-zA-Z0-9./_])
+            if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
+                continue
             fi
-        else
-            if [[ $second_part == *uptodate* ]]; then
-                echo ".> $target/$first_part"
+    
+            # Handle files as needed during the actual rsync
+            if [[ $first_part == "$second_part" ]]; then
+                echo "+> $target/$first_part"
                 if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
                     print_error "Error occurred while handling $target/$first_part"
                 fi
+            else
+                if [[ $second_part == *uptodate* ]]; then
+                    echo ".> $target/$first_part"
+                    if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
+                        print_error "Error occurred while handling $target/$first_part"
+                    fi
+                fi
             fi
-        fi
-    done
-
-    # Post-rsync operations
-    if [[ "$norun" -eq 0 ]] && [[ -d $from/$home_dir/root4rpi ]]; then
-        script_path=$(realpath "$0")
-        if ! sudo bash -c "$script_path --from $from/$home_dir --mnt '' --file '' --target / --quick --norun --root --home_dir root4rpi --timeout 0" | tee copy4root.log; then
-            echo "Error: The second run of the script failed."
-            exit 1
-        fi
-    elif [[ "$norun" -eq 0 ]]; then
-        echo "No root4rpi directory found in $from/$home_dir. Skipping the second run."
+        done
+    else
+        echo "--dry mode enabled. Skipping actual rsync operation."
     fi
-
-    un_un
 }
 
 un_un() {
@@ -285,34 +277,35 @@ main() {
     mnt_init
 
     if [ "$nosync" -ne 1 ]; then
-        run_rsync
+        run_rsync || { print_error "Failed to run rsync"; }
     fi
 
     un_un
 
-    if [ "$norun" -ne 1 ]; then
+    if [ "$norun" -ne 1 ] && [ "$dry" -eq 0 ]; then
         echo "Will run $run with job $job"
-
+    
         if [ "$quick" -eq 0 ]; then
             read -rp "Press [Enter] to continue..."
             echo "Will run $run in 3, 2, 1..."
             sleep 3
         fi
-        
+    
         if [ -n "${job//[[:space:]]/}" ]; then
-          job=""
+            job=""
         else
-          job=" $job"
+            job=" $job"
         fi
     
-        log_file="/home/pi/.mentor/$run.log"
+        log_file="/home/pi/$run.copy4prepare.log"
         echo "Running \"$run\" with job \"$job\"..."
+        echo "Log file: $log_file"
         sleep 4
-        
+    
         "$run""$job" 2>&1 | tee "$log_file"
-        
-        # Fix ownership of the log file
-        sudo chown pi:pi "$log_file"
+        sudo chown pi:pi "$log_file" || { print_error "Failed to change ownership of $log_file"; }
+    else
+        echo "--dry mode enabled or --norun specified. Skipping script execution."
     fi
 }
 
@@ -372,6 +365,11 @@ parse() {
             --root)
                 use_root=1
                 echo "Option --root"
+                shift
+                ;;
+            --dry)
+                dry=1
+                echo "Option --dry"
                 shift
                 ;;
             --help)
