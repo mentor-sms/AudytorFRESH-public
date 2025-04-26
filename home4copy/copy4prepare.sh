@@ -14,7 +14,7 @@ nosync=0
 job="release"
 home_dir=home4copy
 timeout=30
-run="sudo /home/pi/.mentor/prepare4lab.sh"
+run="/home/pi/.mentor/prepare4lab.sh"
 use_root=0
 dry=0
 
@@ -30,7 +30,7 @@ show_help() {
     echo "  --nosync               Do not sync directories before copying"
     echo "  --home_dir <name>      Source directory in from (default: home4copy)"
     echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
-    echo "  --run <path>           Path to the script to run (default: sudo /home/pi/.mentor/prepare4lab.sh)"
+    echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
     echo "                                               (alternatywy prepare4lab: devel, debug, RELEASE...)"
     echo "  --root                 Use root user instead of pi"
@@ -302,8 +302,9 @@ main() {
         echo "Log file: $log_file"
         sleep 4
     
-        "$run""$job" 2>&1 | tee "$log_file"
+        sudo "$run""$job" 2>&1 | tee "$log_file"
         sudo chown pi:pi "$log_file" || { print_error "Failed to change ownership of $log_file"; }
+        cat "$log_file" | grep -vE '^\s*$' | tail -n 20
     else
         echo "--dry mode enabled or --norun specified. Skipping script execution."
     fi
