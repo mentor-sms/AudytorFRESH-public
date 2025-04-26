@@ -281,31 +281,32 @@ main() {
     fi
 
     un_un
-
-    if [ "$norun" -ne 1 ] && [ "$dry" -eq 0 ]; then
-        echo "Will run $run with job $job"
     
-        if [ "$quick" -eq 0 ]; then
-            read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
-            echo "3, 2, 1..."
-            sleep 4
-        fi
-    
-        if [ -n "${job//[[:space:]]/}" ]; then
-            job=" $job"
-        else
-            job=""
-        fi
-    
-        log_file="/home/pi/copy4prepare.log"
-        echo "Running \"$run\" with job \"$job\"..."
-        echo "Log file: $log_file"
+    if [ "$norun" -ne 1 ]; then
+      echo "Will run $run with job $job"
+      if [ "$quick" -eq 0 ]; then
+          read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
+          echo "3, 2, 1..."
+          sleep 4
+      fi
+  
+      if [ -n "${job//[[:space:]]/}" ]; then
+          job=" $job"
+      else
+          job=""
+      fi
+  
+      log_file="/home/pi/copy4prepare.log"
+      echo "Running \"$run\" with job \"$job\"..."
+      echo "Log file: $log_file"
+      if [ "$dry" -eq 0 ]; then
         sleep 4
-    
-        eval "$run""$job"
+        eval "$run""$job" 2>&1 | tee "$log_file"
     else
-        echo "--dry mode enabled or --norun specified. Skipping script execution."
+        echo "--dry mode enabled. Skipping script execution."
     fi
+  fi
+  exit 0
 }
 
 parse() {
