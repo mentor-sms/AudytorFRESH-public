@@ -297,7 +297,7 @@ main() {
             job=" $job"
         fi
     
-        log_file="/home/pi/$run.copy4prepare.log"
+        log_file="/home/pi/copy4prepare.log"
         echo "Running \"$run\" with job \"$job\"..."
         echo "Log file: $log_file"
         sleep 4
