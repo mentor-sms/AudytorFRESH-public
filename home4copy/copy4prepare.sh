@@ -113,7 +113,7 @@ run_rsync() {
     first_part="${line%% *}"  # Extract the first part
     second_part="${line#* }"  # Extract the second part
 
-    echo "test>$line;"
+    echo "$line"
 
     # Check if first_part is valid (matches [a-zA-Z0-9./_])
     if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
@@ -122,16 +122,7 @@ run_rsync() {
 
     # Create backups for files that are being replaced or updated
     if [[ $first_part == "$second_part" ]]; then
-      echo ""
-      echo "+> $target/$first_part"
       create_backup "$target/$first_part"
-      echo ""
-    else
-      if [[ $second_part == *uptodate* ]]; then
-        echo ""
-        echo ".> $target/$first_part"
-        echo ""
-      fi
     fi
   done
 
