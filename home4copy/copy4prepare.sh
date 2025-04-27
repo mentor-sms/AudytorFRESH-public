@@ -192,7 +192,6 @@ mnt_mnt() {
       fi
       set_from "$mntdir"
   fi
-  sudo chown -R pi:pi "$mntdir" || { print_error "Failed to change ownership of $mntdir"; }
 }
 
 mnt_init() {
