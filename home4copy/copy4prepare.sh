@@ -176,7 +176,7 @@ un_un() {
     if [ "$do_umount" -eq 1 ]; then
         echo "Unmounting $mntdir"
         do_umount=0
-        umount "$mntdir" || { print_error "Failed to unmount $mntdir"; }
+        umount "$mntdir" || true
     fi
 }
 
