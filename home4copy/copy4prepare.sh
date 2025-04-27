@@ -401,9 +401,8 @@ parse() {
 print_error() {
     if [ "$do_umount" -eq 1 ]; then
         echo "Unmounting $mntdir"
-        if ! umount "$mntdir"; then
-            print_error "Failed to unmount $mntdir"
-        fi
+        umount "$mntdir" || true
+        do_umount=0
     fi
     echo "Error: $1"
     exit 1
