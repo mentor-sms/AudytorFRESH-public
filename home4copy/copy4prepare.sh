@@ -78,10 +78,19 @@ create_backup() {
     local filepath="$1"
     local backup_path="${filepath}.bak"
     if [ ! -f "$backup_path" ]; then
-      echo "Creating backup for $filepath"
-      sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
+      if [ "$dry" -ne 1 ]; then
+        echo "Backing up $filepath to $backup_path"
+        sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
+      else
+        echo "--dry mode enabled. Skipping backup creation."
+      fi
     else
       echo "Backup file $backup_path already exists. Skipping backup creation."
+    fi
+    
+    if [ "$dry" -ne 1 ]; then
+      echo "Removing up $filepath"
+      rm -rf "$filepath" "$backup_path" || { echo "Error: Failed to remove $filepath."; exit 1; }
     fi
 }
 
