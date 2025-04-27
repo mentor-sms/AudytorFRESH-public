@@ -15,7 +15,6 @@ job="release"
 home_dir=home4copy
 timeout=30
 run="/home/pi/.mentor/prepare4lab.sh"
-use_root=0
 dry=0
 
 show_help() {
@@ -33,7 +32,6 @@ show_help() {
     echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
     echo "                                               (alternatywy prepare4lab: devel, debug, RELEASE...)"
-    echo "  --root                 Use root user instead of pi"
     echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
     echo "  --help                 Show this help message"
 }
@@ -57,9 +55,8 @@ handle_file() {
     if cmp -s "$_file" "$_sourcefile"; then
       true
     else
-      echo "Files are different. Updating $_file with $_sourcefile."
-      sudo rm -f "$_file" || { echo "Failed to remove $_file"; return 1; }
-      cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file"; return 1; }
+      echo "Files are different after rsync: $_file and $_sourcefile"
+      return 1
     fi
 
     echo "Converting $_file to Unix format"
@@ -82,7 +79,7 @@ create_backup() {
     local backup_path="${filepath}.bak"
     if [ ! -f "$backup_path" ]; then
       echo "Creating backup for $filepath"
-      cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
+      sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
     else
       echo "Backup file $backup_path already exists. Skipping backup creation."
     fi
@@ -97,12 +94,7 @@ run_rsync() {
       exclude_option="$exclude_option --exclude=${mntdir#"$target"/}"
   fi
 
-  if [ "$use_root" -eq 1 ]; then
-      rsync_cmd="sudo rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
-  else
-      sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
-      rsync_cmd="sudo rsync -avv --chown=pi:pi --relative $exclude_option $from/$home_dir/./ $target"
-  fi
+  rsync_cmd="sudo -u pi rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
 
   # Perform a dry-run to identify files being replaced or updated
   eval "$rsync_cmd --dry-run" | while read -r line; do
@@ -183,11 +175,7 @@ un_un() {
 
 mnt_mnt() {
   echo "Creating mount directory $mntdir"
-  if [[ $use_root -eq 1 ]]; then
-      sudo -u pi mkdir -p "$mntdir"
-  else
-      mkdir -p "$mntdir"
-  fi
+  sudo -u pi mkdir -p "$mntdir"
   if is_mounted "$from" "$mntdir"; then
       echo "$from is already mounted"
       mntdir=$(mount | grep "$from" | awk '{print $3}')
@@ -204,6 +192,7 @@ mnt_mnt() {
       fi
       set_from "$mntdir"
   fi
+  sudo chown -R pi:pi "$mntdir" || { print_error "Failed to change ownership of $mntdir"; }
 }
 
 mnt_init() {
@@ -258,19 +247,14 @@ main() {
     fi
 
     echo "Creating target directory $target"
-    if [ "$use_root" -ne 1 ]; then
-        sudo chown pi:pi "$target" || { print_error "Failed to change ownership of $target"; }
-        mkdir -p "$target" || { print_error "Failed to write to $target"; }
-    else 
-        sudo mkdir -p "$target" || { print_error "Failed to write to $target"; }
-    fi
+    sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
     
-    sudo rm -rf "$target"/.mentor || { true; }
+    rm -rf "$target"/.mentor || true
     
     echo "Reloading systemd daemon"
-    sudo systemctl daemon-reload
-    sleep 4
+    systemctl daemon-reload
     lsblk
+    sleep 4
 
     mnt_init
 
@@ -291,7 +275,7 @@ main() {
       fi
 
       if [ "$dry" -eq 0 ]; then
-        eval "$run" "$job" 2>&1 | tee "$log_file"
+        eval "$run" "$job" 2>&1 | sudo -u pi tee "$log_file"
     else
         echo "--dry mode enabled. Skipping script execution."
     fi
@@ -379,11 +363,6 @@ parse() {
                 run="$2"
                 echo "Option --run with value $run"
                 shift 2
-                ;;
-            --root)
-                use_root=1
-                echo "Option --root"
-                shift
                 ;;
             --dry)
                 dry=1
