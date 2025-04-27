@@ -48,22 +48,22 @@ handle_file() {
 
     echo "Handling file $_file"
 
-    if [[ "${_file: -1}" == "/" || "${_sourcefile: -1}" == "/" ]]; then
-        echo "Ignoring directory $_file"
-        return 0
-    fi
-
     if [[ ! -f "$_file" || ! -f "$_sourcefile" ]]; then
         echo "Either $_file or $_sourcefile does not exist. Please check the paths."
         return 1
     fi
 
-    #echo "Files are different. Updating $_file with $_sourcefile."
-    #sudo rm -f "$_file" || { echo "Failed to remove $_file"; return 1; }
-    #sudo cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file"; return 1; }
+    # Check if the files are identical    
+    if cmp -s "$_file" "$_sourcefile"; then
+      true
+    else
+      echo "Files are different. Updating $_file with $_sourcefile."
+      sudo rm -f "$_file" || { echo "Failed to remove $_file"; return 1; }
+      cp -rf "$_sourcefile" "$_file" || { echo "Failed to copy $_sourcefile to $_file"; return 1; }
+    fi
 
     echo "Converting $_file to Unix format"
-    dos2unix -f -k "$_file" || { echo "Failed to convert $_file to Unix format."; }
+    dos2unix -f -k "$_file" || true
 
     if [[ "$_file" == *.sh ]]; then
         echo "Making $_file executable"
@@ -79,16 +79,12 @@ handle_file() {
 
 create_backup() {
     local filepath="$1"
-    if [ -d "$filepath" ]; then
-        true
-    elif [ -f "$filepath" ]; then
-        local backup_path="${filepath}.bak"
-        if [ ! -f "$backup_path" ]; then
-            echo "Creating backup for $filepath"
-            cp "$filepath" "$backup_path"
-        else
-            echo "Backup for $filepath already exists. Skipping."
-        fi
+    local backup_path="${filepath}.bak"
+    if [ ! -f "$backup_path" ]; then
+      echo "Creating backup for $filepath"
+      cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
+    else
+      echo "Backup file $backup_path already exists. Skipping backup creation."
     fi
 }
 
@@ -113,16 +109,24 @@ run_rsync() {
     first_part="${line%% *}"  # Extract the first part
     second_part="${line#* }"  # Extract the second part
 
-    echo "$line"
-
     # Check if first_part is valid (matches [a-zA-Z0-9./_])
     if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
+      continue
+    fi
+    
+    local AAA=$target/$first_part
+    local BBB=$from/$home_dir/$first_part
+    if [[ "${AAA: -1}" == "/" || "${BBB: -1}" == "/" ]]; then
       continue
     fi
 
     # Create backups for files that are being replaced or updated
     if [[ $first_part == "$second_part" ]]; then
       create_backup "$target/$first_part"
+    else
+      if [[ $second_part == *uptodate* ]]; then
+        create_backup "$target/$first_part"
+      fi
     fi
   done
 
@@ -138,6 +142,12 @@ run_rsync() {
 
       # Check if first_part is valid (matches [a-zA-Z0-9./_])
       if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
+        continue
+      fi
+      
+      local AAA=$target/$first_part
+      local BBB=$from/$home_dir/$first_part
+      if [[ "${AAA: -1}" == "/" || "${BBB: -1}" == "/" ]]; then
         continue
       fi
 
