@@ -274,7 +274,7 @@ main() {
       fi
 
       if [ "$dry" -eq 0 ]; then
-        eval "$run" "$job" 2>&1 | sudo -u pi tee "$log_file"
+        eval "$run" "$job" 2>&1 | sudo -u pi tee "$log_file" > /dev/null
     else
         echo "--dry mode enabled. Skipping script execution."
     fi
