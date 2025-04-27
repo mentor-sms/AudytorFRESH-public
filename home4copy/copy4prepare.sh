@@ -281,25 +281,17 @@ main() {
     un_un
     
     if [ "$norun" -ne 1 ]; then
-      echo "Will run $run with job $job"
+      echo "Will run $run with job \"$job\""
+      log_file="/home/pi/copy4prepare.run"
+      echo "Log file: $log_file"
       if [ "$quick" -eq 0 ]; then
           read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
           echo "3, 2, 1..."
           sleep 4
       fi
-  
-      if [ -n "${job//[[:space:]]/}" ]; then
-          job=" $job"
-      else
-          job=""
-      fi
-  
-      log_file="/home/pi/copy4prepare.run"
-      echo "Running \"$run\" with job \"$job\"..."
-      echo "Log file: $log_file"
+
       if [ "$dry" -eq 0 ]; then
-        sleep 4
-        eval "$run""$job" 2>&1 | tee "$log_file"
+        eval "$run" "$job" 2>&1 | tee "$log_file"
     else
         echo "--dry mode enabled. Skipping script execution."
     fi
@@ -311,21 +303,37 @@ parse() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             --from)
+                if [[ -z "$2" ]]; then
+                    echo "Error: Missing value for --from"
+                    exit 1
+                fi
                 from="$2"
                 echo "Option --from with value $from"
                 shift 2
                 ;;
             --mnt)
+                if [[ -z "$2" ]]; then
+                    echo "Error: Missing value for --mnt"
+                    exit 1
+                fi
                 mntdir="$2"
                 echo "Option --mnt with value $mntdir"
                 shift 2
                 ;;
             --file)
+                if [[ -z "$2" ]]; then
+                    echo "Error: Missing value for --file"
+                    exit 1
+                fi
                 file="$2"
                 echo "Option --file with value $file"
                 shift 2
                 ;;
             --target)
+                if [[ -z "$2" ]]; then
+                    echo "Error: Missing value for --target"
+                    exit 1
+                fi
                 target="$2"
                 echo "Option --target with value $target"
                 shift 2
@@ -346,16 +354,28 @@ parse() {
                 shift
                 ;;
             --home_dir)
+                if [[ -z "$2" ]]; then
+                    echo "Error: Missing value for --home_dir"
+                    exit 1
+                fi
                 home_dir="$2"
                 echo "Option --home_dir with value $home_dir"
                 shift 2
                 ;;
             --timeout)
+                if [[ -z "$2" ]]; then
+                    echo "Error: Missing value for --timeout"
+                    exit 1
+                fi
                 timeout="$2"
                 echo "Option --timeout with value $timeout"
                 shift 2
                 ;;
             --run)
+                if [[ -z "$2" ]]; then
+                    echo "Error: Missing value for --run"
+                    exit 1
+                fi
                 run="$2"
                 echo "Option --run with value $run"
                 shift 2
@@ -376,6 +396,8 @@ parse() {
                 ;;
             --job)
                 shift
+                job="$*"
+                echo "Option --job with value $job"
                 break
                 ;;
             --)
