@@ -104,8 +104,15 @@ rsync_line_test() {
   if [[ ! $p1 =~ ^[a-zA-Z0-9./_]+$ ]]; then
     return 1
   fi
+  if [[ "/${p1: -1}" == "/" ]]; then
+    return 1
+  fi
   
-  if [[ "${target}/${p1: -1}" == "/" || "${from}/${home_dir}/${p1: -1}" == "/" ]]; then
+  local p2
+  p2="$2"
+  if [[ "/${p2: -1}" == "/" ]]; then
+    echo "p1: $p1"
+    echo "p2: $p2"
     return 1
   fi
   
@@ -141,7 +148,7 @@ run_rsync() {
     first_part="${line%% *}"  # Extract the first part
     second_part="${line#* }"  # Extract the second part
 
-    if ! rsync_line_test "$first_part"; then
+    if ! rsync_line_test "$first_part" "$second_part"; then
       continue
     fi
 
@@ -166,7 +173,7 @@ run_rsync() {
       echo ">$line;"
 
       # Check if first_part is valid (matches [a-zA-Z0-9./_])
-      if ! rsync_line_test "$first_part"; then
+      if ! rsync_line_test "$first_part" "$second_part"; then
         continue
       fi
 
@@ -424,6 +431,11 @@ parse() {
 }
 
 print_error() {
+  local message="$1"
+  echo "Error: $message"
+  exit 1
+}
+    
 is_directory() {
     [ -d "$1" ]
 }
