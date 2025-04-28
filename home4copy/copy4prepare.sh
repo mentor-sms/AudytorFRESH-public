@@ -292,6 +292,7 @@ main() {
     udevadm control --reload-rules || { echo "Error: failed to reload udev rules"; exit 1; }
     udevadm trigger || { echo "Error: failed to trigger udev rules"; exit 1; }
     lsblk
+    echo "3, 2, 1..."
     sleep 4
 
     mnt_init
