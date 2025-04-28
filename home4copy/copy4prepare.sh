@@ -46,10 +46,6 @@ handle_file() {
 
     echo "Handling file $_file"
 
-    if [[ ! -f "$_file" ]]; then
-        echo "$_file does not exist. Please check the paths."
-        return 1
-    fi
     if [[ ! -f "$_sourcefile" ]]; then
         echo "$_sourcefile does not exist. Please check the paths."
         return 1
@@ -90,11 +86,6 @@ create_backup() {
       fi
     else
       echo "Backup file $backup_path already exists. Skipping backup creation."
-    fi
-    
-    if [ "$dry" -ne 1 ]; then
-      echo "Removing up $filepath"
-      rm -rf "$filepath" "$backup_path" || { echo "Error: Failed to remove $filepath."; exit 1; }
     fi
 }
 
@@ -158,18 +149,8 @@ run_rsync() {
     if ! rsync_line_test "$first_part" "$second_part"; then
       continue
     fi
-
-    # Create backups for files that are being replaced or updated
-    if [[ $first_part == "$second_part" ]]; then
-      create_backup "$target/$first_part"
-    else
-      if [[ $second_part == *uptodate* ]]; then
-        create_backup "$target/$first_part"
-      fi
-    fi
   done
 
-  # Now perform the actual rsync operation
   if [ "$dry" -eq 0 ]; then
     echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     echo "CMD: $rsync_cmd"
@@ -179,24 +160,27 @@ run_rsync() {
 
       echo ">$line;"
 
-      # Check if first_part is valid (matches [a-zA-Z0-9./_])
       if ! rsync_line_test "$first_part" "$second_part"; then
         continue
       fi
 
-      # Handle files as needed during the actual rsync
       if [[ $first_part == "$second_part" ]]; then
         echo "+> $target/$first_part"
-        if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
-          print_error "Error occurred while handling $target/$first_part"
-        fi
+      elif [[ $second_part == *uptodate* ]]; then
+        echo ".> $target/$first_part"
       else
-        if [[ $second_part == *uptodate* ]]; then
-          echo ".> $target/$first_part"
-          if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
-            print_error "Error occurred while handling $target/$first_part"
-          fi
-        fi
+        continue
+      fi
+
+      if [ "$dry" -ne 1 ]; then
+        echo "Removing up $filepath"
+        rm -rf "$filepath" || { echo "Error: Failed to remove $filepath."; exit 1; }
+      fi
+
+      create_backup "$target/$first_part"
+
+      if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
+        print_error "Error occurred while handling $target/$first_part"
       fi
     done
   else
