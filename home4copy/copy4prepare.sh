@@ -108,6 +108,8 @@ rsync_line_test() {
   if [[ "/${p1: -1}" == "/" ]]; then
     echo "-p1: $p1"
     return 1
+  else
+    echo "+p1: $p1"
   fi
   
   local p2
@@ -116,6 +118,8 @@ rsync_line_test() {
     echo "+p1: $p1"
     echo "-p2: $p2"
     return 1
+  else 
+    echo "+p2: $p2"
   fi
   
   return 0
