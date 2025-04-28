@@ -227,6 +227,15 @@ mnt_mnt() {
   fi
 }
 
+is_block_device() {
+    local path="$1"
+    if [ -b "$path" ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 mnt_init() {
   if is_block_device "$from"; then
       echo "$from is a block device"
