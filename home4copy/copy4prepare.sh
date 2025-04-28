@@ -105,14 +105,15 @@ rsync_line_test() {
     return 1
   fi
   if [[ "/${p1: -1}" == "/" ]]; then
+    echo "-p1: $p1"
     return 1
   fi
   
   local p2
   p2="$2"
   if [[ "/${p2: -1}" == "/" ]]; then
-    echo "p1: $p1"
-    echo "p2: $p2"
+    echo "+p1: $p1"
+    echo "-p2: $p2"
     return 1
   fi
   
