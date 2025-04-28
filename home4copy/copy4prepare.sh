@@ -46,8 +46,12 @@ handle_file() {
 
     echo "Handling file $_file"
 
-    if [[ ! -f "$_file" || ! -f "$_sourcefile" ]]; then
-        echo "Either $_file or $_sourcefile does not exist. Please check the paths."
+    if [[ ! -f "$_file" ]]; then
+        echo "$_file does not exist. Please check the paths."
+        return 1
+    fi
+    if [[ ! -f "$_sourcefile" ]]; then
+        echo "$_sourcefile does not exist. Please check the paths."
         return 1
     fi
 
@@ -94,30 +98,50 @@ create_backup() {
     fi
 }
 
+rsync_line_test() {
+  local p1
+  p1="$1"
+  if [[ ! $p1 =~ ^[a-zA-Z0-9./_]+$ ]]; then
+    return 1
+  fi
+  
+  if [[ "${target}/${p1: -1}" == "/" || "${from}/${home_dir}/${p1: -1}" == "/" ]]; then
+    return 1
+  fi
+  
+  return 0
+}
+
 run_rsync() {
   echo "Running rsync for home_dir (copy4prepare)"
 
-  exclude_option="--exclude=$home_dir/root4rpi --exclude=$target/copy4prepare.sh"
+  local exclude_option
+  exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh"
 
   if [[ "$mntdir" == "$target/"* ]]; then
-      exclude_option="$exclude_option --exclude=${mntdir#"$target"/}"
+      exclude_option="$exclude_option --exclude=/${mntdir#"$target"/}"
   fi
+  
+  local dry_exclude_option
+  dry_exclude_option="$exclude_option --exclude=/.source4rpi --exclude=/.mentor"
+  
+  local rcmd
+  rcmd="sudo -u pi rsync -avv --relative"
+  local cont
+  cont="$from/$home_dir/./ $target"
 
-  rsync_cmd="sudo -u pi rsync -avv --relative $exclude_option $from/$home_dir/./ $target"
+  local rsync_cmd
+  rsync_cmd="$rcmd $exclude_option $cont"
+  local dry_rsync_cmd
+  dry_rsync_cmd="$rcmd --dry-run $dry_exclude_option $cont"
 
-  # Perform a dry-run to identify files being replaced or updated
-  eval "$rsync_cmd --dry-run" | while read -r line; do
+  local first_part
+  local second_part
+  eval "$dry_rsync_cmd" | while read -r line; do
     first_part="${line%% *}"  # Extract the first part
     second_part="${line#* }"  # Extract the second part
 
-    # Check if first_part is valid (matches [a-zA-Z0-9./_])
-    if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
-      continue
-    fi
-    
-    local AAA=$target/$first_part
-    local BBB=$from/$home_dir/$first_part
-    if [[ "${AAA: -1}" == "/" || "${BBB: -1}" == "/" ]]; then
+    if ! rsync_line_test "$first_part"; then
       continue
     fi
 
@@ -142,13 +166,7 @@ run_rsync() {
       echo ">$line;"
 
       # Check if first_part is valid (matches [a-zA-Z0-9./_])
-      if [[ ! $first_part =~ ^[a-zA-Z0-9./_]+$ ]]; then
-        continue
-      fi
-      
-      local AAA=$target/$first_part
-      local BBB=$from/$home_dir/$first_part
-      if [[ "${AAA: -1}" == "/" || "${BBB: -1}" == "/" ]]; then
+      if ! rsync_line_test "$first_part"; then
         continue
       fi
 
@@ -177,6 +195,7 @@ un_un() {
         echo "Unmounting $mntdir"
         do_umount=0
         umount "$mntdir" || true
+        rm -rf "$mntdir" || true
     fi
 }
 
@@ -255,10 +274,16 @@ main() {
     echo "Creating target directory $target"
     sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
     
+    echo "Cleaning..."
     rm -rf "$target"/.mentor || true
+    rm -rf "$target"/.source4rpi || true
+    rm -rf "$target"/.config/Mentor || true
+    rm -rf "$target"/.prepare4lab.step || true
+    cp -rf /etc/skel/.profile "$target"/. || true
     
     echo "Reloading systemd daemon"
-    systemctl daemon-reload
+    udevadm control --reload-rules || { echo "Error: failed to reload udev rules"; exit 1; }
+    udevadm trigger || { echo "Error: failed to trigger udev rules"; exit 1; }
     lsblk
     sleep 4
 
@@ -272,7 +297,7 @@ main() {
     
     if [ "$norun" -ne 1 ]; then
       echo "Will run $run with job \"$job\""
-      log_file="/home/pi/copy4prepare.run"
+      log_file="/home/pi/copy4prepare.log"
       echo "Log file: $log_file"
       if [ "$quick" -eq 0 ]; then
           read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
@@ -399,19 +424,6 @@ parse() {
 }
 
 print_error() {
-    if [ "$do_umount" -eq 1 ]; then
-        echo "Unmounting $mntdir"
-        umount "$mntdir" || true
-        do_umount=0
-    fi
-    echo "Error: $1"
-    exit 1
-}
-
-is_block_device() {
-    [ -b "$1" ]
-}
-
 is_directory() {
     [ -d "$1" ]
 }
