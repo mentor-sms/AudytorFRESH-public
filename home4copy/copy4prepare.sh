@@ -102,6 +102,7 @@ rsync_line_test() {
   local p1
   p1="$1"
   if [[ ! $p1 =~ ^[a-zA-Z0-9./_]+$ ]]; then
+    echo "aZ1: $p1"
     return 1
   fi
   if [[ "/${p1: -1}" == "/" ]]; then
