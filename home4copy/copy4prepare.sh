@@ -99,29 +99,30 @@ create_backup() {
 }
 
 rsync_line_test() {
-  local p1
-  p1="$1"
-  if [[ ! $p1 =~ ^[a-zA-Z0-9./_]+$ ]]; then
-    echo "aZ1: $p1"
-    return 1
-  fi
-  if [[ "/${p1: -1}" == "/" ]]; then
+  local p1="$1"
+  local p2="$2"
+
+  # Ensure both p1 and p2 start with "/"
+  p1="/${p1#/}"
+  p2="/${p2#/}"
+
+  # Check if the last character of p1 is "/"
+  if [[ "${p1: -1}" == "/" ]]; then
     echo "-p1: $p1"
     return 1
   else
     echo "+p1: $p1"
   fi
-  
-  local p2
-  p2="$2"
-  if [[ "/${p2: -1}" == "/" ]]; then
+
+  # Check if the last character of p2 is "/"
+  if [[ "${p2: -1}" == "/" ]]; then
     echo "+p1: $p1"
     echo "-p2: $p2"
     return 1
-  else 
+  else
     echo "+p2: $p2"
   fi
-  
+
   return 0
 }
 
