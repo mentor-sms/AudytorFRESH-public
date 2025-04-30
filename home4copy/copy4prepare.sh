@@ -77,7 +77,7 @@ handle_file() {
 create_backup() {
     local filepath="$1"
     local backup_path="${filepath}.bak"
-    if [ ! -f "$backup_path" ]; then
+    if [ ! -f "$filepath" ]; then
       if [ "$dry" -ne 1 ]; then
         echo "Backing up $filepath to $backup_path"
         sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
