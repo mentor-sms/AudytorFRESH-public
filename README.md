@@ -42,7 +42,7 @@ Zapisz plik *nazwa.marker* w miejsciu gdzie ma zostac utworzony katalog *nazwa*.
 1. https://downloads.raspberrypi.org/imager/imager_latest.exe
 2. Storage: SD card,
 Device: Raspberry Pi 4,
-OS: Raspberry Pi OS (other)/Raspberry Pi OS Lite (64-bit),
+OS: Raspberry Pi OS (64-bit, wersja Recommended),
 Next.
 3. Dialog: Edit settings.
 4. GENERAL. Set username: `pi`, password: dowolne, Configure wireless LAN: NIE, Set locale settings: Europe/Warsaw.
@@ -69,8 +69,9 @@ Next.
 Przygotowanie:
 ```bash
 sudo apt update
-sudo apt full-upgrade
-sudo apt install dos2unix
+sudo apt upgrade
+sudo apt full-upgrade -y
+#sudo apt install dos2unix
 sudo apt autoremove
 sudo apt clean
 reboot
