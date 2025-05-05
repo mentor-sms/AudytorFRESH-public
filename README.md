@@ -37,7 +37,7 @@ Next.
 1. Przygotuj pendrive FAT32
 2. Konfiguruj SSH: TAK (pierwsze uruchomienie, nowy pulpit/instalacja w sieci, blad bezpieczenstwa), Dalej (Test).
 3. aaa.bbb.ccc.ddd:port - teacher4lab IP (port dowolny).
-4. Kopiuj student4lab zdalnie (dlugo!): NIE, student4lab > pen (przy aktualizacji: TAK, student4lab > *Mentor\home4copy*).
+4. Kopiuj student4lab zdalnie: NIE, student4lab > pen (przy aktualizacji: TAK, student4lab > *Mentor\home4copy*).
 5. Generuj skrypt instalacji, wybierz __katalog glowny__ pendrive (przy aktualizacji: katalog Mentor).
 6. Opcjonalnie zedytuj *USB\home4copy* > */home/pi* (krok: RPI).
 7. Bezpiecznie wysun urzadzenie i odczekaj 10 sekund, bo naprawde... :)
@@ -61,8 +61,8 @@ chmod +x copy4prepare.sh
 Pomoc (np. gdy `lsblk` zwraca */dev/sdb*):
 ```bash
 ./copy4prepare.sh --help
-````
-Instalacja 1x USB (przygotuj pendrive do podmiany na klawiature,:
+```
+Instalacja 1x USB (przygotuj pendrive do podmiany z klawiatura zgodnie z instrukcja na ekranie):
 ```bash
 sudo ./copy4prepare.sh --job release
 ```
@@ -70,4 +70,13 @@ Instalacja 2x USB:
 ```bash
 sudo ./copy4prepare.sh --timeout 0 --job release
 ```
-~~~~
+Postepuj zgodnie z instrukcjami na ekranie. Typowo informacje po zatwierdzeniu usuniecia pendrive nie sa istotne. RPI uruchomi sie kilka razy, raz po minutowej przerwie ktora latwo pomylic z zakonczeniem procesu. Oczekuj komunikatu "Mentor wita!".
+
+# ISO
+
+
+
+# install4lab (3)
+
+1. Szukaj pulpitow: TAK, Konfiguruj backdoor SSH: NIE.
+2. 
