@@ -12,9 +12,28 @@ Pliki wewnetrzne: *installer4lab.exe\run*
 
 Pliki uzytkownika: *%userprofile%\Mentor*
 
+*Mentor\root4rpi* - synchronizacja z */* (root). Dowolnie modyfikuj ten katalog. Sciezki zabronione:
+```
+home/pi/*
+etc/ssh/ssh_host_rsa_key
+etc/ssh/ssh_host_rsa_key.pub
+usr/local/bin/student4lab
+usr/lib/libmentor4lab*
+```
+
+*Mentor\home4copy* - synchronizacja z */home/pi*. Dowolnie modyfikuj ten katalog. Dodatkowe pliki w kroku (2). Sciezki zabronione:
+```
+copy4prepare.sh
+.profile
+.ssh/known_hosts
+.ssh/authorized_keys
+```
+*.mentor/known_keys/\*.pub* - extra klucze SSH dla *known_hosts/authorized_keys*
+
+*.mentor/profile.sh*, *.mentor/profile.part* - zamiast *.profile*
+
 Nie zmieniaj nazw plikow *\*.marker* w dialogach.
 Zapisz plik *nazwa.marker* w miejsciu gdzie ma zostac utworzony katalog *nazwa*.
-Otworz plik *nazwa.marker* w katalogu *nazwa* ktory chcesz wskazac (utworz recznie by oznaczyc katalog jako wybieralny).
 
 # SD
 
@@ -26,7 +45,7 @@ Next.
 3. Dialog: Edit settings.
 4. GENERAL. Set username: `pi`, password: dowolne, Configure wireless LAN: NIE, Set locale settings: Europe/Warsaw.
 5. SERVICES. Enable SSH: TAK, Allow public-key authentication only: TAK, Set authorized key for 'pi': zawartosc *Mentor\ssh4win\id_ed25519.pub*.
-6. OPTIONS. Eject media when finished: YES.
+6. OPTIONS. Eject media when finished: YES (nie modyfikuj bootfs).
 7. SAVE.
 8. Dialog: YES, YES.
 9. CONTINUE, zamknij.
@@ -39,7 +58,7 @@ Next.
 3. aaa.bbb.ccc.ddd:port - teacher4lab IP (port dowolny).
 4. Kopiuj student4lab zdalnie: NIE, student4lab > pen (przy aktualizacji: TAK, student4lab > *Mentor\home4copy*).
 5. Generuj skrypt instalacji, wybierz __katalog glowny__ pendrive (przy aktualizacji: katalog Mentor).
-6. Opcjonalnie zedytuj *USB\home4copy* > */home/pi* (krok: RPI).
+6. Opcjonalnie zedytuj *USB\home4copy* > */home/pi* (dla kroku: RPI).
 7. Bezpiecznie wysun urzadzenie i odczekaj 5 sekund, bo naprawde... :)
 
 # RPI
@@ -83,6 +102,8 @@ poweroff
 # install4lab (3)
 
 1. Szukaj pulpitow: TAK, Konfiguruj backdoor SSH: NIE.
-2. aaa.bbb.ccc.xxx-yyy - aaa.bbb.ccc IP (RPI, wyswietlone na ekranie) + zakres koncowek (xxx-xxx dla jednego pulpitu).
+2. aaa.bbb.ccc.xxx-yyy - aaa.bbb.ccc prefix IP pulpitow + zakres koncowek (wyswietlone na RPI, xxx-xxx dla jednego pulpitu, __bezpiecznie 2-254__).
 3. Ilosc pulpitow: zostanie nadpisane przez Test.
-4. Test
+4. Test. 
+5. Ok? Dalej.
+6. Force reinstall: NIE, Buduj zdalnie: NIE. Zmiana konfiguracji: TAK, NIE. Aktualizacja aplikacji: NIE, TAK.
