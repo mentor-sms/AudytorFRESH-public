@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.5
+WERSJA=2.0.0
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -60,9 +60,13 @@ handle_file() {
     if cmp -s "$_file" "$_sourcefile"; then
       true
     else
-      echo "Files are different after rsync: $_file and $_sourcefile"
-      diff -u "$_file" "$_sourcefile" || true
-      return 1
+      echo "Files are different after rsync (cmp): $_file and $_sourcefile"
+      if diff -u "$_file" "$_sourcefile"; then
+        echo "Files are identical after all: $_file and $_sourcefile"
+      else
+        echo "Files are different after rsync (diff): $_file and $_sourcefile"
+        return 1
+      fi
     fi
 
     echo "Converting $_file to Unix format"

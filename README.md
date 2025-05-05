@@ -72,11 +72,6 @@ sudo ./copy4prepare.sh --timeout 0 --job release
 ```
 Postepuj zgodnie z instrukcjami na ekranie. Typowo informacje po zatwierdzeniu usuniecia pendrive nie sa istotne. RPI uruchomi sie kilka razy, raz po minutowej przerwie ktora latwo pomylic z zakonczeniem procesu. Oczekuj komunikatu "Mentor wita!".
 
-Aktualizacja:
-```bash
-
-```
-
 # ISO
 
 
