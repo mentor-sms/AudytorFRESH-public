@@ -295,6 +295,7 @@ main() {
     rm -rf "$target"/.source4rpi || true
     rm -rf "$target"/.config/Mentor || true
     rm -rf "$target"/.prepare4lab.step || true
+    echo "0" | sudo -u pi tee "$target"/.prepare4lab.step > /dev/null || { echo "Error: failed to write to "$target"/.prepare4lab.step"; exit 1; }
     cp -rf /etc/skel/.profile "$target"/. || true
     
     echo "Reloading systemd daemon"
