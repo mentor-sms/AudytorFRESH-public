@@ -40,7 +40,7 @@ Next.
 4. Kopiuj student4lab zdalnie: NIE, student4lab > pen (przy aktualizacji: TAK, student4lab > *Mentor\home4copy*).
 5. Generuj skrypt instalacji, wybierz __katalog glowny__ pendrive (przy aktualizacji: katalog Mentor).
 6. Opcjonalnie zedytuj *USB\home4copy* > */home/pi* (krok: RPI).
-7. Bezpiecznie wysun urzadzenie i odczekaj 10 sekund, bo naprawde... :)
+7. Bezpiecznie wysun urzadzenie i odczekaj 5 sekund, bo naprawde... :)
 
 # RPI
 
@@ -71,6 +71,11 @@ Instalacja 2x USB:
 sudo ./copy4prepare.sh --timeout 0 --job release
 ```
 Postepuj zgodnie z instrukcjami na ekranie. Typowo informacje po zatwierdzeniu usuniecia pendrive nie sa istotne. RPI uruchomi sie kilka razy, raz po minutowej przerwie ktora latwo pomylic z zakonczeniem procesu. Oczekuj komunikatu "Mentor wita!".
+
+Aktualizacja:
+```bash
+
+```
 
 # ISO
 

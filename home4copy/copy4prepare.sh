@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.4
+WERSJA=1.0.5
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -61,6 +61,7 @@ handle_file() {
       true
     else
       echo "Files are different after rsync: $_file and $_sourcefile"
+      diff -u "$_file" "$_sourcefile" || true
       return 1
     fi
 
@@ -136,7 +137,7 @@ run_rsync() {
   dry_exclude_option="$exclude_option --exclude=/.source4rpi --exclude=/.mentor"
   
   local rcmd
-  rcmd="sudo -u pi rsync -avv --relative"
+  rcmd="sudo -u pi rsync -avvc --relative"
   local cont
   cont="$from/$home_dir/./ $target"
 
