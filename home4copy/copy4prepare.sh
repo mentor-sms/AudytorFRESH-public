@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=2.0.0
+WERSJA=1.0.1
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -18,23 +18,28 @@ run="/home/pi/.mentor/prepare4lab.sh"
 dry=0
 
 show_help() {
-    echo "Usage: sudo $0 [options]"
-    echo "Options:"
-    echo "  --from <path>          Block device or directory (default: /dev/sda1)"
-    echo "  --mnt <path>           Mount point for the device (default: /home/pi/mnt)"
-    echo "  --file <name>          Script name to run after copying (default: prepare4lab.sh)"
-    echo "  --target <path>        Target directory for the script (default: /home/pi)"
-    echo "  --quick                Do not prompt before running the script"
-    echo "  --norun                Do not run the script"
-    echo "  --nosync               Do not sync directories before copying"
-    echo "  --home_dir <name>      Source directory in from (default: home4copy)"
-    echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
-    echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
-    echo "  --job <args>           Argumenty dla skryptu (default: release)"
-    echo "                                               (alternatywy prepare4lab: devel, debug)"
-    echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
-    echo "  --help                 Show this help message"
-}
+        echo "Usage: sudo $0 [options]"
+        echo "Options:"
+        echo "  --from <path>          Block device or directory (default: ${from})"
+        echo ""
+        echo "  --quick                Do not prompt before running the script"
+        echo "  --timeout <seconds>    Wait time before starting the process (default: ${timeout})"
+        echo ""
+        echo "  --norun                Do not run the script"
+        echo "  --dry                  Dry sync directories"
+        echo "  --nosync               Do not sync directories"
+        echo ""
+        echo "  --mnt <path>           Mount point for the device (default: ${mntdir})"
+        echo "  --target <path>        Target directory for the script (default: ${target})"
+        echo "  --home_dir <name>      Source directory in \${mnt} (default: ${home_dir})"
+        echo "  --run <path>           Path to the script to run (default: ${run})"
+        echo ""
+        echo "  --job <args>           Argumenty dla skryptu (default: ${job})"
+        echo "                                               (opcje prepare4lab: release, devel, debug)"
+        echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
+        echo ""
+        echo "  --help                 Show this help message"
+    }
 
 handle_file() {
     local _file=$1
