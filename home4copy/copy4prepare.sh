@@ -11,7 +11,7 @@ target=/home/pi
 quick=0
 norun=0
 nosync=0
-job="release"
+job="urelease"
 home_dir=home4copy
 timeout=30
 run="/home/pi/.mentor/prepare4lab.sh"
@@ -34,7 +34,7 @@ show_help() {
         echo "  --home_dir <name>      Source directory in \${mnt} (default: ${home_dir})"
         echo "  --run <path>           Path to the script to run (default: ${run})"
         echo ""
-        echo "  --job <args>           Argumenty dla skryptu (default: ${job})"
+        echo "  --job <args>           Argumenty dla skryptu (default: release)"
         echo "                                               (opcje prepare4lab: release, devel, debug)"
         echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
         echo ""
