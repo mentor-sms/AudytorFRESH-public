@@ -197,12 +197,13 @@ run_rsync() {
 }
 
 un_un() {
-    if [ "$do_umount" -eq 1 ]; then
-        echo "Unmounting $mntdir"
-        do_umount=0
-        umount "$mntdir" || true
-        rm -rf "$mntdir" || true
-    fi
+  if [ "$do_umount" -eq 1 ]; then
+      echo "Unmounting $mntdir"
+      sleep 4
+      do_umount=0
+      sudo umount "$mntdir" || { echo "err unmount $mntdir, waiting a minute, Ctrl+C to cancel..."; sleep 60; }
+      rm -rf "$mntdir" || { echo "err rm $mntdir, waiting a minute, Ctrl+C to cancel..."; sleep 60; }
+  fi
 }
 
 mnt_mnt() {
