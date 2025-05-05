@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.1
+WERSJA=1.0.2
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -154,43 +154,41 @@ run_rsync() {
     if ! rsync_line_test "$first_part" "$second_part"; then
       continue
     fi
+    
+    local fpath
+    fpath="$target/$first_part"
+    
+    create_backup "$fpath"
+    if [ "$dry" -ne 1 ]; then
+      echo "Removing up $fpath"
+      rm -rf "$fpath" || { echo "Error: Failed to remove $fpath."; exit 1; }
+    fi
   done
 
-  if [ "$dry" -eq 0 ]; then
-    echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
-    echo "CMD: $rsync_cmd"
-    eval "$rsync_cmd" | while read -r line; do
-      first_part="${line%% *}"
-      second_part="${line#* }"
+  echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
+  echo "CMD: $rsync_cmd"
+  eval "$rsync_cmd" | while read -r line; do
+    first_part="${line%% *}"
+    second_part="${line#* }"
 
-      echo ">$line;"
+    echo ">$line;"
 
-      if ! rsync_line_test "$first_part" "$second_part"; then
-        continue
-      fi
+    if ! rsync_line_test "$first_part" "$second_part"; then
+      continue
+    fi
 
-      if [[ $first_part == "$second_part" ]]; then
-        echo "+> $target/$first_part"
-      elif [[ $second_part == *uptodate* ]]; then
-        echo ".> $target/$first_part"
-      else
-        continue
-      fi
+    if [[ $first_part == "$second_part" ]]; then
+      echo "+> $target/$first_part"
+    elif [[ $second_part == *uptodate* ]]; then
+      echo ".> $target/$first_part"
+    else
+      continue
+    fi
 
-      if [ "$dry" -ne 1 ]; then
-        echo "Removing up $filepath"
-        rm -rf "$filepath" || { echo "Error: Failed to remove $filepath."; exit 1; }
-      fi
-
-      create_backup "$target/$first_part"
-
-      if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
-        print_error "Error occurred while handling $target/$first_part"
-      fi
-    done
-  else
-    echo "--dry mode enabled. Skipping actual rsync operation."
-  fi
+    if ! handle_file "$target/$first_part" "$from/$home_dir/$first_part"; then
+      print_error "Error occurred while handling $target/$first_part"
+    fi
+  done
 }
 
 un_un() {
