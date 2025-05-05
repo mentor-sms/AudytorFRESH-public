@@ -31,7 +31,7 @@ show_help() {
     echo "  --timeout <seconds>    Wait time before starting the process (default: 30)"
     echo "  --run <path>           Path to the script to run (default: /home/pi/.mentor/prepare4lab.sh)"
     echo "  --job <args>           Argumenty dla skryptu (default: release)"
-    echo "                                               (alternatywy prepare4lab: devel, debug, RELEASE...)"
+    echo "                                               (alternatywy prepare4lab: devel, debug)"
     echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
     echo "  --help                 Show this help message"
 }
@@ -415,6 +415,16 @@ parse() {
             --job)
                 shift
                 job="$*"
+                if [ "$job" == "release" ]; then
+                    job="urelease"
+                elif [ "$job" == "devel" ]; then
+                    job="udevel"
+                elif [ "$job" == "debug" ]; then
+                    job="udebug"
+                else
+                    echo "Uwaga! Unknown job: $job"
+                    exit 1
+                fi
                 echo "Option --job with value $job"
                 break
                 ;;
