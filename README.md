@@ -70,13 +70,19 @@ Instalacja 2x USB:
 ```bash
 sudo ./copy4prepare.sh --timeout 0 --job release
 ```
-Postepuj zgodnie z instrukcjami na ekranie. Typowo informacje po zatwierdzeniu usuniecia pendrive nie sa istotne. RPI uruchomi sie kilka razy, raz po minutowej przerwie ktora latwo pomylic z zakonczeniem procesu. Oczekuj komunikatu "Mentor wita!".
-
+Postepuj zgodnie z instrukcjami na ekranie. Po komunikacje o ponownym uruchomieniu w sieci docelowej:
+```bash
+poweroff
+```
 # ISO
-
-
+1. Sklonuj SD na karty dla pozostalych pulpitow.
+2. Skonfiguruj ostatecznie siec.
+3. Wlacz pulpity. Uruchomia sie ponownie kilka razy, konczac konfiguracje.
+4. Oczekuj komunikatu "Mentor wita!" u gory ekranu na kazdym z pulpitow. Jezeli tak nie jest - cos poszlo nie tak.
 
 # install4lab (3)
 
 1. Szukaj pulpitow: TAK, Konfiguruj backdoor SSH: NIE.
-2. 
+2. aaa.bbb.ccc.xxx-yyy - aaa.bbb.ccc IP (RPI, wyswietlone na ekranie) + zakres koncowek (xxx-xxx dla jednego pulpitu).
+3. Ilosc pulpitow: zostanie nadpisane przez Test.
+4. Test
