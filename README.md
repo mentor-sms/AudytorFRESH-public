@@ -32,6 +32,8 @@ copy4prepare.sh
 
 *.mentor/profile.sh*, *.mentor/profile.part* - zamiast *.profile*
 
+__jezeli usunales lub dodales pliki: Przeladuj__
+
 Nie zmieniaj nazw plikow *\*.marker* w dialogach.
 Zapisz plik *nazwa.marker* w miejsciu gdzie ma zostac utworzony katalog *nazwa*.
 
