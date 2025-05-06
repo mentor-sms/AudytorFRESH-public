@@ -21,7 +21,7 @@ set PRIV_KEY=%USERPROFILE%\.ssh\id_repo_defaults
 set REMOTE_HOST=%IP%
 
 REM Define the ssh command
-set SSH_CMD=ssh.exe -t -o StrictHostKeyChecking=no -o ConnectTimeout=7 -i %PRIV_KEY% %REMOTE_USER%@%REMOTE_HOST%
+set SSH_CMD=ssh.exe -o StrictHostKeyChecking=no -o ConnectTimeout=7 -i %PRIV_KEY% %REMOTE_USER%@%REMOTE_HOST%
 echo %SSH_CMD%
 
 REM Define the base directory
