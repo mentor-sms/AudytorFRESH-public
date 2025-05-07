@@ -87,7 +87,7 @@ handle_file() {
 create_backup() {
     local filepath="$1"
     local backup_path="${filepath}.bak"
-    if [ ! -f "$filepath" ]; then
+    if [ ! -f "$backup_path" ] && [ -f "$filepath" ]; then
       if [ "$dry" -ne 1 ]; then
         echo "Backing up $filepath to $backup_path"
         sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
@@ -95,7 +95,7 @@ create_backup() {
         echo "--dry mode enabled. Skipping backup creation."
       fi
     else
-      echo "Backup file $backup_path already exists. Skipping backup creation."
+      echo "Skipping backup creation of $filepath"
     fi
 }
 
