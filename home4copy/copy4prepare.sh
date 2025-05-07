@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=6.6.6
+WERSJA=7.7.7
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -24,8 +24,7 @@ show_help() {
         echo "Usage: sudo $0 [options]"
         echo "Options:"
         echo "  --from <path>          Block device or directory (default: ${from})"
-        echo ""
-        echo "  --quick                Do not prompt before running the script"
+        echo "  --mnt <path>           Mount point for the device (default: ${mntdir})"
         echo "  --timeout <seconds>    Wait time before starting the process (default: ${timeout})"
         echo ""
         echo "  --norun                Do not run the script"
@@ -36,17 +35,20 @@ show_help() {
         echo "  --nobackup             Do not backup files"
         echo "  --bclear               Remove backup files and exit"
         echo ""
-        echo "  --mnt <path>           Mount point for the device (default: ${mntdir})"
-        echo "  --target <path>        Target directory for the script (default: ${target})"
-        echo "  --home_dir <name>      Source directory in \${mnt} (default: ${home_dir})"
-        echo "  --run <path>           Path to the script to run (default: ${run})"
-        echo ""
         echo "  --job <args>           Argumenty dla skryptu (default: release)"
         echo "                                               (opcje prepare4lab: release, devel, debug)"
         echo "  --job                  ZAWSZE JAKO OSTATNI ARGUMENT!"
         echo ""
         echo "  --help                 Show this help message"
-    }
+}
+
+noquick() {
+  if [ "$quick" -eq 0 ]; then
+      read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
+      echo "3, 2, 1..."
+      sleep 4
+  fi
+}
 
 handle_file() {
     local _file=$1
@@ -89,12 +91,14 @@ handle_file() {
             return 1
         fi
     fi
+    sleep 1
 }
 
 create_backup() {
     local filepath="$1"
     if [ "$nobackup" -eq 1 ]; then
         echo "--nobackup enabled. Skipping backup creation for $filepath"
+        sleep 1
         return
     fi
     local backup_path="${filepath}.mentorbak"
@@ -102,18 +106,21 @@ create_backup() {
     # Check if filepath contains "home/pi/.mentor" or "home/pi/.source4rpi"
     if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
         echo "Skipping backup creation for $filepath (excluded path)"
+        sleep 1
         return
     fi
 
     if [ ! -f "$backup_path" ] && [ -f "$filepath" ]; then
-        if [ "$dry" -ne 1 ]; then
-            echo "Backing up $filepath to $backup_path"
-            sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
-        else
-            echo "--dry mode enabled. Skipping backup creation."
-        fi
+      if [ "$dry" -ne 1 ]; then
+        echo "backup: $filepath to $backup_path"
+        sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
+      else
+        echo "bry: backup: $filepath to $backup_path"
+      fi
+      sleep 1
     else
         echo "Skipping backup creation of $filepath"
+        sleep 1
     fi
 }
 
@@ -170,7 +177,7 @@ run_rsync() {
 
   local first_part
   local second_part
-  eval "$dry_rsync_cmd" | while read -r line; do
+  $dry_rsync_cmd | while read -r line; do
     first_part="${line%% *}"  # Extract the first part
     second_part="${line#* }"  # Extract the second part
 
@@ -181,10 +188,15 @@ run_rsync() {
     local fpath
     fpath="$target/$first_part"
     
-    create_backup "$fpath"
     if [ "$dry" -ne 1 ]; then
-      echo "Removing up $fpath"
+      create_backup "$fpath"
+    fi
+    
+    if [ "$dry" -ne 1 ]; then
+      echo "rm $fpath"
       rm -rf "$fpath" || { echo "Error: Failed to remove $fpath."; exit 1; }
+    else
+      echo "dry: rm $fpath"
     fi
   done
 
@@ -216,11 +228,16 @@ run_rsync() {
 
 un_un() {
   if [ "$do_umount" -eq 1 ]; then
-      echo "Unmounting $mntdir"
+    echo "Unmounting $mntdir"
+    if [ "$quick" -eq 0 ]; then
+      echo ""
+      echo "3, 2, 1..."
+      read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
       sleep 4
-      do_umount=0
-      sudo umount "$mntdir" || { echo "err unmount $mntdir, waiting a minute, Ctrl+C to cancel..."; sleep 60; }
-      rm -rf "$mntdir" || { echo "err rm $mntdir, waiting a minute, Ctrl+C to cancel..."; sleep 60; }
+    fi
+    do_umount=0
+    sudo umount "$mntdir" || { echo "err unmount $mntdir"; exit 1; }
+    rm -rf "$mntdir" || { echo "err rm $mntdir"; exit 1; }
   fi
 }
 
@@ -285,7 +302,6 @@ mnt_init() {
 
 main() {
     echo "Starting script with arguments: $*"
-    parse "$@"
 
     if [ "$(id -u)" -ne 0 ]; then
       echo "Requires sudo!"
@@ -293,6 +309,10 @@ main() {
       echo "Requires sudo!"
       exit 1
     fi
+    
+    parse "$@"
+    
+    noquick
     
     if [ "$brestore" -eq 1 ]; then
         echo "Restoring configuration from backup files..."
@@ -319,15 +339,15 @@ main() {
       echo "Now connect the USB drive containing $home_dir."
       echo "It will be safe to disconnect the USB drive after the script asks you to press [Enter] again."
       if [ "$timeout" -gt 0 ]; then
-          echo "Sleeping for $timeout seconds"
-          sleep "$timeout"
+        echo ""
+        echo "Sleeping for $timeout seconds..."
+        read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
+        sleep "$timeout"
       fi
     fi
-
-    echo "Creating target directory $target"
-    sudo -u pi mkdir -p "$target" || { print_error "Failed to write to $target"; }
     
-    echo "Cleaning..."
+    echo "Will clean previous mentor files..."
+    noquick
     rm -rf "$target"/.mentor || true
     rm -rf "$target"/.source4rpi || true
     rm -rf "$target"/.config/Mentor || true
@@ -335,15 +355,9 @@ main() {
     rm -rf "$target"/.source4rpi || true
     echo "0" | sudo -u pi tee "$target"/.prepare4lab.step > /dev/null || { echo "Error: failed to write to '$target'/.prepare4lab.step"; exit 1; }
     cp -rf /etc/skel/.profile "$target"/. || true
-    
-    echo "Reloading systemd daemon"
-    udevadm control --reload-rules || { echo "Error: failed to reload udev rules"; exit 1; }
-    udevadm trigger || { echo "Error: failed to trigger udev rules"; exit 1; }
-    lsblk
-    echo "3, 2, 1..."
-    sleep 4
 
     mnt_init
+    noquick
 
     if [ "$nosync" -ne 1 ]; then
         run_rsync || { print_error "Failed to run rsync"; }
