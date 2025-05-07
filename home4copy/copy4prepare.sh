@@ -28,6 +28,7 @@ show_help() {
         echo "  --norun                Do not run the script"
         echo "  --dry                  Dry sync directories"
         echo "  --nosync               Do not sync directories"
+        #echo "  --restore              Restore configuration from backup files"
         echo ""
         echo "  --mnt <path>           Mount point for the device (default: ${mntdir})"
         echo "  --target <path>        Target directory for the script (default: ${target})"
