@@ -318,6 +318,7 @@ main() {
     
     parse "$@"
     
+    echo "Will clean previous mentor files..."
     noquick
     
     if [ "$brestore" -eq 1 ]; then
@@ -352,8 +353,6 @@ main() {
       fi
     fi
     
-    echo "Will clean previous mentor files..."
-    noquick
     rm -rf "$target"/.mentor || true
     rm -rf "$target"/.source4rpi || true
     rm -rf "$target"/.config/Mentor || true
