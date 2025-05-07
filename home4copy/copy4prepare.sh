@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=7.7.7
+WERSJA=7.7.8
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -44,8 +44,8 @@ show_help() {
 
 noquick() {
   if [ "$quick" -eq 0 ]; then
-      read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
       echo "3, 2, 1..."
+      echo "Ctrl+C to cancel."
       sleep 4
   fi
 }
@@ -230,9 +230,8 @@ un_un() {
   if [ "$do_umount" -eq 1 ]; then
     echo "Unmounting $mntdir"
     if [ "$quick" -eq 0 ]; then
-      echo ""
       echo "3, 2, 1..."
-      read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
+      echo "Ctrl+C to cancel."
       sleep 4
     fi
     do_umount=0
@@ -370,8 +369,8 @@ main() {
       log_file="/home/pi/copy4prepare.log"
       echo "Log file: $log_file"
       if [ "$quick" -eq 0 ]; then
-          read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
           echo "3, 2, 1..."
+          echo "Ctrl+C to cancel."
           sleep 4
       fi
 
