@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=7.7.8
+WERSJA=1.0.0
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -44,8 +44,7 @@ show_help() {
 
 noquick() {
   if [ "$quick" -eq 0 ]; then
-      echo "3, 2, 1..."
-      echo "Ctrl+C to cancel."
+      echo "3, 2, 1... Ctrl+C to cancel."
       sleep 4
   fi
 }
@@ -91,14 +90,18 @@ handle_file() {
             return 1
         fi
     fi
-    sleep 1
+    if [ "$quick" -eq 0 ]; then
+          sleep 1
+    fi
 }
 
 create_backup() {
     local filepath="$1"
     if [ "$nobackup" -eq 1 ]; then
         echo "--nobackup enabled. Skipping backup creation for $filepath"
-        sleep 1
+        if [ "$quick" -eq 0 ]; then
+              sleep 1
+        fi
         return
     fi
     local backup_path="${filepath}.mentorbak"
@@ -106,7 +109,10 @@ create_backup() {
     # Check if filepath contains "home/pi/.mentor" or "home/pi/.source4rpi"
     if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
         echo "Skipping backup creation for $filepath (excluded path)"
-        sleep 1
+        
+        if [ "$quick" -eq 0 ]; then
+              sleep 1
+        fi
         return
     fi
 
@@ -117,10 +123,12 @@ create_backup() {
       else
         echo "bry: backup: $filepath to $backup_path"
       fi
-      sleep 1
+      
+      if [ "$quick" -eq 0 ]; then
+          sleep 1
+      fi
     else
         echo "Skipping backup creation of $filepath"
-        sleep 1
     fi
 }
 
@@ -230,8 +238,7 @@ un_un() {
   if [ "$do_umount" -eq 1 ]; then
     echo "Unmounting $mntdir"
     if [ "$quick" -eq 0 ]; then
-      echo "3, 2, 1..."
-      echo "Ctrl+C to cancel."
+      echo "3, 2, 1... Ctrl+C to cancel."
       sleep 4
     fi
     do_umount=0
@@ -369,8 +376,7 @@ main() {
       log_file="/home/pi/copy4prepare.log"
       echo "Log file: $log_file"
       if [ "$quick" -eq 0 ]; then
-          echo "3, 2, 1..."
-          echo "Ctrl+C to cancel."
+          echo "3, 2, 1... Ctrl+C to cancel."
           sleep 4
       fi
 
