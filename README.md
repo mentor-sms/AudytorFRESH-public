@@ -30,7 +30,7 @@ copy4prepare.sh
 ```
 *.mentor/known_keys/\*.pub* - extra klucze SSH dla *known_hosts/authorized_keys*
 
-*.mentor/profile.sh*, *.mentor/profile.part* - zamiast *.profile*
+*.mentor/profile.sh*, *.mentor/prepare4lab.run* - zamiast *.profile*
 
 __jezeli usunales lub dodales pliki: Przeladuj__
 
