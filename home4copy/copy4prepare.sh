@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.7
+WERSJA=6.6.6
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -16,6 +16,9 @@ home_dir=home4copy
 timeout=30
 run="/home/pi/.mentor/prepare4lab.sh"
 dry=0
+brestore=0
+bclear=0
+nobackup=0
 
 show_help() {
         echo "Usage: sudo $0 [options]"
@@ -28,7 +31,10 @@ show_help() {
         echo "  --norun                Do not run the script"
         echo "  --dry                  Dry sync directories"
         echo "  --nosync               Do not sync directories"
-        #echo "  --restore              Restore configuration from backup files"
+        echo ""
+        echo "  --brestore             Restore from backup and exit"
+        echo "  --nobackup             Do not backup files"
+        echo "  --bclear               Remove backup files and exit"
         echo ""
         echo "  --mnt <path>           Mount point for the device (default: ${mntdir})"
         echo "  --target <path>        Target directory for the script (default: ${target})"
@@ -87,16 +93,27 @@ handle_file() {
 
 create_backup() {
     local filepath="$1"
-    local backup_path="${filepath}.bak"
+    if [ "$nobackup" -eq 1 ]; then
+        echo "--nobackup enabled. Skipping backup creation for $filepath"
+        return
+    fi
+    local backup_path="${filepath}.mentorbak"
+
+    # Check if filepath contains "home/pi/.mentor" or "home/pi/.source4rpi"
+    if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
+        echo "Skipping backup creation for $filepath (excluded path)"
+        return
+    fi
+
     if [ ! -f "$backup_path" ] && [ -f "$filepath" ]; then
-      if [ "$dry" -ne 1 ]; then
-        echo "Backing up $filepath to $backup_path"
-        sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
-      else
-        echo "--dry mode enabled. Skipping backup creation."
-      fi
+        if [ "$dry" -ne 1 ]; then
+            echo "Backing up $filepath to $backup_path"
+            sudo -u pi cp "$filepath" "$backup_path" || { echo "Error: Failed to create backup file $backup_path."; exit 1; }
+        else
+            echo "--dry mode enabled. Skipping backup creation."
+        fi
     else
-      echo "Skipping backup creation of $filepath"
+        echo "Skipping backup creation of $filepath"
     fi
 }
 
@@ -173,7 +190,7 @@ run_rsync() {
 
   echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
   echo "CMD: $rsync_cmd"
-  eval "$rsync_cmd" | while read -r line; do
+  $rsync_cmd | while read -r line; do
     first_part="${line%% *}"
     second_part="${line#* }"
 
@@ -276,6 +293,25 @@ main() {
       echo "Requires sudo!"
       exit 1
     fi
+    
+    if [ "$brestore" -eq 1 ]; then
+        echo "Restoring configuration from backup files..."
+        sudo find "/" -name "*.mentorbak" -exec sh -c '
+            original_file="${1%.mentorbak}"
+            echo "Restoring $original_file from $1"
+            sudo -u pi mv "$1" "$original_file" || { echo "Error: Failed to restore $original_file from $1"; exit 1; }
+        ' sh {} \;
+        exit 0
+    fi
+    
+    if [ "$bclear" -eq 1 ]; then
+        echo "Clearing backup files..."
+        sudo find "/" -name "*.mentorbak" -exec sh -c '
+            echo "Removing $1"
+            rm -f "$1" || { echo "Error: Failed to clear backup file $1"; exit 1; }
+        ' sh {} \;
+        exit 0
+    fi
 
     if [ "$timeout" -ne 0 ]; then
       echo "Starting after $timeout seconds from pressing [Enter]. During this time, disconnect the keyboard and connect the USB drive with $home_dir."
@@ -296,7 +332,8 @@ main() {
     rm -rf "$target"/.source4rpi || true
     rm -rf "$target"/.config/Mentor || true
     rm -rf "$target"/.prepare4lab.step || true
-    echo "0" | sudo -u pi tee "$target"/.prepare4lab.step > /dev/null || { echo "Error: failed to write to "$target"/.prepare4lab.step"; exit 1; }
+    rm -rf "$target"/.source4rpi || true
+    echo "0" | sudo -u pi tee "$target"/.prepare4lab.step > /dev/null || { echo "Error: failed to write to '$target'/.prepare4lab.step"; exit 1; }
     cp -rf /etc/skel/.profile "$target"/. || true
     
     echo "Reloading systemd daemon"
@@ -385,6 +422,21 @@ parse() {
             --nosync)
                 nosync=1
                 echo "Option --nosync"
+                shift
+                ;;
+            --brestore)
+                brestore=1
+                echo "Option --brestore"
+                shift
+                ;;
+            --bclear)
+                bclear=1
+                echo "Option --bclear"
+                shift
+                ;;
+            --nobackup)
+                nobackup=1
+                echo "Option --nobackup"
                 shift
                 ;;
             --home_dir)
