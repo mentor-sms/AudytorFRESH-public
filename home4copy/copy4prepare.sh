@@ -110,7 +110,6 @@ create_backup() {
     if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
         echo "Skipping backup creation for $filepath (excluded path)"
         
-        
         if [ "$timeout" -ne 0 ]; then
               sleep 1
         fi
@@ -337,7 +336,7 @@ main() {
         echo "Clearing backup files..."
         sudo find "/" -name "*.mentorbak" -exec sh -c '
             echo "Removing $1"
-            rm -f "$1" || { echo "Error: Failed to clear backup file $1"; exit 1; }
+            sudo rm -f "$1" || { echo "Error: Failed to clear backup file $1"; exit 1; }
         ' sh {} \;
         exit 0
     fi
