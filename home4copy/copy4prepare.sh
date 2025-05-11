@@ -13,7 +13,7 @@ norun=0
 nosync=0
 job="urelease"
 home_dir=home4copy
-timeout=30
+timeout=0
 run="/home/pi/.mentor/prepare4lab.sh"
 dry=0
 brestore=0
@@ -90,7 +90,7 @@ handle_file() {
             return 1
         fi
     fi
-    if [ "$quick" -eq 0 ]; then
+    if [ "$timeout" -ne 0 ]; then
           sleep 1
     fi
 }
@@ -99,7 +99,7 @@ create_backup() {
     local filepath="$1"
     if [ "$nobackup" -eq 1 ]; then
         echo "--nobackup enabled. Skipping backup creation for $filepath"
-        if [ "$quick" -eq 0 ]; then
+        if [ "$timeout" -ne 0 ]; then
               sleep 1
         fi
         return
@@ -110,7 +110,8 @@ create_backup() {
     if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
         echo "Skipping backup creation for $filepath (excluded path)"
         
-        if [ "$quick" -eq 0 ]; then
+        
+        if [ "$timeout" -ne 0 ]; then
               sleep 1
         fi
         return
@@ -124,8 +125,9 @@ create_backup() {
         echo "bry: backup: $filepath to $backup_path"
       fi
       
-      if [ "$quick" -eq 0 ]; then
-          sleep 1
+      
+      if [ "$timeout" -ne 0 ]; then
+            sleep 1
       fi
     else
         echo "Skipping backup creation of $filepath"

@@ -71,7 +71,6 @@ Przygotowanie:
 sudo apt update
 sudo apt upgrade
 sudo apt full-upgrade -y
-#sudo apt install dos2unix
 sudo apt autoremove
 sudo apt clean
 reboot
