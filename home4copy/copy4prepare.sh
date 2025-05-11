@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=1.0.0
+WERSJA=2.0.0
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -504,13 +504,19 @@ parse() {
                 elif [ "$job" == "debug" ]; then
                     job="udebug"
                 else
+                    echo ""
                     echo "Uwaga! Unknown job: $job"
-                    exit 1
+                    read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
                 fi
                 echo "Option --job with value $job"
                 break
                 ;;
             --)
+                if [[ $# -gt 1 ]]; then
+                    echo "Error: '--' must not be followed by any arguments"
+                    show_help
+                    exit 1
+                fi
                 shift
                 break
                 ;;
