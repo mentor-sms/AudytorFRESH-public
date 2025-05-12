@@ -74,6 +74,15 @@ sudo apt full-upgrade -y
 sudo apt autoremove
 sudo apt clean
 reboot
+```
+
+Zidentyfikuj USB:
+```bash
+lsblk
+```
+`/dev/sda` -> `/media/pi/[...]`
+
+```bash
 cd ~
 curl -L -o copy4prepare.sh https://tinyurl.com/copy4prepare
 dos2unix -f -k copy4prepare.sh
