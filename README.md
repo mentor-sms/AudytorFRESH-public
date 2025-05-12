@@ -74,31 +74,30 @@ sudo apt full-upgrade -y
 sudo apt autoremove
 sudo apt clean
 reboot
-```
 
-Zidentyfikuj USB:
-```bash
-lsblk
-```
-`/dev/sda` -> `/media/pi/[...]`
-
-```bash
 cd ~
 curl -L -o copy4prepare.sh https://tinyurl.com/copy4prepare
 dos2unix -f -k copy4prepare.sh
 chmod +x copy4prepare.sh
 ```
+Zidentyfikuj USB:
+```bash
+lsblk
+```
+*/dev/sda* -> */media/pi/[...]*
+np. */media/pi/003E-54D5*
+
 Pomoc (np. gdy `lsblk` zwraca */dev/sdb*):
 ```bash
 ./copy4prepare.sh --help
 ```
 Instalacja 1x USB (przygotuj pendrive do podmiany z klawiatura zgodnie z instrukcja na ekranie):
 ```bash
-sudo ./copy4prepare.sh --job release
+sudo ./copy4prepare.sh [ARGUMENTY=null] --from /media/pi/003E-54D5 --quick --job release
 ```
 Instalacja 2x USB:
 ```bash
-sudo ./copy4prepare.sh --timeout 0 --job release
+ARGUMENTY=--timeout 0
 ```
 Postepuj zgodnie z instrukcjami na ekranie. Po komunikacje o ponownym uruchomieniu w sieci docelowej:
 ```bash

@@ -1,18 +1,18 @@
 #!/bin/bash
 
-WERSJA=2.0.2
+WERSJA=4.2.0
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
 from=/dev/sda1
 mntdir=/home/pi/mnt
-file=prepare4lab.sh
 target=/home/pi
+home_dir=home4copy
+file=prepare4lab.sh
 quick=0
 norun=0
 nosync=0
 job="urelease"
-home_dir=home4copy
 timeout=0
 run="/home/pi/.mentor/prepare4lab.sh"
 dry=0
@@ -393,23 +393,41 @@ parse() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             --from)
-                if [[ -z "$2" ]]; then
-                    echo "Error: Missing value for --from"
-                    exit 1
-                fi
-                from="$2"
-                echo "Option --from with value $from"
-                shift 2
-                ;;
-            --mnt)
-                if [[ -z "$2" ]]; then
-                    echo "Error: Missing value for --mnt"
-                    exit 1
-                fi
-                mntdir="$2"
-                echo "Option --mnt with value $mntdir"
-                shift 2
-                ;;
+               if [[ -z "$2" ]]; then
+                   echo "Error: Missing value for --from"
+                   exit 1
+               fi
+               from="${2%/}" # Remove trailing slash if present
+               echo "Option --from with value $from"
+               shift 2
+               ;;
+           --mnt)
+               if [[ -z "$2" ]]; then
+                   echo "Error: Missing value for --mnt"
+                   exit 1
+               fi
+               mntdir="${2%/}" # Remove trailing slash if present
+               echo "Option --mnt with value $mntdir"
+               shift 2
+               ;;
+           --target)
+               if [[ -z "$2" ]]; then
+                   echo "Error: Missing value for --target"
+                   exit 1
+               fi
+               target="${2%/}" # Remove trailing slash if present
+               echo "Option --target with value $target"
+               shift 2
+               ;;
+           --home_dir)
+               if [[ -z "$2" ]]; then
+                   echo "Error: Missing value for --home_dir"
+                   exit 1
+               fi
+               home_dir="${2%/}" # Remove trailing slash if present
+               echo "Option --home_dir with value $home_dir"
+               shift 2
+               ;;
             --file)
                 if [[ -z "$2" ]]; then
                     echo "Error: Missing value for --file"
@@ -417,15 +435,6 @@ parse() {
                 fi
                 file="$2"
                 echo "Option --file with value $file"
-                shift 2
-                ;;
-            --target)
-                if [[ -z "$2" ]]; then
-                    echo "Error: Missing value for --target"
-                    exit 1
-                fi
-                target="$2"
-                echo "Option --target with value $target"
                 shift 2
                 ;;
             --quick)
@@ -457,15 +466,6 @@ parse() {
                 nobackup=1
                 echo "Option --nobackup"
                 shift
-                ;;
-            --home_dir)
-                if [[ -z "$2" ]]; then
-                    echo "Error: Missing value for --home_dir"
-                    exit 1
-                fi
-                home_dir="$2"
-                echo "Option --home_dir with value $home_dir"
-                shift 2
                 ;;
             --timeout)
                 if [[ -z "$2" ]]; then
