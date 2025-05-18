@@ -1,0 +1,583 @@
+#!/bin/bash
+# -*- coding: utf-8 -*-
+
+# installer4lab STEP 0 //prepare4lab.sh.0
+WERSJA=4.2.0
+echo prepare4lab ver: $WERSJA
+# WERSJA nie moze byc zadeklarowana ponizej 10 linii skryptu!
+# Plik przygotowujacy system Debian Raspberry do obslugi przez installer4lab, instalator AudytorLAB
+
+# ! NIE USUWAJ I NIE PRZENOS LINII ZACZYNAJACYCH SIE OD "# installer4lab"!
+
+MIC_TYPE=0 # 1 dla dynamicznego
+DEBUG_LEVEL=2
+# 0 - debug, sieczka
+# 1 - informacyjnie, nie dla klienta
+# 2 - ostrzezenia, domyslne
+# 3 - bledy
+# 4 - bledy krytyczne
+# 5 - bledy kryczyne i komunikacja szeregowa
+# 6 - bledy krytyczne i komunikacja LAN
+
+HOST=0.0.0.0
+VER_PC=0.0.0
+PORT=0
+# installer4lab vars
+# HOST, PORT, VER_PC
+
+echo installer4lab ver: $VER_PC
+
+# todo - automate via installer4lab:
+VER_APP="$WERSJA"
+VER_LIB="$WERSJA"
+
+prep=0 # runs preinstall.sh
+user=0 # runs preinstall.sh, apt full-upgrade
+dbg=0 # waits for [Enter] often
+devel=0
+clear=0 # clears step file before beginning
+job="" # arg0 for step 1+
+
+if [ $# -gt 0 ]; then
+  job="$1"
+  currjob="$job"
+  if [ "$currjob" = release ]; then
+    echo "MODE: release, reinstall"
+    clear=1
+    job=RELEASE
+  elif [ "$currjob" = urelease ]; then
+    echo "MODE: user, release, reinstall"
+    clear=1
+    job=URELEASE
+    user=1
+  elif [ "$currjob" = RELEASE ]; then
+    echo "MODE: release"
+  elif [ "$currjob" = URELEASE ]; then
+    echo "MODE: user, release"
+    user=1
+  elif [ "$currjob" = devel ]; then
+    echo "MODE: devel, reinstall"
+		devel=1
+    clear=1
+    job=DEVEL
+  elif [ "$currjob" = udevel ]; then
+    echo "MODE: user, devel, reinstall"
+		devel=1
+    clear=1
+    job=UDEVEL
+    user=1
+  elif [ "$currjob" = DEVEL ]; then
+    echo "MODE: devel"
+		devel=1
+  elif [ "$currjob" = UDEVEL ]; then
+    echo "MODE: user, devel"
+		devel=1
+  elif [ "$currjob" = debug ] || [ "$currjob" = udebug ]; then
+    echo "MODE: debug (user), devel, reinstall"
+		dbg=1
+		devel=1
+    clear=1
+    job=DEBUG
+    user=1
+  elif [ "$currjob" = DEBUG ]; then
+    echo "MODE: debug (user), devel"
+		dbg=1
+		devel=1
+    user=1
+  elif [ "$currjob" = prepare ]; then
+    echo "MODE: prepare (release)"
+		prep=1
+  elif [ "$currjob" = develprepare ]; then
+    echo "MODE: prepare (devel)"
+		devel=1
+		prep=1
+  else
+    echo "MODE: unknown: $*"
+    exit 1
+  fi
+else
+  echo "MODE: not given!"
+  exit 1
+fi
+
+echo "3, 2, 1..."
+sleep 4
+
+echo_dbg() {
+  echo "$1"
+  if [ $dbg -eq 1 ]; then
+    echo "Press [Enter]..."
+    read -r
+  fi
+}
+
+echo_wait() {
+  echo "$1"
+  if [ $user -eq 1 ] || [ $dbg -eq 1 ]; then
+    echo "Press [Enter] to continue, Ctrl+C to cancel..."
+    read -r
+  fi
+}
+
+rere() {
+  echo_wait "Ponowne uruchomienie systemu..."
+  sync
+  shutdown -r -f now >/dev/null 2>&1
+  exit 0
+}
+
+chown_chmod() {
+  chown pi:pi "$2" || { echo "Error: failed to change ownership of $2"; exit 1; }
+  chmod "$1" "$2" || { echo "Error: failed to change permissions of $2"; exit 1; }
+}
+
+wait_apt() {
+  echo "Oczekiwanie na /var/lib/dpkg/lock-frontend dla apt-get..."
+  while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done
+}
+
+set_step() {
+  step=$1
+  echo_dbg "SET /home/pi/.prepare4lab.step = $step"
+  if ! echo "$step" | grep -Eq '^[0-9]+$'; then
+    echo "Error: Invalid step value: $step"
+    exit 1
+  fi
+  
+  rm -rf /home/pi/.prepare4lab.step || { echo "Error: failed to remove /home/pi/.prepare4lab.step"; exit 1; }
+  echo "$step" | sudo -u pi tee /home/pi/.prepare4lab.step > /dev/null || { echo "Error: failed to write to /home/pi/.prepare4lab.step"; exit 1; }
+  read_step=$(<"/home/pi/.prepare4lab.step")
+  
+  if [ "$read_step" != "$step" ]; then
+    echo "Error: Step value mismatch. Write unsuccessful."
+    exit 1
+  fi
+}
+
+# installer4lab embedded-scripts
+
+# installer4lab generate_files()
+
+create_files() {
+    CMDLINE_FILE="/boot/firmware/cmdline.txt"
+    
+    # Extract the "root=PARTUUID=..." part from the cmdline.txt
+    ROOT_PARTUUID=$(grep -o "root=PARTUUID=[^ ]*" "$CMDLINE_FILE") || {
+        echo "Error: Could not find 'root=PARTUUID' in $CMDLINE_FILE."
+        exit 1
+    }
+    
+    if [ -z "$ROOT_PARTUUID" ]; then
+        echo "Error: PARTUUID extraction failed."
+        exit 1
+    fi
+    
+    echo "Extracted root PARTUUID: $ROOT_PARTUUID"
+    echo "Contents of $CMDLINE_FILE before modification:"
+    cat "$CMDLINE_FILE"
+    echo_dbg ""
+    
+    # installer4lab clear generate_files
+    
+    if grep -q "root=" "$CMDLINE_FILE"; then
+        echo "Error: cmdline.txt still contains 'root=' after overriding."
+        exit 1
+    fi
+    
+    sed -i '${/^$/d;}' "$CMDLINE_FILE" || {
+        echo "Error: Failed to remove trailing newline from $CMDLINE_FILE."
+        exit 1
+    }
+
+    sed -i "\$s/\$/ ${ROOT_PARTUUID}/" "$CMDLINE_FILE" || {
+        echo "Error: Failed to append PARTUUID to $CMDLINE_FILE."
+        exit 1
+    }
+    
+    sed -i -e '${/^$/d;}' -e 's/[[:space:]]*$//' "$CMDLINE_FILE" || {
+        echo "Error: Failed to process $CMDLINE_FILE."
+        exit 1
+    }
+
+    echo "Contents of $CMDLINE_FILE after modification:"
+    cat "$CMDLINE_FILE"
+    echo_dbg ""
+}
+
+new_profile() {
+  cp -rf /etc/skel/.profile /home/pi/.profile || { echo "Error: failed to copy .profile"; exit 1; }
+  chown pi:pi /home/pi/.profile || { echo "Error: failed to change ownership of .profile"; exit 1; }
+  
+  if [ -r /home/pi/.mentor/profile.sh ]; then
+    cat /home/pi/.mentor/profile.sh >> /home/pi/.profile || { echo "Error: failed to append contents of profile.sh"; exit 1; }
+  else
+    echo "Error: /home/pi/.mentor/profile.sh not found or not readable"
+    exit 1
+  fi
+  
+  printf "\njob=%s\n" "$job" >> /home/pi/.profile || { echo "Error: failed to append: job=$job"; exit 1; }
+  
+  if [ -r /home/pi/.mentor/prepare4lab.run ]; then
+    cat /home/pi/.mentor/prepare4lab.run >> /home/pi/.profile || { echo "Error: failed to append contents of prepare4lab.run"; exit 1; }
+  else
+    echo "Error: /home/pi/.mentor/prepare4lab.run not found or not readable"
+    exit 1
+  fi
+  
+  dos2unix /home/pi/.profile || { echo "Error: failed to convert line endings in .profile"; exit 1; }
+}
+
+test_network() {
+  ip_address=$(hostname -I | awk '{print $1}')
+  ierr=0
+  if [ -z "$ip_address" ]; then
+    ierr=1
+  fi
+  if [ $ierr -eq 0 ]; then
+    if ping -c 1 www.mentorpolska.pl >/dev/null 2>&1; then
+      true
+    else
+      ierr=1
+    fi
+  fi
+  
+  if [ $ierr -eq 0 ]; then
+    echo "Polaczenie z Internetem nawiazane."
+    echo ""
+    echo "Proces moze zajac kilka minut, a urzadzenie moze zostac uruchomione ponownie kilka razy."
+    echo "Nie wylaczaj zasilania."
+    echo "Nie odlaczaj internetu."
+    echo "Oczekuj instrukcji."
+  else
+    echo "Nie wykryto polaczenia z internetem: ierr $ierr"
+    if [ "$user" -ne 1 ]; then
+      dhcpd_conf=$(cat <<-EOF
+# plik fallback
+# See dhcpcd.conf(5) for details.
+
+hostname
+clientid
+persistent
+option rapid_commit
+option domain_name_servers, domain_name, domain_search, host_name
+option classless_static_routes
+option interface_mtu
+require dhcp_server_identifier
+slaac private
+
+# DHCP ON
+auto lo
+iface lo itet loopback
+iface eth0 inet dhcp
+EOF
+      )
+      echo "$dhcpd_conf" > /etc/dhcpd.conf || { echo "Error: failed to write to /etc/dhcpd.conf"; exit 1; }
+      echo "Konfiguracja DHCP zapisana do /etc/dhcpd.conf"
+      echo "Skrypt bedzie musial zostac uruchomiony jeszcze raz."
+      rere
+    fi
+  fi
+}
+
+main() {
+  wait_apt
+
+  if [ "$(id -u)" -ne 0 ]; then
+		echo "This script must be run as root. Please use sudo."
+		exit 1
+  fi
+
+  directory_path=/home/pi/.mentor
+
+  if [ ! -d $directory_path ]; then
+		mkdir -p $directory_path || { echo "Error: failed to create directory $directory_path"; exit 1; }
+  fi
+
+  if [ $clear -eq 1 ]; then
+    echo "CLEARING STEP FILE"
+    rm -fr /home/pi/.prepare4lab.step || { echo "Error: failed to remove /home/pi/.prepare4lab.step"; exit 1; }
+		set_step 0
+  else
+		file_content=$(<"/home/pi/.prepare4lab.step")
+		if echo "$file_content" | grep -Eq '^[0-9]+$'; then
+		  echo "GOT STEP FILE: $file_content"
+      set_step "$file_content"
+		else
+			if [ $user -eq 1 ]; then
+			  echo "FIRST RUN, USER MODE"
+        set_step 0
+			else
+				echo "Nieznany stan pulpitu. Dziwna zawartosc pliku /home/pi/.prepare4lab.step:"
+				echo "$file_content"
+        set_step 0
+			fi
+		fi
+  fi
+
+  echo_dbg "Krok: $step"
+
+  if [ "$step" -ne 0 ]; then
+    if [ "$step" -eq 5 ]; then
+      echo_dbg "Pulpit jest juz oznaczony jako przygotowany."
+      if [ $user -eq 1 ]; then
+        echo "RESET BY USER"
+        set_step 0
+      else
+        exit 0
+      fi
+    elif [ "$step" -eq 1 ] || [ "$step" -eq 2 ] || [ "$step" -eq 3 ] || [ "$step" -eq 4 ]; then
+      echo_dbg "Pulpit oznaczony jako w trakcie przygotowywania."
+    else
+      echo_dbg "Nieznany stan pulpitu."
+      if [ $user -eq 1 ]; then
+        echo "RESET BY USER"
+        set_step 0
+      else
+        exit 1
+      fi
+    fi
+  fi
+  
+  if  [ "$prep" -eq 1 ]; then
+    step=0
+  fi
+  
+  if [ "$step" -eq 0 ]; then
+    step0 "$1"
+  elif [ "$step" -eq 1 ]; then
+    step1
+  elif [ "$step" -eq 2 ]; then
+    step2
+  elif [ "$step" -eq 3 ]; then
+    step3
+  elif [ "$step" -eq 4 ]; then
+    step4
+  else
+    echo "Step $step is not implemented."
+    echo "Console failed to prepare for AudytorLAB."
+    exit 1
+  fi
+}
+
+step0() {
+  echo "Przygotowywanie pulpitu AudytorLAB (1/5)..."
+  pkill -f student4lab || true
+  
+  test_network
+
+  if [ "$user" -eq 1 ]; then
+      wait_apt
+      DEBIAN_FRONTEND=noninteractive apt-get -y --allow-releaseinfo-change update || { echo "Error: failed to update apt-get"; exit 1; }
+      wait_apt
+      apt-get update || { echo "Error: failed to update apt-get"; exit 1; }
+  
+      wait_apt
+      if [ "$dbg" -eq 1 ]; then
+          DEBIAN_FRONTEND=noninteractive apt-get -y full-upgrade || { echo "Error: failed to full-upgrade apt-get"; exit 1; }
+      else 
+          DEBIAN_FRONTEND=noninteractive apt-get -y upgrade || { echo "Error: failed to upgrade apt-get"; exit 1; }
+      fi
+  
+      wait_apt
+      DEBIAN_FRONTEND=noninteractive apt-get -y install \
+      # installer4lab deps
+  
+      if [ "$devel" -eq 1 ]; then
+          wait_apt
+          DEBIAN_FRONTEND=noninteractive apt-get -y install \
+          # installer4lab devps
+      fi
+  
+      wait_apt
+      DEBIAN_FRONTEND=noninteractive apt-get -y autoremove || { echo "Error: failed to autoremove apt-get"; exit 1; }
+      wait_apt
+      DEBIAN_FRONTEND=noninteractive apt-get -y clean || { echo "Error: failed to clean apt-get"; exit 1; }
+  
+      wait_apt
+  fi
+  
+  new_profile
+  
+  if [ $prep -eq 1 ] || [ $user -eq 1 ]; then
+    wait_apt
+    local po=""
+    if [ $devel -eq 1 ]; then
+      po=" devel"
+    fi
+    bash -c "/home/pi/.mentor/preinstall.sh$po" 2>&1 | tee /home/pi/.mentor/preinstall_output.log
+    
+    echo "Podsumowanie preinstall.sh:"
+    cat /home/pi/.mentor/preinstall_output.log
+    echo "-- Koniec podsumowania preinstall.sh --"
+    
+    if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        echo "Error occurred during preinstall.sh execution. Check /tmp/preinstall_output.log for details."
+        exit 1
+    fi
+    echo "Preinstall.sh executed successfully."
+    touch /home/pi/.mentor/.prepared
+    if [ $prep -eq 1 ]; then
+      exit 0
+    fi
+  fi
+  echo "Przygotowywanie pulpitu AudytorLAB..."
+  
+  create_files || { echo "Error: failed to create files"; exit 1; }
+  
+  echo "Configuring auto-login..."
+  
+  mkdir -p /etc/systemd/system/getty@tty1.service.d || { echo "Error: failed to create /etc/systemd/system/getty@tty1.service.d"; exit 1; }
+
+  echo "[Service]
+  ExecStart=
+  ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM" > /etc/systemd/system/getty@tty1.service.d/autologin.conf
+  
+  cp -rf /etc/sudoers /etc/sudoers.mentorbak || { echo "Error: failed to backup sudoers file"; exit 1; }
+
+  sed -i 's/%sudo\s\+ALL=(ALL:ALL)\s\+ALL/%sudo ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers
+
+  if visudo -c; then
+    true
+  else
+    echo "Error in sudoers file. Restoring the original file."
+    mv -f /etc/sudoers.mentorbak /etc/sudoers || { echo "Error: failed to restore sudoers file"; exit 1; }
+    exit 1
+  fi
+
+  passwd -d pi || { echo "Error: failed to delete password for user pi"; exit 1; }
+  systemctl set-default multi-user.target || { echo "Error: failed to set default target"; exit 1; }
+  
+  echo "Auto-login configured"
+  
+  if [ $user -eq 1 ]; then
+		set_step 1
+    rere
+  elif [ $prep -ne 1 ]; then
+		set_step 2
+		rere
+  fi
+}
+
+step12() {
+  echo "Przygotowywanie pulpitu AudytorLAB (time-travelling 2/5)..."
+  systemctl stop ssh || { echo "Error: failed to stop ssh"; exit 1; }
+  if [ ! -d /ssh ]; then
+		mkdir -p /ssh || { echo "Error: failed to create /ssh directory"; exit 1; }
+  fi
+
+  chown_chmod 700 /home/pi/.ssh
+  chown_chmod 600 /home/pi/.ssh/id_rsa
+  chown_chmod 644 /home/pi/.ssh/id_rsa.pub
+  chmod 755 /etc/ssh || { echo "Error: failed to change permissions of /etc/ssh"; exit 1; }
+  chmod 644 /etc/ssh/ssh_config || { echo "Error: failed to change permissions of /etc/ssh/ssh_config"; exit 1; }
+  chmod 644 /etc/ssh/sshd_config || { echo "Error: failed to change permissions of /etc/ssh/sshd_config"; exit 1; }
+  chmod 600 /etc/ssh/ssh_host_rsa_key.pub || { echo "Error: failed to change permissions of /etc/ssh/ssh_host_rsa_key.pub"; exit 1; }
+  
+  chown_chmod 644 /home/pi/.ssh/known_hosts
+  chown_chmod 644 /home/pi/.ssh/authorized_keys #temporary
+
+  echo "[DEBUG] /home/pi/.ssh/known_hosts before appending:"
+  cat /home/pi/.ssh/known_hosts
+  
+  cat /home/pi/.ssh/id_rsa.pub > /home/pi/.ssh/known_hosts || { echo "Error: failed append /home/pi/.ssh/id_rsa.pub"; exit 1; }
+  echo "[DEBUG] Appended contents of /home/pi/.ssh/id_rsa.pub to known_hosts"
+  sleep 1
+  
+  echo "[DEBUG] /home/pi/.ssh/known_hosts after appending (1):"
+  cat /home/pi/.ssh/known_hosts
+  
+  for pub_file in /home/pi/.mentor/known_keys/*; do
+    cat "$pub_file" >> /home/pi/.ssh/authorized_keys || { echo "Error: failed to append $pub_file to authorized_keys"; exit 1; }
+    echo "[DEBUG] Appended contents of $pub_file to authorized_keys"
+    sleep 1
+  done
+  
+  echo "[DEBUG] /home/pi/.ssh/known_hosts after appending (2):"
+  cat /home/pi/.ssh/known_hosts
+  
+  echo "[DEBUG] /home/pi/.ssh/authorized_keys before appending:"
+  cat /home/pi/.ssh/authorized_keys
+
+  while IFS= read -r line; do
+    line_without_first_and_last_word=$(echo "$line" | awk '{$1=""; $NF=""; print $0}' | xargs)
+    echo "$HOST $line_without_first_and_last_word"
+  done < /home/pi/.ssh/authorized_keys > /home/pi/.ssh/known_hosts || { echo "Error: failed to create known_hosts"; exit 1; }
+  
+  chown_chmod 644 /home/pi/.ssh/known_hosts
+  chown_chmod 600 /home/pi/.ssh/authorized_keys
+
+  systemctl enable ssh || { echo "Error: failed to enable ssh"; exit 1; }
+
+  PROTOCOL=TCP
+  HIDE_CURSOR=1
+  MAXIMIZE=1
+  ACK_RETRY=3
+  ACK_WAIT=3000
+  PING=10000
+  PING_MISS=3
+  LNR_ADD=1
+  LNR_SWAP=0
+  MENU_TIMER=1500
+  SERIAL=ttyAMA0
+
+  pairs="MIC_TYPE $MIC_TYPE DEBUG_LEVEL $DEBUG_LEVEL HOST $HOST VER_APP $VER_APP VER_LIB $VER_LIB PORT $PORT PROTOCOL $PROTOCOL HIDE_CURSOR $HIDE_CURSOR MAXIMIZE $MAXIMIZE ACK_RETRY $ACK_RETRY ACK_WAIT $ACK_WAIT PING $PING PING_MISS $PING_MISS LNR_ADD $LNR_ADD LNR_SWAP $LNR_SWAP MENU_TIMER $MENU_TIMER USERNAME pi SERIAL $SERIAL"
+  sudo -u pi mkdir -p /home/pi/.config/Mentor || { echo "Error: failed to create /home/pi/.config/Mentor"; exit 1; }
+  rm -rf /home/pi/.config/Mentor/AudytorStudent.conf || { echo "Error: failed to remove /home/pi/.config/Mentor/AudytorStudent.conf"; exit 1; }
+  sudo -u pi touch /home/pi/.config/Mentor/AudytorStudent.conf || { echo "Error: failed to create /home/pi/.config/Mentor/AudytorStudent.conf"; exit 1; }
+  sudo -u pi echo "[General]" | tee /home/pi/.config/Mentor/AudytorStudent.conf
+
+  echo "$pairs" | tr ' ' '\n' | while read -r key; do
+    read -r value
+    echo "$key=$value" | tee -a /home/pi/.config/Mentor/AudytorStudent.conf
+  done
+}
+
+step1() {
+  echo "Przygotowywanie pulpitu AudytorLAB (3/5)..."
+  step12  
+  set_step 3
+  clear
+  echo "Ponowne uruchomienie pulpitu powinno zostac wykonane juz w sieci docelowej."
+  echo "Zapisz ten moment na karte do sklonowania po dokonaniu ewentualnych zmian."
+  echo "Kontynuuj przygotowywanie pulpitu: reboot"
+  exit 0
+}
+
+step2() {
+  echo "Przygotowywanie pulpitu AudytorLAB (4/5)..."
+  step12
+  step3
+}
+
+step3() {
+  echo "Przygotowywanie pulpitu AudytorLAB (5/5)..."
+  ip_address=$(hostname -I | awk '{print $1}')
+  new_hostname=rpi$(echo "$ip_address" | tr -d '.')
+  
+  usermod -a -G dialout pi
+  usermod -a -G tty pi
+  usermod -a -G video pi
+
+  set_step 4
+  
+  echo "PONOWNE URUCHOMIENIE ZA MINUTE"
+  shutdown -r +1 >/dev/null 2>&1
+  echo "$new_hostname" > /etc/hostname
+  sed -i "s/127.0.1.1.*/127.0.1.1 $new_hostname/" /etc/hosts
+}
+
+step4() {
+  ip_address=$(hostname -I | awk '{print $1}')
+  
+  echo "Mentor wita!"
+  echo ""
+  echo "Pulpit oczekuje na installer4lab.exe, instalator AudytorLAB na komputerze nauczyciela."
+  echo "Adres IP pulpitu: $ip_address"
+  echo "Oczekiwany adres IP serwera: $HOST"
+  echo "Wersja skryptu: $WERSJA"
+  echo "Wersja systemu: $(cat /etc/debian_version)"
+  echo "Wersja Qt: $(dpkg -s libqt5core5a | grep '^Version:' | awk '{print $2}')"
+  exit 0
+}
+
+main "$@"
