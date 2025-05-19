@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # installer4lab STEP 0 //prepare4lab.sh.0
-WERSJA=4.2.4
+WERSJA=4.2.7
 echo prepare4lab ver: $WERSJA
 # WERSJA nie moze byc zadeklarowana ponizej 10 linii skryptu!
 # Plik przygotowujacy system Debian Raspberry do obslugi przez installer4lab, instalator AudytorLAB
