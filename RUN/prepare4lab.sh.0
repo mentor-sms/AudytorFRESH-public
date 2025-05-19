@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # installer4lab STEP 0 //prepare4lab.sh.0
-WERSJA=4.2.1
+WERSJA=4.2.2
 echo prepare4lab ver: $WERSJA
 # WERSJA nie moze byc zadeklarowana ponizej 10 linii skryptu!
 # Plik przygotowujacy system Debian Raspberry do obslugi przez installer4lab, instalator AudytorLAB
@@ -495,7 +495,7 @@ EOF
   cat /home/pi/.ssh/known_hosts
   
   for pub_file in /home/pi/.mentor/known_keys/*; do
-    cat "$pub_file" >> /home/pi/.ssh/authorized_keys || { echo "Error: failed to append $pub_file to authorized_keys"; exit 1; }
+    cat "$pub_file" >> /home/pi/.ssh/known_hosts || { echo "Error: failed to append $pub_file to authorized_keys"; exit 1; }
     echo "[DEBUG] /home/pi/.ssh/known_hosts after appending ($pub_file):"
     cat /home/pi/.ssh/known_hosts
   done
