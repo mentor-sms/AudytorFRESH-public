@@ -259,7 +259,7 @@ test_network() {
   else
     echo "Nie wykryto polaczenia z internetem: ierr $ierr"
     if [ "$user" -ne 1 ]; then
-      dhcpd_conf=$(cat <<-EOF
+      dhcpcd_conf=$(cat <<-EOF
 # plik fallback
 # See dhcpcd.conf(5) for details.
 
@@ -279,8 +279,8 @@ iface lo itet loopback
 iface eth0 inet dhcp
 EOF
       )
-      echo "$dhcpd_conf" > /etc/dhcpd.conf || { echo "Error: failed to write to /etc/dhcpd.conf"; exit 1; }
-      echo "Konfiguracja DHCP zapisana do /etc/dhcpd.conf"
+      echo "$dhcpcd_conf" > /etc/dhcpcd.conf || { echo "Error: failed to write to /etc/dhcpcd.conf"; exit 1; }
+      echo "Konfiguracja DHCP zapisana do /etc/dhcpcd.conf"
       echo "Skrypt bedzie musial zostac uruchomiony jeszcze raz."
       rere
     fi
