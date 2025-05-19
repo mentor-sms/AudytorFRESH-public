@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WERSJA=4.2.0
+WERSJA=4.2.4
 echo "copy4prepare ver: $WERSJA"
 
 do_umount=0
@@ -372,6 +372,10 @@ main() {
     un_un
     
     if [ "$norun" -ne 1 ]; then
+      if [ $quick -eq 1 ]; then
+          job="Q$job"
+      fi
+      
       echo "Will run $run with job \"$job\""
       log_file="/home/pi/copy4prepare.log"
       echo "Log file: $log_file"

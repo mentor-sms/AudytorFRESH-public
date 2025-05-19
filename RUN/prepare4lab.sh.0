@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # installer4lab STEP 0 //prepare4lab.sh.0
-WERSJA=4.2.3
+WERSJA=4.2.4
 echo prepare4lab ver: $WERSJA
 # WERSJA nie moze byc zadeklarowana ponizej 10 linii skryptu!
 # Plik przygotowujacy system Debian Raspberry do obslugi przez installer4lab, instalator AudytorLAB
@@ -37,9 +37,15 @@ dbg=0 # waits for [Enter] often
 devel=0
 clear=0 # clears step file before beginning
 job="" # arg0 for step 1+
+quick=0
 
 if [ $# -gt 0 ]; then
   job="$1"
+  if [[ "$job" == Q* ]]; then
+    job="${job#Q}"
+    quick=1
+  fi
+  
   currjob="$job"
   if [ "$currjob" = release ]; then
     echo "MODE: release, reinstall"
@@ -105,7 +111,7 @@ sleep 4
 
 echo_dbg() {
   echo "$1"
-  if [ $dbg -eq 1 ]; then
+  if [ $dbg -eq 1 ] && [ $quick -eq 0 ]; then
     echo "Press [Enter]..."
     read -r
   fi
@@ -114,8 +120,10 @@ echo_dbg() {
 echo_wait() {
   echo "$1"
   if [ $user -eq 1 ] || [ $dbg -eq 1 ]; then
-    echo "Press [Enter] to continue, Ctrl+C to cancel..."
-    read -r
+    if [ $quick -eq 0 ]; then
+      echo "Press [Enter] to continue, Ctrl+C to cancel..."
+      read -r
+    fi
   fi
 }
 
