@@ -473,13 +473,20 @@ step12() {
   chmod 644 /etc/ssh/sshd_config || { echo "Error: failed to change permissions of /etc/ssh/sshd_config"; exit 1; }
   chmod 600 /etc/ssh/ssh_host_rsa_key.pub || { echo "Error: failed to change permissions of /etc/ssh/ssh_host_rsa_key.pub"; exit 1; }
   
-  chown_chmod 644 /home/pi/.ssh/known_hosts
   chown_chmod 644 /home/pi/.ssh/authorized_keys #temporary
 
   echo "[DEBUG] /home/pi/.ssh/known_hosts before appending:"
-  cat /home/pi/.ssh/known_hosts
+  rm -rf /home/pi/.ssh/known_hosts || { echo "Error: failed to remove /home/pi/.ssh/known_hosts"; exit 1; }
+  known_hosts=$(cat <<-EOF
+# installer4lab id_ed25519.pub
+EOF
+  )
+    
+  echo "$known_hosts" > /home/pi/.ssh/known_hosts || { echo "Error: failed to write to /home/pi/.ssh/known_hosts"; exit 1; }
+  chown_chmod 644 /home/pi/.ssh/known_hosts
+  dos2unix /home/pi/.ssh/known_hosts || { echo "Error: failed to convert line endings in known_hosts"; exit 1; }
   
-  cat /home/pi/.ssh/id_rsa.pub > /home/pi/.ssh/known_hosts || { echo "Error: failed append /home/pi/.ssh/id_rsa.pub"; exit 1; }
+  cat /home/pi/.ssh/id_rsa.pub >> /home/pi/.ssh/known_hosts || { echo "Error: failed append /home/pi/.ssh/id_rsa.pub"; exit 1; }
   echo "[DEBUG] Appended contents of /home/pi/.ssh/id_rsa.pub to known_hosts"
   sleep 1
   
