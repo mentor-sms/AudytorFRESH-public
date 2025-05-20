@@ -81,34 +81,40 @@ curl -L -o copy4prepare.sh https://tinyurl.com/copy4prepare
 dos2unix -f -k copy4prepare.sh
 chmod +x copy4prepare.sh
 ```
-Zidentyfikuj USB:
+__Instalacja 2x USB__:
 ```bash
 lsblk
 ```
-*/dev/sda* -> */media/pi/[...]*
-np. */media/pi/003E-54D5*
+`/dev/sda` -> `/media/pi/[...]`
+
+np. `/media/pi/003E-54D5`
+
+Instalacja (`--job release` __zawsze na koncu!__):
+```bash
+sudo ./copy4prepare.sh --timeout 0 --from /media/pi/003E-54D5 --job release
+```
+__Instalacja 2x USB__:
+
+Przygotuj pendrive do podmiany z klawiatura zgodnie z instrukcja na ekranie:
+```bash
+sudo ./copy4prepare.sh --job release
+```
+__Finalizacja__:
 
 Pomoc (np. gdy `lsblk` zwraca `/dev/sdb`):
 ```bash
 ./copy4prepare.sh --help
 ```
-Instalacja 1x USB (przygotuj pendrive do podmiany z klawiatura zgodnie z instrukcja na ekranie):
-```bash
-sudo ./copy4prepare.sh [ARGUMENTY=null] --from /media/pi/003E-54D5 --quick --job release
-```
-Instalacja 2x USB:
-```bash
-ARGUMENTY=--timeout 0
-```
-Postepuj zgodnie z instrukcjami na ekranie. Po komunikacje o ponownym uruchomieniu w sieci docelowej:
+Po komunikacje o ponownym uruchomieniu w sieci docelowej:
 ```bash
 poweroff
 ```
 # ISO
 1. Sklonuj SD na karty dla pozostalych pulpitow.
 2. Skonfiguruj ostatecznie siec.
-3. Wlacz pulpity. Uruchomia sie ponownie kilka razy, konczac konfiguracje.
-4. Oczekuj komunikatu "Mentor wita!" u gory ekranu na kazdym z pulpitow. Jezeli tak nie jest - cos poszlo nie tak.
+3. Wlacz pulpity. Uruchomia sie ponownie kilka razy, konczac konfiguracje. Uwazaj na komunikat o
+4. Oczekuj komunikatu "Mentor wita!" na kazdym z pulpitow. Jezeli tak nie jest - cos poszlo nie tak.
+Pulpit pozornie zakonczy prace na minute przed ostatnim z ponownych uruchomien. Nie przeszkadzaj mu wtedy!
 
 # install4lab (3)
 

@@ -553,7 +553,9 @@ step1() {
   set_step 3
   clear
   echo "Ponowne uruchomienie pulpitu powinno zostac wykonane juz w sieci docelowej."
-  echo "Zapisz ten moment na karte do sklonowania po dokonaniu ewentualnych zmian."
+  echo "Zapisz ten moment na karte do sklonowania po dokonaniu ewentualnych zmian." 
+  echo ""
+  echo "Wtrzymaj przygotowywanie pulpitu: touch /home/pi/.mentor/wait.marker"
   echo "Kontynuuj przygotowywanie pulpitu: reboot"
   exit 0
 }
@@ -565,6 +567,14 @@ step2() {
 }
 
 step3() {
+  if [ -f /home/pi/.mentor/wait.marker ]; then
+    clear
+    echo "Ponowne uruchomienie pulpitu powinno zostac wykonane juz w sieci docelowej."
+    echo "Zapisz ten moment na karte do sklonowania po dokonaniu ewentualnych zmian."
+    echo "Kontynuuj przygotowywanie pulpitu: rm -f /home/pi && reboot"
+    exit 0
+  fi
+  
   echo "Przygotowywanie pulpitu AudytorLAB (5/5)..."
   ip_address=$(hostname -I | awk '{print $1}')
   new_hostname=rpi$(echo "$ip_address" | tr -d '.')
@@ -583,7 +593,7 @@ step3() {
 
 step4() {
   ip_address=$(hostname -I | awk '{print $1}')
-  
+  clear
   echo "Mentor wita!"
   echo ""
   echo "Pulpit oczekuje na installer4lab.exe, instalator AudytorLAB na komputerze nauczyciela."

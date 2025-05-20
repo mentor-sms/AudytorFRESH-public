@@ -307,6 +307,24 @@ mnt_init() {
   fi
 }
 
+print_parsed_arguments() {
+    echo "  stad: $from"
+    echo "  mount: $mntdir"
+    echo "  tu: $target"
+    echo "  home: $home_dir"
+    echo "  skrypt: $file"
+    echo "  szybko: $quick"
+    echo "  bez skryptu? $norun"
+    echo "  bez kopiowania? $nosync"
+    echo "  zadanie: $job"
+    echo "  oczekiwanie na uzytkownika: $timeout"
+    echo "  skrypt na miejscu: $run"
+    echo "  tylko udajemy? $dry"
+    echo "  przywracamy? $brestore"
+    echo "  czyscimy? $bclear"
+    echo "  nie robimy kopii? $nobackup"
+}
+
 main() {
     echo "Starting script with arguments: $*"
 
@@ -318,7 +336,7 @@ main() {
     fi
     
     parse "$@"
-    
+    print_parsed_arguments    
     echo "Will clean previous mentor files..."
     noquick
     
