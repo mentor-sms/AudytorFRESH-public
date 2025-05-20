@@ -8,11 +8,11 @@ Temat: AudytorFRESH/installer4lab
 2. Otwiera sie za pierwszym razem dluzsza chwile (git clone), czekaj.
 3. Zminimalizuj.
 
-Pliki wewnetrzne: *installer4lab.exe\run*
+Pliki wewnetrzne: `installer4lab.exe\run`
 
-Pliki uzytkownika: *%userprofile%\Mentor*
+Pliki uzytkownika: `%userprofile%\Mentor`
 
-*Mentor\root4rpi* - synchronizacja z */* (root). Dowolnie modyfikuj ten katalog. Sciezki zabronione:
+`Mentor\root4rpi` - synchronizacja z `/` (root). Dowolnie modyfikuj ten katalog. Sciezki zabronione:
 ```
 home/pi/*
 etc/ssh/ssh_host_rsa_key
@@ -21,16 +21,16 @@ usr/local/bin/student4lab
 usr/lib/libmentor4lab*
 ```
 
-*Mentor\home4copy* - synchronizacja z */home/pi*. Dowolnie modyfikuj ten katalog. Dodatkowe pliki w kroku (2). Sciezki zabronione:
+`Mentor\home4copy` - synchronizacja z `/home/pi`. Dowolnie modyfikuj ten katalog. Dodatkowe pliki w kroku (2). Sciezki zabronione:
 ```
 copy4prepare.sh
 .profile
 .ssh/known_hosts
 .ssh/authorized_keys
 ```
-*.mentor/known_keys/\*.pub* - extra klucze SSH dla *known_hosts/authorized_keys*
+`.mentor/known_keys/*.pub` - extra klucze SSH dla `known_hosts/authorized_keys`, dodaj tam
 
-*.mentor/profile.sh*, *.mentor/prepare4lab.run* - zamiast *.profile*
+`.mentor/profile.sh`, `.mentor/prepare4lab.run` - zamiast `.profile`
 
 __jezeli usunales lub dodales pliki: Przeladuj__
 
@@ -44,24 +44,25 @@ Zapisz plik *nazwa.marker* w miejsciu gdzie ma zostac utworzony katalog *nazwa*.
 Device: Raspberry Pi 4,
 OS: Raspberry Pi OS (64-bit, wersja Recommended),
 Next.
-3. Dialog: Edit settings.
-4. GENERAL. Set username: `pi`, password: dowolne, Configure wireless LAN: NIE, Set locale settings: Europe/Warsaw.
-5. SERVICES. Enable SSH: TAK, Allow public-key authentication only: TAK, Set authorized key for 'pi': zawartosc *Mentor\ssh4win\id_ed25519.pub*.
-6. OPTIONS. Eject media when finished: YES (nie modyfikuj bootfs).
-7. SAVE.
-8. Dialog: YES, YES.
-9. CONTINUE, zamknij.
-10. SD > RPI.
+3. Dialog: Edit settings. Konfiguracja w katalogu SEEME:
+GENERAL. Set username: `pi`, password: dowolne, Configure wireless LAN: NIE, Set locale settings: Europe/Warsaw.
+SERVICES. Enable SSH: TAK, Allow public-key authentication only: TAK, Set authorized key for 'pi': zawartosc `id_maniek.pub`.
+4. OPTIONS. Eject media when finished: YES (nie modyfikuj bootfs).
+5. SAVE.
+6. Dialog: YES, YES.
+7. CONTINUE, zamknij.
+8. Upewnij sie, ze bezpiecznie usunieto bootfs.
+9. SD > RPI.
 
 # install4lab (2)
 
-1. Przygotuj pendrive FAT32
+1. Przygotuj czysty pendrive FAT32
 2. Konfiguruj SSH: TAK (pierwsze uruchomienie, nowy pulpit/instalacja w sieci, blad bezpieczenstwa), Dalej (Test).
 3. aaa.bbb.ccc.ddd:port - teacher4lab IP (port dowolny).
-4. Kopiuj student4lab zdalnie: NIE, student4lab > pen (przy aktualizacji: TAK, student4lab > *Mentor\home4copy*).
-5. Generuj skrypt instalacji, wybierz __katalog glowny__ pendrive (przy aktualizacji: katalog Mentor).
-6. Opcjonalnie zedytuj *USB\home4copy* > */home/pi* (dla kroku: RPI).
-7. Bezpiecznie wysun urzadzenie i odczekaj 5 sekund, bo naprawde... :)
+4. Kopiuj student4lab zdalnie: NIE, student4lab zostanie zapisany na pendrive (przy aktualizacji: TAK, student4lab zostanie zapisany do `Mentor\home4copy`).
+5. Generuj skrypt instalacji, wybierz __katalog glowny__ pendrive (przy aktualizacji: katalog `%userprofile%\Mentor`).
+6. Opcjonalnie zedytuj `USB\home4copy` > `/home/pi` (dla kroku: RPI).
+7. Bezpiecznie usun urzadzenie.
 
 # RPI
 
@@ -87,7 +88,7 @@ lsblk
 */dev/sda* -> */media/pi/[...]*
 np. */media/pi/003E-54D5*
 
-Pomoc (np. gdy `lsblk` zwraca */dev/sdb*):
+Pomoc (np. gdy `lsblk` zwraca `/dev/sdb`):
 ```bash
 ./copy4prepare.sh --help
 ```
