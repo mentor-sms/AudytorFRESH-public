@@ -387,21 +387,21 @@ step0() {
       fi
   
       wait_apt
-      DEBIAN_FRONTEND=noninteractive apt-get -y install \
-      # installer4lab deps
-  
-      if [ "$devel" -eq 1 ]; then
-          wait_apt
-          DEBIAN_FRONTEND=noninteractive apt-get -y install \
-          # installer4lab devps
-      fi
-  
-      wait_apt
       DEBIAN_FRONTEND=noninteractive apt-get -y autoremove || { echo "Error: failed to autoremove apt-get"; exit 1; }
       wait_apt
       DEBIAN_FRONTEND=noninteractive apt-get -y clean || { echo "Error: failed to clean apt-get"; exit 1; }
   
       wait_apt
+  fi
+  
+  wait_apt
+  DEBIAN_FRONTEND=noninteractive apt-get -y install \
+  # installer4lab deps
+
+  if [ "$devel" -eq 1 ]; then
+      wait_apt
+      DEBIAN_FRONTEND=noninteractive apt-get -y install \
+      # installer4lab devps
   fi
   
   new_profile
