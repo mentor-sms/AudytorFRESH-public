@@ -2,12 +2,9 @@
 # -*- coding: utf-8 -*-
 
 # installer4lab STEP 0 //prepare4lab.sh.0
-WERSJA=4.2.7
+WERSJA=7.7.0
 echo prepare4lab ver: $WERSJA
 # WERSJA nie moze byc zadeklarowana ponizej 10 linii skryptu!
-# Plik przygotowujacy system Debian Raspberry do obslugi przez installer4lab, instalator AudytorLAB
-
-# ! NIE USUWAJ I NIE PRZENOS LINII ZACZYNAJACYCH SIE OD "# installer4lab"!
 
 MIC_TYPE=0 # 1 dla dynamicznego
 DEBUG_LEVEL=2
@@ -129,35 +126,166 @@ echo_wait() {
 
 rere() {
   echo_wait "Ponowne uruchomienie systemu..."
-  sync
-  shutdown -r -f now >/dev/null 2>&1
-  exit 0
+  
+  # Ensure all data is written to disk
+  sync || echo "Warning: sync command failed"
+  
+  # Try multiple methods of system reboot
+  if shutdown -r -f now >/dev/null 2>&1; then
+    echo "Shutdown command issued successfully"
+  elif systemctl reboot >/dev/null 2>&1; then
+    echo "Reboot through systemctl issued successfully"
+  elif reboot >/dev/null 2>&1; then
+    echo "Reboot command issued successfully"
+  else
+    echo "Error: All reboot methods failed, manual restart required"
+    exit 1
+  fi
+  
+  # Wait a moment for reboot to start
+  sleep 5
+  
+  # If we get here, reboot failed
+  echo "Error: System did not reboot as expected"
+  exit 1
 }
 
 chown_chmod() {
+  if [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Error: chown_chmod requires two parameters: permissions and filename"
+    exit 1
+  fi
+  
+  if [ ! -e "$2" ]; then
+    echo "Error: file or directory does not exist: $2"
+    # Try to create an empty file or directory if it doesn't exist
+    if [[ "$1" == *"7"* ]]; then  # If permission includes 7, likely a directory
+      mkdir -p "$2" || { echo "Error: failed to create directory $2"; exit 1; }
+    else
+      touch "$2" || { echo "Error: failed to create file $2"; exit 1; }
+    fi
+  fi
+  
+  # Check if pi user exists
+  if ! id pi &>/dev/null; then
+    echo "Error: user 'pi' does not exist"
+    exit 1
+  fi
+  
+  # Set ownership
   chown pi:pi "$2" || { echo "Error: failed to change ownership of $2"; exit 1; }
+  
+  # Validate permissions format
+  if ! [[ "$1" =~ ^[0-7]{3}$ ]]; then
+    echo "Error: invalid permissions format: $1"
+    exit 1
+  fi
+  
+  # Set permissions
   chmod "$1" "$2" || { echo "Error: failed to change permissions of $2"; exit 1; }
+  
+  # Verify changes
+  local owner
+  owner=$(stat -c "%U:%G" "$2")
+  if [ "$owner" != "pi:pi" ]; then
+    echo "Error: ownership verification failed for $2. Expected pi:pi, got $owner"
+    exit 1
+  fi
+  
+  local perms
+  perms=$(stat -c "%a" "$2")
+  if [ "$perms" != "$1" ]; then
+    echo "Error: permission verification failed for $2. Expected $1, got $perms"
+    exit 1
+  fi
+  
+  return 0
 }
 
 wait_apt() {
   echo "Oczekiwanie na /var/lib/dpkg/lock-frontend dla apt-get..."
-  while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done
+  
+  # Maximum wait time in seconds
+  local max_wait
+  max_wait=300  # 5 minutes
+  local start_time
+  start_time=$(date +%s)
+  local current_time
+  local elapsed_time
+  
+  while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+    current_time=$(date +%s)
+    elapsed_time=$((current_time - start_time))
+    
+    # Display progress every 10 seconds
+    if [ $((elapsed_time % 10)) -eq 0 ]; then
+      echo "Still waiting for apt lock... ($elapsed_time seconds elapsed)"
+      
+      # Show what process is holding the lock
+      echo "Processes holding the lock:"
+      fuser -v /var/lib/dpkg/lock-frontend 2>/dev/null || echo "None identified"
+    fi
+    
+    # Check if we've waited too long
+    if [ "$elapsed_time" -gt "$max_wait" ]; then
+      echo "Error: Timed out waiting for apt lock after $max_wait seconds"
+      echo "Attempting to check for and fix stale locks..."
+      
+      # Check if the process holding the lock is still running
+      pid=$(fuser /var/lib/dpkg/lock-frontend 2>/dev/null)
+      if [ -n "$pid" ] && ! ps -p "$pid" > /dev/null; then
+        echo "Stale lock detected. Attempting to remove..."
+        rm -f /var/lib/dpkg/lock-frontend || { echo "Error: Failed to remove stale lock"; exit 1; }
+        rm -f /var/lib/dpkg/lock || echo "Warning: Failed to remove secondary lock"
+        dpkg --configure -a || echo "Warning: dpkg --configure -a failed"
+        echo "Lock files removed. Continuing..."
+        break
+      else
+        echo "Lock is held by running process. Cannot proceed."
+        exit 1
+      fi
+    fi
+    
+    sleep 1
+  done
+  
+  echo "Lock released, proceeding with apt operations"
 }
 
 set_step() {
   step=$1
   echo_dbg "SET /home/pi/.prepare4lab.step = $step"
+  
+  # Validate numeric step value
   if ! echo "$step" | grep -Eq '^[0-9]+$'; then
     echo "Error: Invalid step value: $step"
     exit 1
   fi
   
-  rm -rf /home/pi/.prepare4lab.step || { echo "Error: failed to remove /home/pi/.prepare4lab.step"; exit 1; }
+  # Ensure home directory exists and is accessible
+  if [ ! -d /home/pi ]; then
+    echo "Error: /home/pi directory not found"
+    exit 1
+  fi
+  
+  # Remove existing step file with error handling
+  if [ -f /home/pi/.prepare4lab.step ]; then
+    rm -f /home/pi/.prepare4lab.step || { echo "Error: failed to remove /home/pi/.prepare4lab.step"; exit 1; }
+  fi
+  
+  # Write new step value with error handling
   echo "$step" | sudo -u pi tee /home/pi/.prepare4lab.step > /dev/null || { echo "Error: failed to write to /home/pi/.prepare4lab.step"; exit 1; }
-  read_step=$(<"/home/pi/.prepare4lab.step")
+  
+  # Verify written step value
+  if [ ! -f /home/pi/.prepare4lab.step ]; then
+    echo "Error: Step file was not created"
+    exit 1
+  fi
+  
+  read_step=$(<"/home/pi/.prepare4lab.step") || { echo "Error: failed to read /home/pi/.prepare4lab.step"; exit 1; }
   
   if [ "$read_step" != "$step" ]; then
-    echo "Error: Step value mismatch. Write unsuccessful."
+    echo "Error: Step value mismatch. Expected: $step, Got: $read_step"
     exit 1
   fi
 }
@@ -213,39 +341,97 @@ create_files() {
 }
 
 new_profile() {
+  # Backup existing profile if it exists
+  if [ -f /home/pi/.profile ]; then
+    cp /home/pi/.profile /home/pi/.profile.mentorbak || true
+  fi
+
+  # Copy skeleton profile
   cp -rf /etc/skel/.profile /home/pi/.profile || { echo "Error: failed to copy .profile"; exit 1; }
   chown pi:pi /home/pi/.profile || { echo "Error: failed to change ownership of .profile"; exit 1; }
+  chmod 644 /home/pi/.profile || { echo "Error: failed to set permissions on .profile"; exit 1; }
   
-  if [ -r /home/pi/.mentor/profile.sh ]; then
-    cat /home/pi/.mentor/profile.sh >> /home/pi/.profile || { echo "Error: failed to append contents of profile.sh"; exit 1; }
-  else
-    echo "Error: /home/pi/.mentor/profile.sh not found or not readable"
+  # Check and ensure .mentor directory exists
+  if [ ! -d /home/pi/.mentor ]; then
+    echo "Error: /home/pi/.mentor directory does not exist"
     exit 1
   fi
   
+  # Check for profile.sh
+  if [ ! -f /home/pi/.mentor/profile.sh ]; then
+    echo "Error: /home/pi/.mentor/profile.sh not found"
+    exit 1
+  fi
+  
+  # Check if profile.sh is readable
+  if [ ! -r /home/pi/.mentor/profile.sh ]; then
+    echo "Error: /home/pi/.mentor/profile.sh is not readable"
+    # Try to fix permissions
+    chmod 644 /home/pi/.mentor/profile.sh || { echo "Error: failed to make profile.sh readable"; exit 1; }
+  fi
+  
+  # Append profile.sh
+  cat /home/pi/.mentor/profile.sh >> /home/pi/.profile || { echo "Error: failed to append contents of profile.sh"; exit 1; }
+  
+  # Append job
   printf "\njob=%s\n" "$job" >> /home/pi/.profile || { echo "Error: failed to append: job=$job"; exit 1; }
   
-  if [ -r /home/pi/.mentor/prepare4lab.run ]; then
-    cat /home/pi/.mentor/prepare4lab.run >> /home/pi/.profile || { echo "Error: failed to append contents of prepare4lab.run"; exit 1; }
-  else
-    echo "Error: /home/pi/.mentor/prepare4lab.run not found or not readable"
+  # Check for prepare4lab.run
+  if [ ! -f /home/pi/.mentor/prepare4lab.run ]; then
+    echo "Error: /home/pi/.mentor/prepare4lab.run not found"
     exit 1
   fi
   
-  dos2unix /home/pi/.profile || { echo "Error: failed to convert line endings in .profile"; exit 1; }
+  # Check if prepare4lab.run is readable
+  if [ ! -r /home/pi/.mentor/prepare4lab.run ]; then
+    echo "Error: /home/pi/.mentor/prepare4lab.run is not readable"
+    # Try to fix permissions
+    chmod 644 /home/pi/.mentor/prepare4lab.run || { echo "Error: failed to make prepare4lab.run readable"; exit 1; }
+  fi
+  
+  # Append prepare4lab.run
+  cat /home/pi/.mentor/prepare4lab.run >> /home/pi/.profile || { echo "Error: failed to append contents of prepare4lab.run"; exit 1; }
+  
+  # Convert line endings
+  dos2unix /home/pi/.profile 2>/dev/null || { 
+    echo "Warning: dos2unix failed, trying alternative method for line ending conversion"
+    sed -i 's/\r$//' /home/pi/.profile || { echo "Error: failed to convert line endings in .profile"; exit 1; }
+  }
+  
+  echo "Profile setup completed successfully"
 }
 
 test_network() {
-  ip_address=$(hostname -I | awk '{print $1}')
+  echo "Testowanie polaczenia sieciowego..."
+  
+  # Check IP assignment
+  ip_address=$(hostname -I | awk '{print $1}') || { echo "Error: failed to get hostname IP"; exit 1; }
+  local ierr
   ierr=0
   if [ -z "$ip_address" ]; then
+    echo "Warning: No IP address detected"
     ierr=1
+  else
+    echo "IP address detected: $ip_address"
   fi
+  
+  # Test internet connectivity only if we have an IP
   if [ $ierr -eq 0 ]; then
-    if ping -c 1 www.mentorpolska.pl >/dev/null 2>&1; then
-      true
+    echo "Testing connection to www.mentorpolska.pl..."
+    if ping -c 3 -W 5 www.mentorpolska.pl >/dev/null 2>&1; then
+      echo "Internet connectivity verified"
     else
-      ierr=1
+      echo "Warning: Cannot reach www.mentorpolska.pl"
+      
+      # Try alternative site
+      echo "Testing connection to google.com..."
+      if ping -c 3 -W 5 google.com >/dev/null 2>&1; then
+        echo "Internet connectivity verified through alternative site"
+        ierr=0
+      else
+        echo "Warning: Cannot reach google.com"
+        ierr=1
+      fi
     fi
   fi
   
@@ -258,7 +444,14 @@ test_network() {
     echo "Oczekuj instrukcji."
   else
     echo "Nie wykryto polaczenia z internetem: ierr $ierr"
+    
+    # Check network interface status
+    echo "Network interface status:"
+    ip addr show || echo "Failed to get network interface status"
+    
     if [ "$user" -ne 1 ]; then
+      echo "Trying to configure DHCP automatically..."
+      local dhcpcd_conf
       dhcpcd_conf=$(cat <<-EOF
 # plik fallback
 # See dhcpcd.conf(5) for details.
@@ -279,9 +472,18 @@ iface lo itet loopback
 iface eth0 inet dhcp
 EOF
       )
+      
+      # Backup existing config if it exists
+      if [ -f /etc/dhcpcd.conf ]; then
+        cp /etc/dhcpcd.conf /etc/dhcpcd.conf.mentorbak || { echo "Error: failed to backup /etc/dhcpcd.conf"; exit 1; }
+        echo "Created backup of existing dhcpcd.conf"
+      fi
+      
       echo "$dhcpcd_conf" > /etc/dhcpcd.conf || { echo "Error: failed to write to /etc/dhcpcd.conf"; exit 1; }
       echo "Konfiguracja DHCP zapisana do /etc/dhcpcd.conf"
       echo "Skrypt bedzie musial zostac uruchomiony jeszcze raz."
+      echo "Restart za 5 sekund..."
+      sleep 5
       rere
     fi
   fi
@@ -408,7 +610,8 @@ step0() {
   
   if [ $prep -eq 1 ] || [ $user -eq 1 ]; then
     wait_apt
-    local po=""
+    local po
+    po=""
     if [ $devel -eq 1 ]; then
       po=" devel"
     fi
@@ -468,60 +671,148 @@ step0() {
 
 step12() {
   echo "Przygotowywanie pulpitu AudytorLAB (time-travelling 2/5)..."
+  
+  # Stop SSH service
   systemctl stop ssh || { echo "Error: failed to stop ssh"; exit 1; }
+  
+  # Create SSH directory if it doesn't exist
   if [ ! -d /ssh ]; then
-		mkdir -p /ssh || { echo "Error: failed to create /ssh directory"; exit 1; }
+    mkdir -p /ssh || { echo "Error: failed to create /ssh directory"; exit 1; }
   fi
 
+  # Ensure .ssh directory exists for the pi user
+  if [ ! -d /home/pi/.ssh ]; then
+    mkdir -p /home/pi/.ssh || { echo "Error: failed to create /home/pi/.ssh directory"; exit 1; }
+    chown pi:pi /home/pi/.ssh || { echo "Error: failed to set ownership of /home/pi/.ssh"; exit 1; }
+  fi
+
+  # Back up SSH configuration files before modification
+  echo "Backing up SSH configuration files..."
+  if [ -f /etc/ssh/ssh_config ]; then
+    cp /etc/ssh/ssh_config /etc/ssh/ssh_config.mentorbak || echo "Warning: failed to backup ssh_config"
+  fi
+  
+  if [ -f /etc/ssh/sshd_config ]; then
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.mentorbak || echo "Warning: failed to backup sshd_config"
+  fi
+  
+  if [ -f /home/pi/.ssh/authorized_keys ]; then
+    cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.mentorbak || echo "Warning: failed to backup authorized_keys"
+  fi
+  
+  # Set correct permissions for SSH files and directories
   chown_chmod 700 /home/pi/.ssh
-  chown_chmod 600 /home/pi/.ssh/id_rsa
-  chown_chmod 644 /home/pi/.ssh/id_rsa.pub
+  
+  # Check if id_rsa file exists before trying to set permissions
+  if [ -f /home/pi/.ssh/id_rsa ]; then
+    chown_chmod 600 /home/pi/.ssh/id_rsa
+  else
+    echo "Warning: /home/pi/.ssh/id_rsa not found, skipping permission setting"
+  fi
+  
+  # Check if id_rsa.pub file exists before trying to set permissions
+  if [ -f /home/pi/.ssh/id_rsa.pub ]; then
+    chown_chmod 644 /home/pi/.ssh/id_rsa.pub
+  else
+    echo "Warning: /home/pi/.ssh/id_rsa.pub not found, skipping permission setting"
+  fi
+  
+  # Set permissions on SSH configuration directories
   chmod 755 /etc/ssh || { echo "Error: failed to change permissions of /etc/ssh"; exit 1; }
   chmod 644 /etc/ssh/ssh_config || { echo "Error: failed to change permissions of /etc/ssh/ssh_config"; exit 1; }
   chmod 644 /etc/ssh/sshd_config || { echo "Error: failed to change permissions of /etc/ssh/sshd_config"; exit 1; }
-  chmod 600 /etc/ssh/ssh_host_rsa_key.pub || { echo "Error: failed to change permissions of /etc/ssh/ssh_host_rsa_key.pub"; exit 1; }
-  chown_chmod 644 /home/pi/.ssh/authorized_keys
+  
+  # Check if ssh_host_rsa_key.pub exists before setting permissions
+  if [ -f /etc/ssh/ssh_host_rsa_key.pub ]; then
+    chmod 600 /etc/ssh/ssh_host_rsa_key.pub || { echo "Error: failed to change permissions of /etc/ssh/ssh_host_rsa_key.pub"; exit 1; }
+  else
+    echo "Warning: /etc/ssh/ssh_host_rsa_key.pub not found, skipping permission setting"
+  fi
 
-  echo "[DEBUG] original /home/pi/.ssh/authorized_keys:"
-  cat /home/pi/.ssh/authorized_keys
+  # Prepare authorized_keys file
+  if [ -f /home/pi/.ssh/authorized_keys ]; then
+    echo "[DEBUG] original /home/pi/.ssh/authorized_keys:"
+    cat /home/pi/.ssh/authorized_keys
+  else
+    echo "[DEBUG] No existing authorized_keys file found."
+  fi
   
-  rm -rf /home/pi/.ssh/authorized_keys || { echo "Error: failed to remove /home/pi/.ssh/authorized_keys"; exit 1; }
+  # Remove and recreate authorized_keys file
+  rm -f /home/pi/.ssh/authorized_keys || { echo "Error: failed to remove /home/pi/.ssh/authorized_keys"; exit 1; }
   touch /home/pi/.ssh/authorized_keys || { echo "Error: failed to create /home/pi/.ssh/authorized_keys"; exit 1; }
+  chown pi:pi /home/pi/.ssh/authorized_keys || { echo "Error: failed to set ownership of authorized_keys"; exit 1; }
   
+  # Add SSH keys
+  local authorized_keys
   authorized_keys=$(cat <<-EOF
 # installer4lab id_ed25519.pub
 EOF
   )
   echo "$authorized_keys" >> /home/pi/.ssh/authorized_keys || { echo "Error: failed to write to /home/pi/.ssh/authorized_keys"; exit 1; }
-  cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.mentorbak || true
+  cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.mentorbak || echo "Warning: failed to backup authorized_keys"
   echo "[DEBUG] authorized_keys after appending id_ed25519.pub:"
   cat /home/pi/.ssh/authorized_keys
   
-  cat /home/pi/.ssh/id_rsa.pub >> /home/pi/.ssh/authorized_keys || { echo "Error: failed append /home/pi/.ssh/id_rsa.pub"; exit 1; }
-  echo "[DEBUG] /home/pi/.ssh/authorized_keys after appending /home/pi/.ssh/id_rsa.pub:"
-  cat /home/pi/.ssh/authorized_keys
-  
-  for pub_file in /home/pi/.mentor/known_keys/*; do
-    cat "$pub_file" >> /home/pi/.ssh/authorized_keys || { echo "Error: failed to append $pub_file to authorized_keys"; exit 1; }
-    echo "[DEBUG] /home/pi/.ssh/authorized_keys after appending ($pub_file):"
+  # Add id_rsa.pub key if it exists
+  if [ -f /home/pi/.ssh/id_rsa.pub ]; then
+    cat /home/pi/.ssh/id_rsa.pub >> /home/pi/.ssh/authorized_keys || { echo "Error: failed to append /home/pi/.ssh/id_rsa.pub"; exit 1; }
+    echo "[DEBUG] /home/pi/.ssh/authorized_keys after appending /home/pi/.ssh/id_rsa.pub:"
     cat /home/pi/.ssh/authorized_keys
-  done
+  else
+    echo "Warning: /home/pi/.ssh/id_rsa.pub not found, skipping"
+  fi
+  
+  # Check if known_keys directory exists
+  if [ -d /home/pi/.mentor/known_keys ]; then
+    # Add all public keys from known_keys directory
+    for pub_file in /home/pi/.mentor/known_keys/*; do
+      if [ -f "$pub_file" ]; then
+        cat "$pub_file" >> /home/pi/.ssh/authorized_keys || { echo "Error: failed to append $pub_file to authorized_keys"; exit 1; }
+        echo "[DEBUG] /home/pi/.ssh/authorized_keys after appending ($pub_file):"
+        cat /home/pi/.ssh/authorized_keys
+      fi
+    done
+  else
+    echo "Warning: /home/pi/.mentor/known_keys directory not found, skipping"
+  fi
   
   echo "[DEBUG] /home/pi/.ssh/authorized_keys after appending (2):"
   cat /home/pi/.ssh/authorized_keys
   
-  echo "[DEBUG] /home/pi/.ssh/known_hosts before appending:"
-  cat /home/pi/.ssh/known_hosts
-
-  while IFS= read -r line; do
-    line_without_first_and_last_word=$(echo "$line" | awk '{$1=""; $NF=""; print $0}' | xargs)
-    echo "$HOST $line_without_first_and_last_word"
-  done < /home/pi/.ssh/authorized_keys > /home/pi/.ssh/known_hosts || { echo "Error: failed to create known_hosts"; exit 1; }
+  # Create known_hosts file
+  if [ -f /home/pi/.ssh/known_hosts ]; then
+    echo "[DEBUG] /home/pi/.ssh/known_hosts before appending:"
+    cat /home/pi/.ssh/known_hosts
+    cp -f /home/pi/.ssh/known_hosts /home/pi/.ssh/known_hosts.mentorbak || echo "Warning: failed to backup known_hosts"
+    rm -f /home/pi/.ssh/known_hosts || { echo "Error: failed to remove known_hosts"; exit 1; }
+  fi
   
+  touch /home/pi/.ssh/known_hosts || { echo "Error: failed to create known_hosts"; exit 1; }
+  
+  # Process authorized_keys to create known_hosts
+  if [ -s /home/pi/.ssh/authorized_keys ]; then
+    while IFS= read -r line; do
+      # Skip comment lines
+      if [[ "$line" == \#* ]]; then
+        continue
+      fi
+      if [[ -n "$line" ]]; then
+        line_without_first_and_last_word=$(echo "$line" | awk '{$1=""; $NF=""; print $0}' | xargs)
+        echo "$HOST $line_without_first_and_last_word"
+      fi
+    done < /home/pi/.ssh/authorized_keys > /home/pi/.ssh/known_hosts || { echo "Error: failed to create known_hosts"; exit 1; }
+  else
+    echo "Warning: authorized_keys is empty, known_hosts will be empty too"
+  fi
+  
+  # Set correct permissions for known_hosts and authorized_keys
   chown_chmod 644 /home/pi/.ssh/known_hosts
   chown_chmod 600 /home/pi/.ssh/authorized_keys
 
+  # Enable SSH service
   systemctl enable ssh || { echo "Error: failed to enable ssh"; exit 1; }
+  
+  echo "SSH configuration completed successfully"
 
   PROTOCOL=TCP
   HIDE_CURSOR=1
@@ -576,7 +867,9 @@ step3() {
   fi
   
   echo "Przygotowywanie pulpitu AudytorLAB (5/5)..."
+  local ip_address
   ip_address=$(hostname -I | awk '{print $1}')
+  local new_hostname
   new_hostname=rpi$(echo "$ip_address" | tr -d '.')
   
   usermod -a -G dialout pi
@@ -586,23 +879,242 @@ step3() {
   set_step 4
   
   echo "PONOWNE URUCHOMIENIE ZA MINUTE"
-  shutdown -r +1 >/dev/null 2>&1
-  echo "$new_hostname" > /etc/hostname
-  sed -i "s/127.0.1.1.*/127.0.1.1 $new_hostname/" /etc/hosts
+  shutdown -r +1 >/dev/null 2>&1 || { echo "Error: failed to schedule restart"; exit 1; }
+  
+  # Get current hostname for comparison
+  current_hostname=$(hostname)
+  echo "Current hostname: $current_hostname"
+  echo "New hostname: $new_hostname"
+  
+  # Update hostname with error handling
+  echo "$new_hostname" > /etc/hostname || { 
+    echo "Error: failed to set hostname to $new_hostname";
+    exit 1; 
+  }
+  
+  # Create hosts file backup
+  cp /etc/hosts /etc/hosts.mentorbak || { 
+    echo "Error: failed to backup /etc/hosts"; 
+    exit 1; 
+  }
+  
+  # Update hosts file with error handling
+  sed -i "s/127.0.1.1.*/127.0.1.1 $new_hostname/" /etc/hosts || { 
+    echo "Error: failed to update hostname in /etc/hosts"; 
+    cp /etc/hosts.mentorbak /etc/hosts;  # Restore backup
+    exit 1; 
+  }
+  
+  # Verify the changes
+  if ! grep -q "$new_hostname" /etc/hostname; then
+    echo "Error: hostname not set correctly in /etc/hostname"
+    exit 1
+  fi
+  
+  if ! grep -q "127.0.1.1.*$new_hostname" /etc/hosts; then
+    echo "Error: hostname not set correctly in /etc/hosts"
+    exit 1
+  fi
+  
+  echo "Hostname successfully set to $new_hostname"
 }
 
 step4() {
-  ip_address=$(hostname -I | awk '{print $1}')
-  clear
-  echo "Mentor wita!"
-  echo ""
-  echo "Pulpit oczekuje na installer4lab.exe, instalator AudytorLAB na komputerze nauczyciela."
-  echo "Adres IP pulpitu: $ip_address"
-  echo "Oczekiwany adres IP serwera: $HOST"
-  echo "Wersja skryptu: $WERSJA"
-  echo "Wersja systemu: $(cat /etc/debian_version)"
-  echo "Wersja Qt: $(dpkg -s libqt5core5a | grep '^Version:' | awk '{print $2}')"
+  # Get IP address with error handling
+  local ip_address
+  ip_address=$(hostname -I | awk '{print $1}') || {
+    echo "Error: Failed to get IP address"
+    ip_address="unknown"
+  }
+  
+  local current_hostname
+  current_hostname=$(hostname)
+  
+  # Create a marker file with collected system information
+  create_marker_file "/home/pi/.mentor" "prepare4lab.marker" "$(collect_system_info)"
+  
+  # Set final step
+  set_step 5
+  
   exit 0
+}
+  
+# Function to create a marker file similar to the C# version
+create_marker_file() {
+  local marker="$1"
+  local filename="$2"
+  local lines_to_append="$3"
+  
+  if [[ ! "$marker" == *.marker ]]; then
+    if [[ -z "$filename" ]]; then
+      filename="$(basename "$marker" | tr '[:upper:]' '[:lower:]').marker"
+    fi
+    marker="${marker}/${filename}"
+  fi
+  
+  echo_dbg "Creating marker file: $marker"
+  filename="$(basename "$marker")"
+  
+  local timestamp
+  timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
+  local username
+  username="$(whoami)"
+  local hostname
+  hostname="$(hostname)"
+  
+  # Create parent directory if it doesn't exist
+  mkdir -p "$(dirname "$marker")" || { 
+    echo "Error: failed to create directory for marker file"; 
+    return 1; 
+  }
+
+  # Write initial marker content
+  {
+    echo "# $filename"
+    echo "WERSJA=$WERSJA"
+    echo "# "
+    echo "# $timestamp"
+    echo "# ${username}@${hostname}"
+    if [[ -n "$HOST" && "$HOST" != "0.0.0.0" ]]; then
+      echo "# ${HOST}:${PORT}"
+    fi
+    echo "# ---"
+    echo "# "
+  } > "$marker" || {
+      echo "Error: failed to write to marker file"; 
+      return 1;
+  }
+  
+  # Append additional lines if provided
+  if [[ -n "$lines_to_append" ]]; then
+    echo "$lines_to_append" >> "$marker" || {
+      echo "Error: failed to append to marker file"; 
+      return 1;
+    }
+  fi
+  
+  # Add footer
+  {
+    echo "# ---"
+    echo "# "
+  } >> "$marker" || {
+    echo "Error: failed to write footer to marker file"; 
+    return 1;
+  }
+  
+  return 0
+}
+
+# Collect system information to append to the marker file
+collect_system_info() {
+  echo "# =========================================================="
+  echo "# SYSTEM INFORMATION"
+  echo "# =========================================================="
+  echo "# "
+  echo "# Kernel Information:"
+  echo "# ------------------"
+  echo "# $(uname -a)"
+  echo "# "
+  echo "# OS Information:"
+  echo "# --------------"
+  echo "# Debian Version: $(cat /etc/debian_version 2>/dev/null || echo 'unknown')"
+  echo "# LSB Release:"
+  if command -v lsb_release >/dev/null 2>&1; then
+    lsb_release -a 2>/dev/null | sed 's/^/# /'
+  else
+    echo "# LSB Release information not available"
+  fi
+  echo "# "
+  
+  echo "# Hostname & Network Information:"
+  echo "# ------------------------------"
+  echo "# Hostname: $(hostname)"
+  echo "# Domain Name: $(hostname -d 2>/dev/null || echo 'N/A')"
+  echo "# Fully Qualified Domain Name: $(hostname -f 2>/dev/null || echo 'N/A')"
+  echo "# Primary IP: $(hostname -I | awk '{print $1}')"
+  echo "# All IPs: $(hostname -I)"
+  echo "# "
+  
+  echo "# Network Interfaces:"
+  echo "# ------------------"
+  ip -br addr show | while read -r line; do
+    echo "# $line"
+  done
+  echo "# "
+  
+  echo "# Routing Table:"
+  echo "# -------------"
+  ip route | sed 's/^/# /'
+  echo "# "
+  
+  echo "# DNS Settings:"
+  echo "# ------------"
+  if [ -f /etc/resolv.conf ]; then
+    grep -v "^#" /etc/resolv.conf | sed 's/^/# /'
+  else
+    echo "# resolv.conf not found"
+  fi
+  echo "# "
+  
+  echo "# Hardware Information:"
+  echo "# -------------------"
+  echo "# CPU:"
+  lscpu | grep "Model name\|Architecture\|CPU(s)\|CPU MHz" | sed 's/^/# /'
+  echo "# "
+  
+  echo "# Memory Information:"
+  echo "# -----------------"
+  free -h | sed 's/^/# /'
+  echo "# "
+  
+  echo "# Storage Information:"
+  echo "# ------------------"
+  echo "# Root Filesystem:"
+  df -h / | sed 's/^/# /'
+  echo "# "
+  echo "# All Mounted Filesystems:"
+  df -h | sed 's/^/# /'
+  echo "# "
+  
+  echo "# Installed Packages Information:"
+  echo "# -----------------------------"
+  echo "# Qt Version: $(dpkg -s libqt5core5a 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo 'not installed')"
+  
+  # Check for common packages that might be important
+  for pkg in python3 gcc g++ make openssl libssl-dev openssh-server openssh-client; do
+    version=$(dpkg -s $pkg 2>/dev/null | grep '^Version:' | awk '{print $2}' || echo 'not installed')
+    echo "# $pkg: $version"
+  done
+  echo "# "
+  
+  echo "# Service Status:"
+  echo "# -------------"
+  for service in ssh dhcpcd networking cron systemd-timesyncd; do
+    status=$(systemctl is-active $service 2>/dev/null || echo "inactive")
+    echo "# $service: $status"
+  done
+  echo "# "
+  
+  echo "# System Uptime:"
+  echo "# ------------"
+  uptime | sed 's/^/# /'
+  echo "# "
+  
+  echo "# Environment Variables:"
+  echo "# --------------------"
+  echo "# PATH: $PATH"
+  echo "# USER: $USER"
+  echo "# HOME: $HOME"
+  echo "# SHELL: $SHELL"
+  echo "# "
+  
+  echo "# Date and Time:"
+  echo "# ------------"
+  echo "# Current Time: $(date)"
+  echo "# Timezone: $(cat /etc/timezone 2>/dev/null || echo 'unknown')"
+  echo "# "
+  
+  echo "# =========================================================="
 }
 
 main "$@"
