@@ -1,6 +1,30 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM ==========================================================================
+REM Remote Copy Script for Mentor Lab
+REM 
+REM This script copies files from the local home4copy directory to a remote
+REM Raspberry Pi system using SSH/SCP.
+REM 
+REM Usage: re4copy.bat IP_ADDRESS
+REM 
+REM Example: re4copy.bat 192.168.1.100
+REM ==========================================================================
+
+REM Display script banner
+echo ==========================================================================
+echo Mentor Lab Remote Copy Script
+echo ==========================================================================
+echo.
+
+REM Check if IP address was provided
+if "%~1"=="" (
+    echo Error: IP address not provided.
+    echo Usage: %~nx0 IP_ADDRESS
+    exit /b 1
+)
+
 REM Validate the IP address format
 set "IP=%~1"
 for /f "tokens=1-4 delims=." %%a in ("%IP%") do (
@@ -9,8 +33,13 @@ for /f "tokens=1-4 delims=." %%a in ("%IP%") do (
         exit /b 1
     )
     for %%i in (%%a %%b %%c %%d) do (
-        if %%i lss 0 if %%i gtr 255 (
-            echo Error: Invalid IP address format.
+        REM Fixed condition: needs to be OR not AND
+        if %%i lss 0 (
+            echo Error: Invalid IP address components.
+            exit /b 1
+        )
+        if %%i gtr 255 (
+            echo Error: Invalid IP address components.
             exit /b 1
         )
     )
@@ -54,27 +83,31 @@ for /f "delims=" %%f in ('dir /b /s "%BASE_DIR%"') do (
         )
 
         REM Transfer the file to the remote system
-        echo scp -i %PRIV_KEY% "%%f" %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
+        echo Copying: "%%f" to %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
         scp -i %PRIV_KEY% "%%f" %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
         if %errorlevel% neq 0 (
-            echo Error: Failed to transfer file %%f to remote.
-            goto :error
-        )
-
-        echo scp -i %PRIV_KEY% "%%f" %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
-        scp -i %PRIV_KEY% "%%f" %REMOTE_USER%@%REMOTE_HOST%:!REMOTE_PATH!
-        if %errorlevel% neq 0 (
-            echo Error: Failed to transfer file %%f to remote.
+            echo Error: Failed to transfer file "%%f" to remote.
             goto :error
         )
     )
 )
 
-%SSH_CMD% 
+REM Execute final SSH command to check connection
+echo Testing final SSH connection...
+%SSH_CMD% "echo 'SSH connection successful. File synchronization completed.'"
+if %errorlevel% neq 0 (
+    echo Warning: Final SSH connection test failed, but files may have been transferred.
+    goto :warning
+)
 
-REM Report completion
-echo Skonczylem.
+REM Report successful completion
+echo.
+echo Transfer completed successfully.
 goto :eof
+
+:warning
+echo Process completed with warnings.
+exit /b 2
 
 :error
 echo An error occurred during SSH command execution.
