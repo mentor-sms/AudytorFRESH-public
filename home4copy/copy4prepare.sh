@@ -17,11 +17,11 @@
 ###############################################################################
 
 # Script version
-WERSJA=7.7.0
-echo "copy4prepare ver: $WERSJA (enhanced error handling, backup protection)"
+WERSJA=7.7.1
+echo "copy4prepare ver: $WERSJA (enhanced path detection, error handling, backup protection)"
 
-# Set default values for all parameters
 do_umount=0                          # Flag to track if we mounted a device
+# Set default values for all parameters
 from=/dev/sda1                       # Source location (block device or directory)
 mntdir=/home/pi/mnt                  # Mount point for block devices
 target=/home/pi                      # Target directory for file operations
@@ -45,7 +45,7 @@ warning_count=0
 show_help() {
     cat << EOF
 ╔══════════════════════════════════════════════════════════════════════════════
-║ copy4prepare.sh v$WERSJA - Mentor Lab Preparation Utility
+║ copy4prepare.sh v$WERSJA - Mentor Lab Preparation Utility (Enhanced Path Detection)
 ╠══════════════════════════════════════════════════════════════════════════════
 ║ Usage: sudo $0 [options]
 ║
@@ -447,25 +447,36 @@ mnt_mnt() {
 mnt_init() {
   echo "Initializing mount system for source: $from"
   
+  # Diagnostics before starting
+  print_debug "Current mounts:"
+  if [ "$timeout" -ne 0 ]; then
+      mount | grep -E '(^/dev/sd|^/media/pi)' || print_debug "No relevant mounts found"
+  fi
+
+  print_debug "Available block devices:"
+  if [ "$timeout" -ne 0 ]; then
+      lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL 2>/dev/null || print_debug "lsblk failed or no devices found"
+  fi
+
   # Case 1: from is a block device
   if is_block_device "$from"; then
       echo "$from is a block device, proceeding with mount"
       mnt_mnt "$from"
       return 0
   fi
-  
+
   # Case 2: from is an existing directory
   if is_directory "$from"; then
       echo "$from is a directory, using directly"
       set_from "$from"
       return 0
   fi
-  
+
   # Case 3: from is a pattern for a block device
   if echo "$from" | grep -q '/dev/sd[a-z][0-9]'; then
       echo "Searching for block device matching pattern: $from"
       local gotit=0
-      
+
       # First try exact match
       if [ -b "$from" ]; then
           echo "Found exact match for block device: $from"
@@ -473,7 +484,7 @@ mnt_init() {
           mnt_mnt "$from"
           return 0
       fi
-      
+
       # Try to find any matching block device
       echo "Searching for available block devices..."
       for dev in /dev/sd*[0-9]; do
@@ -485,7 +496,7 @@ mnt_init() {
               return 0
           fi
       done
-      
+
       # Additional search for USB devices
       if [ "$gotit" -eq 0 ]; then
           echo "Checking for USB block devices..."
@@ -499,24 +510,85 @@ mnt_init() {
               fi
           done
       fi
-      
+
       if [ "$gotit" -eq 0 ]; then
           print_error "Failed to find any suitable block device"
       fi
   else
       # Case 4: None of the above, try to guess what the user meant
-      echo "Path '$from' is not a block device or directory"
-      
-      # Try to interpret as a partial path
-      if [ -d "/media/pi/$from" ]; then
+      echo "Path '$from' is not recognized as a block device or directory"
+
+      # Extended diagnostics
+      print_debug "Detailed path analysis for '$from':"
+      print_debug "- Directory test: $([ -d "$from" ] && echo "YES" || echo "NO")"
+      print_debug "- Block device test: $([ -b "$from" ] && echo "YES" || echo "NO")"
+      print_debug "- File exists test: $([ -e "$from" ] && echo "YES" || echo "NO")"
+
+      if [ "$timeout" -ne 0 ]; then
+          print_debug "- ls -la output: $(ls -la "$from" 2>&1 || echo "Cannot access")"
+          print_debug "- mountpoint check: $(mountpoint "$from" 2>&1 || echo "Not a mountpoint")"
+      fi
+
+      # Check if the path is in /proc/mounts
+      if grep -q " $from " /proc/mounts 2>/dev/null; then
+          print_debug "Found '$from' in /proc/mounts:"
+          if [ "$timeout" -ne 0 ]; then
+              grep " $from " /proc/mounts
+          fi
+      else
+          print_debug "Path '$from' not found in /proc/mounts"
+      fi
+
+      # Try to interpret as a partial path in /media/pi/
+      print_debug "Checking /media/pi/ for matching paths..."
+      local found=0
+
+      for media_path in /media/pi/*; do
+          if [ -d "$media_path" ]; then
+              print_debug "Found directory: $media_path"
+
+              # Check if it's a mountpoint
+              if mountpoint -q "$media_path" 2>/dev/null; then
+                  print_debug "$media_path is a mountpoint"
+
+                  # Check if the basename matches or contains our from value
+                  media_basename=$(basename "$media_path")
+                  if [ "$media_basename" = "$from" ] || [[ "$media_basename" == *"$from"* ]]; then
+                      echo "Found matching directory at $media_path"
+                      from="$media_path"
+                      set_from "$from"
+                      found=1
+                      return 0
+                  fi
+              fi
+          fi
+      done
+
+      if [ "$found" -eq 0 ] && [ -d "/media/pi/$from" ]; then
           echo "Found matching directory at /media/pi/$from"
           from="/media/pi/$from"
           set_from "$from"
           return 0
       fi
-      
+
+      # Last resort: check if any path in /media/pi contains files we need
+      if [ "$found" -eq 0 ]; then
+          print_debug "Checking if any mountpoint contains required files..."
+          for media_path in /media/pi/*; do
+              if [ -d "$media_path" ] && [ -d "$media_path/$home_dir" ]; then
+                  echo "Found directory with $home_dir at $media_path"
+                  from="$media_path"
+                  set_from "$from"
+                  found=1
+                  return 0
+              fi
+          done
+      fi
+
       # If all else fails
-      print_error "Invalid path: $from - must be a block device or existing directory"
+      if [ "$found" -eq 0 ]; then
+          print_error "Invalid path: $from - must be a block device or existing directory"
+      fi
   fi
 }
 
@@ -681,11 +753,7 @@ main() {
 
     un_un
     
-    if [ "$norun" -ne 1 ]; then
-      if [ $quick -eq 1 ]; then
-          job="Q$job"
-      fi
-      
+    if [ "$norun" -ne 1 ]; then      
       echo "Will run $run with job \"$job\""
       log_file="/home/pi/copy4prepare.log"
       echo "Log file: $log_file"
@@ -845,22 +913,43 @@ parse() {
                 job="$*"
                 echo "Raw job value: $job"
                 
-                # Map common job names to their internal representations
-                if [ "$job" == "release" ]; then
-                    job="urelease"
-                    echo "Mapped 'release' to 'urelease'"
-                elif [ "$job" == "devel" ]; then
-                    job="udevel"
-                    echo "Mapped 'devel' to 'udevel'"
-                elif [ "$job" == "debug" ]; then
-                    job="udebug"
-                    echo "Mapped 'debug' to 'udebug'"
+                # Define known job types
+                declare -a known_job_types=("release" "devel" "debug")
+
+                # Extract the base job type (first word)
+                base_job=$(echo "$job" | awk '{print $1}')
+                rest_args=$(echo "$job" | cut -d' ' -f2-)
+
+                # Check if base_job is a known type
+                is_known=0
+                for known_type in "${known_job_types[@]}"; do
+                    if [ "$base_job" == "$known_type" ]; then
+                        is_known=1
+                        break
+                    fi
+                done
+
+                if [ $is_known -eq 1 ]; then
+                    # Add --user flag by default to ensure consistency
+                    if ! echo " $rest_args " | grep -q " --user "; then
+                        rest_args="--user $rest_args"
+                    fi
+
+                    # Combine job and arguments
+                    job="$base_job $rest_args"
+                    echo "Prepared job command: $job"
                 else
                     echo ""
-                    echo "Warning: Unknown job type: '$job'"
-                    echo "Known job types are: release, devel, debug"
-                    echo "Continuing with provided job value"
+                    echo "Warning: Unknown job type: '$base_job'"
+                    echo "Known job types are: ${known_job_types[*]}"
+                    echo "Continuing with provided job value: $job"
                     read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
+                fi
+
+                
+                # Add quick flag if needed
+                if [ $quick -eq 1 ] && ! echo " $job " | grep -q " --quick "; then
+                    job="$job --quick"
                 fi
                 echo "Final job value: $job"
                 break
@@ -934,47 +1023,230 @@ print_debug() {
 }
 
 is_directory() {
-    if [ -z "$1" ]; then
+    local path="$1"
+
+    if [ -z "$path" ]; then
         print_warning "Empty path provided to is_directory"
         return 1
     fi
-    [ -d "$1" ]
+
+    # Standard directory test
+    if [ -d "$path" ]; then
+        print_debug "$path is a standard directory (-d test succeeded)"
+        return 0
+    fi
+
+    # Check if it's a mountpoint
+    if mountpoint -q "$path" 2>/dev/null; then
+        print_debug "$path is a mountpoint (mountpoint command succeeded)"
+        return 0
+    fi
+
+    # Check if it's in /proc/mounts
+    if grep -q " $path " /proc/mounts 2>/dev/null; then
+        print_debug "$path found in /proc/mounts"
+        return 0
+    fi
+
+    # Try to access the directory
+    if cd "$path" >/dev/null 2>&1; then
+        if ! cd - >/dev/null 2>&1; then
+            print_error "Failed to return to previous directory"
+        fi
+        print_debug "$path is accessible via cd"
+        return 0
+    fi
+
+    # Check if it's an automounted path with possibly strange characters
+    if [[ "$path" == /media/pi/* ]]; then
+        # Check all entries in /media/pi/ to see if any match after normalization
+        for dir in /media/pi/*; do
+            if [ -d "$dir" ]; then
+                # Compare after removing problematic characters
+                normalized_dir=$(echo "$dir" | tr -d '[:cntrl:]')
+                normalized_path=$(echo "$path" | tr -d '[:cntrl:]')
+                if [ "$normalized_dir" = "$normalized_path" ]; then
+                    print_debug "$path matches normalized path $dir"
+                    return 0
+                fi
+            fi
+        done
+    fi
+
+    print_debug "$path is not a directory (all tests failed)"
+    return 1
 }
 
 # is_file is used for checking file existence throughout the script
 is_file() {
-    if [ -z "$1" ]; then
+    local path="$1"
+
+    if [ -z "$path" ]; then
         print_warning "Empty path provided to is_file"
         return 1
     fi
-    [ -f "$1" ]
+
+    # Standard file test
+    if [ -f "$path" ]; then
+        print_debug "$path is a standard file (-f test succeeded)"
+        return 0
+    fi
+
+    # Check if it's a symlink to a file
+    if [ -L "$path" ] && [ -f "$(readlink -f "$path")" ]; then
+        print_debug "$path is a symlink to a file"
+        return 0
+    fi
+
+    # Try to access the file with cat (zero bytes)
+    if cat "$path" >/dev/null 2>&1; then
+        print_debug "$path is accessible via cat"
+        return 0
+    fi
+
+    print_debug "$path is not a file (all tests failed)"
+    return 1
 }
 
 is_block_device() {
-    if [ -z "$1" ]; then
+    local path="$1"
+
+    if [ -z "$path" ]; then
         print_warning "Empty path provided to is_block_device"
         return 1
     fi
-    [ -b "$1" ]
+
+    # Standard block device test
+    if [ -b "$path" ]; then
+        print_debug "$path is a standard block device (-b test succeeded)"
+        return 0
+    fi
+
+    # Check in /dev/disk/by-* symlinks
+    for disk_by in /dev/disk/by-id /dev/disk/by-uuid /dev/disk/by-label /dev/disk/by-path; do
+        if [ -d "$disk_by" ]; then
+            # Check if our path is a target of any symlink in these directories
+            for link in "$disk_by"/*; do
+                if [ -L "$link" ]; then
+                    target=$(readlink -f "$link")
+                    if [ "$target" = "$path" ] || [ "$target" = "$(readlink -f "$path")" ]; then
+                        print_debug "$path resolves to block device via symlink $link"
+                        return 0
+                    fi
+                fi
+            done
+        fi
+    done
+
+    # Check if it appears as a block device in /proc/partitions
+    if grep -q "$(basename "$path")" /proc/partitions 2>/dev/null; then
+        print_debug "$path found in /proc/partitions"
+        return 0
+    fi
+
+    # Check if lsblk recognizes it
+    if lsblk "$path" >/dev/null 2>&1; then
+        print_debug "$path recognized by lsblk"
+        return 0
+    fi
+
+    print_debug "$path is not a block device (all tests failed)"
+    return 1
 }
 
 is_mounted() {
-    if [ -z "$1" ] || [ -z "$2" ]; then
+    local dev="$1"
+    local mnt="$2"
+
+    if [ -z "$dev" ] || [ -z "$mnt" ]; then
         print_warning "Empty parameters provided to is_mounted"
         return 1
     fi
-    
-    # Check with grep for exact match
-    if mount | grep -q "$1 on $2"; then
+
+    # Normalize paths to canonical form
+    local real_dev
+    local real_mnt
+
+    # Get real path for device if it exists
+    if [ -e "$dev" ]; then
+        real_dev=$(readlink -f "$dev")
+    else
+        real_dev="$dev"  # Use as-is if it doesn't exist
+    fi
+
+    # Get real path for mountpoint if it exists
+    if [ -e "$mnt" ]; then
+        real_mnt=$(readlink -f "$mnt")
+    else
+        real_mnt="$mnt"  # Use as-is if it doesn't exist
+    fi
+
+    # Check if device is mounted at the specified mountpoint
+    if mount | grep -q "^$real_dev on $real_mnt "; then
+        print_debug "$dev is mounted at $mnt (exact match in mount output)"
         return 0
     fi
-    
-    # Check if the device is mounted anywhere
-    if [ -b "$1" ] && mount | grep -q "^$1 "; then
-        print_debug "$1 is mounted somewhere else"
+
+    # Check /proc/mounts which contains canonical device paths
+    if grep -q "^$real_dev $real_mnt " /proc/mounts 2>/dev/null; then
+        print_debug "$dev is mounted at $mnt (found in /proc/mounts)"
         return 0
     fi
-    
+
+    # For block devices, check if any matching device is mounted at the mountpoint
+    if is_block_device "$dev"; then
+        # Get device name without /dev/ prefix
+        local devname
+        devname=$(basename "$real_dev")
+
+        # Check if any entry in /proc/mounts matches the device and mountpoint
+        if grep -q " $real_mnt " /proc/mounts 2>/dev/null; then
+            # Get the device from matching mountpoint line
+            local mounted_dev
+            mounted_dev=$(grep " $real_mnt " /proc/mounts | cut -d' ' -f1)
+
+            print_debug "Mountpoint $mnt is used by device $mounted_dev"
+
+            # Check if it's our device or a link to it
+            if [ "$mounted_dev" = "$real_dev" ] || readlink -f "$mounted_dev" 2>/dev/null | grep -q "$devname"; then
+                print_debug "$dev is mounted at $mnt (device match by name)"
+                return 0
+            fi
+        fi
+    fi
+
+    # Check for devices in /media/pi/ which might be automounted
+    if [[ "$mnt" == /media/pi/* ]]; then
+        for mounted in /media/pi/*; do
+            if [ -d "$mounted" ] && mountpoint -q "$mounted" 2>/dev/null; then
+                # Get the device for this mountpoint
+                local auto_dev
+                auto_dev=$(grep " $mounted " /proc/mounts 2>/dev/null | cut -d' ' -f1)
+
+                if [ -n "$auto_dev" ]; then
+                    print_debug "Found automounted device $auto_dev at $mounted"
+
+                    # Check if it matches our device
+                    if [ "$auto_dev" = "$real_dev" ] || [ "$auto_dev" = "$dev" ]; then
+                        print_debug "$dev is automounted at $mounted (device match)"
+                        return 0
+                    fi
+
+                    # Check if device names match after normalization
+                    local norm_auto_dev # ai! do not join declaration with assignment please!
+                    local norm_dev # ai! do not join declaration with assignment please!
+                    norm_auto_dev=$(basename "$auto_dev" | tr -d '[:cntrl:]')
+                    norm_dev=$(basename "$dev" | tr -d '[:cntrl:]')
+                    if [ "$norm_auto_dev" = "$norm_dev" ]; then
+                        print_debug "$dev matches normalized device $auto_dev at $mounted"
+                        return 0
+                    fi
+                fi
+            fi
+        done
+    fi
+
+    print_debug "$dev is not mounted at $mnt (all tests failed)"
     return 1
 }
 
@@ -990,12 +1262,26 @@ set_from() {
     # Validate the path exists
     if ! [ -e "$from" ]; then
         print_warning "Source path does not exist: $from"
+        # Additional diagnostics for non-existent paths
+        print_debug "Path diagnostics for non-existent path: $from"
+        if [ "$timeout" -ne 0 ]; then
+            print_debug "- Parent directory: $(dirname "$from")"
+            print_debug "- Parent exists: $([ -d "$(dirname "$from")" ] && echo "YES" || echo "NO")"
+            print_debug "- Parent contents: $(ls -la "$(dirname "$from")" 2>&1 || echo "Cannot access")"
+        fi
+    else
+        # Check if the source path contains the required home_dir
+        if [ -d "$from/$home_dir" ]; then
+            print_debug "Found required $home_dir directory in $from"
+        else
+            print_warning "Required directory $home_dir not found in $from"
+            if [ "$timeout" -ne 0 ]; then
+                print_debug "Contents of $from: $(ls -la "$from" 2>&1 || echo "Cannot access")"
+            fi
+        fi
     fi
     
     return 0
 }
-
-# We've removed the unused functions for better code maintenance
-# is_file and is_directory are kept as they're used in the script
 
 main "$@"

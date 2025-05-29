@@ -32,74 +32,88 @@ prep=0 # runs preinstall.sh
 user=0 # runs preinstall.sh, apt full-upgrade
 dbg=0 # waits for [Enter] often
 devel=0
-clear=0 # clears step file before beginning
+clear=1 # clears step file before beginning by default
 job="" # arg0 for step 1+
 quick=0
+args_string="" # additional arguments as string
+
+  # Check for help option first
+  if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+  show_help
+  exit 0
+  fi
 
 if [ $# -gt 0 ]; then
+  # First argument is the job type (release or devel)
   job="$1"
-  if [[ "$job" == Q* ]]; then
-    job="${job#Q}"
-    quick=1
-  fi
-  
-  currjob="$job"
-  if [ "$currjob" = release ]; then
-    echo "MODE: release, reinstall"
-    clear=1
-    job=RELEASE
-  elif [ "$currjob" = urelease ]; then
-    echo "MODE: user, release, reinstall"
-    clear=1
-    job=URELEASE
-    user=1
-  elif [ "$currjob" = RELEASE ]; then
+  shift
+
+  # Store original arguments for later use
+  original_args=("$job")
+
+  # Process job type first
+  if [ "$job" = "release" ]; then
     echo "MODE: release"
-  elif [ "$currjob" = URELEASE ]; then
-    echo "MODE: user, release"
-    user=1
-  elif [ "$currjob" = devel ]; then
-    echo "MODE: devel, reinstall"
-		devel=1
-    clear=1
-    job=DEVEL
-  elif [ "$currjob" = udevel ]; then
-    echo "MODE: user, devel, reinstall"
-		devel=1
-    clear=1
-    job=UDEVEL
-    user=1
-  elif [ "$currjob" = DEVEL ]; then
+    job="RELEASE"
+  elif [ "$job" = "devel" ]; then
     echo "MODE: devel"
-		devel=1
-  elif [ "$currjob" = UDEVEL ]; then
-    echo "MODE: user, devel"
-		devel=1
-  elif [ "$currjob" = debug ] || [ "$currjob" = udebug ]; then
-    echo "MODE: debug (user), devel, reinstall"
-		dbg=1
-		devel=1
-    clear=1
-    job=DEBUG
-    user=1
-  elif [ "$currjob" = DEBUG ]; then
-    echo "MODE: debug (user), devel"
-		dbg=1
-		devel=1
-    user=1
-  elif [ "$currjob" = prepare ]; then
-    echo "MODE: prepare (release)"
-		prep=1
-  elif [ "$currjob" = develprepare ]; then
-    echo "MODE: prepare (devel)"
-		devel=1
-		prep=1
+    job="DEVEL"
+    devel=1
   else
-    echo "MODE: unknown: $*"
+    echo "MODE: unknown job type: $job"
+    echo "Valid job types: release, devel"
     exit 1
+  fi
+
+  # Process remaining arguments
+  while [ $# -gt 0 ]; do
+    original_args+=("$1")
+    case "$1" in
+      --user)
+        echo "OPTION: user mode enabled"
+        user=1
+        clear=1 # reinstall when --user is specified
+        ;;
+      --debug)
+        echo "OPTION: debug mode enabled"
+        dbg=1
+        ;;
+      --continue)
+        echo "OPTION: continue mode enabled"
+        clear=0 # don't clear step file
+        ;;
+      --quick)
+        echo "OPTION: quick mode enabled"
+        quick=1
+        ;;
+      *)
+        echo "WARNING: Unknown option: $1"
+        ;;
+    esac
+    shift
+  done
+  # Build the arguments string for later use
+  args_string=""
+  for arg in "${original_args[@]:1}"; do
+    args_string="$args_string $arg"
+  done
+
+  # Add --user to job name if user mode is enabled
+  if [ "$user" -eq 1 ]; then
+    job="U$job"
+    echo "Final mode: $job with user privileges"
+  else
+    echo "Final mode: $job"
+  fi
+
+  # Add debug flag to environment if debug mode is enabled
+  if [ "$dbg" -eq 1 ]; then
+    echo "Debug mode is active"
   fi
 else
   echo "MODE: not given!"
+  echo "Usage: $0 [release|devel] [--user] [--debug] --continue [--quick]"
+  echo "Usage: $0 [release|devel] [--user] [--debug] [--continue] [--quick]"
   exit 1
 fi
 
@@ -122,6 +136,24 @@ echo_wait() {
       read -r
     fi
   fi
+}
+
+show_help() {
+  echo "Usage: $0 [release|devel] [--user] [--debug] [--continue] [--quick]"
+  echo ""
+  echo "Job type (required):"
+  echo "  release           Configure system for release environment"
+  echo "  devel             Configure system for development environment"
+  echo ""
+  echo "Options:"
+  echo "  --user            Run in user mode (perform system upgrades)"
+  echo "  --debug           Run in debug mode (more verbose, more interactive if also --user)"
+  echo "  --continue        Continue from last step (don't clear state)"
+  echo "  --quick           Skip confirmation prompts"
+  echo ""
+  echo "Example:"
+  echo "  $0 release --user --debug"
+  echo "  $0 devel --continue --quick"
 }
 
 rere() {
@@ -373,8 +405,8 @@ new_profile() {
   # Append profile.sh
   cat /home/pi/.mentor/profile.sh >> /home/pi/.profile || { echo "Error: failed to append contents of profile.sh"; exit 1; }
   
-  # Append job
-  printf "\njob=%s\n" "$job" >> /home/pi/.profile || { echo "Error: failed to append: job=$job"; exit 1; }
+  # Append job with arguments
+  printf "\njob=%s %s\n" "$job" "${args_string} --continue" >> /home/pi/.profile || { echo "Error: failed to append job with arguments"; exit 1; }
   
   # Check for prepare4lab.run
   if [ ! -f /home/pi/.mentor/prepare4lab.run ]; then
@@ -526,6 +558,9 @@ main() {
 
   echo_dbg "Krok: $step"
 
+  # Show final job configuration
+  echo_dbg "Job: $job ${args_string}"
+
   if [ "$step" -ne 0 ]; then
     if [ "$step" -eq 5 ]; then
       echo_dbg "Pulpit jest juz oznaczony jako przygotowany."
@@ -667,6 +702,10 @@ step0() {
 		set_step 2
 		rere
   fi
+
+		  # If we get here, no reboot was performed
+		  echo "Manual mode completion"
+		  echo "Job: $job ${args_string}"
 }
 
 step12() {
