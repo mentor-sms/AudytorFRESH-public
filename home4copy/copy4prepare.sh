@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Script version
-WERSJA=4.2.0
+WERSJA=4.2.1
 
 ###############################################################################
 # copy4prepare.sh - Mentor Lab Preparation Utility
@@ -58,23 +58,12 @@ show_help() {
 ║   --from <path>          Block device or directory (default: ${from})
 ║   --mnt <path>           Mount point for the device (default: ${mntdir})
 ║   --target <path>        Target directory (default: ${target})
-║   --home_dir <dir>       Home directory name (default: ${home_dir})
-║   --file <filename>      Script filename (default: ${file})
 ║   --timeout <seconds>    Wait time before starting the process (default: ${timeout} or 0 if --quick)
 ║
 ║ Process Control:
 ║   --quick                Skip confirmation delays
-║   --norun                Do not run the script after copying files
-║   --dry                  Simulate operations without making changes
-║   --nosync               Do not sync directories (skip rsync)
-║
-║ Backup Management:
-║   --brestore             Restore from backup files and exit
-║   --nobackup             Do not create backup files during operation
-║   --bclear               Remove all backup files and exit
 ║
 ║ Script Execution:
-║   --run <path>           Path to the script to run (default: ${run})
 ║   --debug                Set debug verbosity level
 ║   --job <args>           Arguments for the script (default: ${job})
 ║
@@ -131,10 +120,10 @@ echo_info() {
 
   # Interactive mode with debug
   if [ "$DEBUG_LEVEL" -eq 1 ] && [ "$USER_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
-    echo_info "$msg //Enter..."
+    echo "$msg //Enter..."
     read -r
   else
-    echo_info "$msg"
+    echo "$msg"
   fi
 
   # Sleep in debug mode for better readability
