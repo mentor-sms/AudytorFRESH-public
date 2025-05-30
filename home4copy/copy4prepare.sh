@@ -1,4 +1,9 @@
 #!/bin/bash
+# -*- coding: utf-8 -*-
+
+# Script version
+WERSJA=4.2.0
+
 ###############################################################################
 # copy4prepare.sh - Mentor Lab Preparation Utility
 # 
@@ -16,21 +21,17 @@
 # See --help for available options
 ###############################################################################
 
-# Script version
-WERSJA=7.7.1
-echo "copy4prepare ver: $WERSJA (enhanced path detection, error handling, backup protection)"
-
 do_umount=0                          # Flag to track if we mounted a device
 # Set default values for all parameters
-from=/dev/sda1                       # Source location (block device or directory)
-mntdir=/home/pi/mnt                  # Mount point for block devices
+from="/dev/sd[a-z][1-9]"                       # Source location (block device or directory)
+mntdir=/mnt                          # Mount point for block devices
 target=/home/pi                      # Target directory for file operations
 home_dir=home4copy                   # Directory name on source containing files
 file=prepare4lab.sh                  # Script filename to run after copying
 quick=0                              # Flag to skip confirmation delays
 norun=0                              # Flag to skip running scripts
 nosync=0                             # Flag to skip rsync operations
-job="urelease"                       # Default job type for the script
+job="release"                        # Default job type for the script
 timeout=0                            # Wait time before starting operations
 run="/home/pi/.mentor/prepare4lab.sh" # Path to the script to run
 dry=0                                # Flag for simulation mode (no changes)
@@ -41,6 +42,10 @@ nobackup=0                           # Flag to skip creating backup files
 # Initialize error and warning counters
 error_count=0
 warning_count=0
+    
+# Initialize user and debug level variables
+USER_LEVEL=1
+DEBUG_LEVEL=0
 
 show_help() {
     cat << EOF
@@ -55,7 +60,7 @@ show_help() {
 ║   --target <path>        Target directory (default: ${target})
 ║   --home_dir <dir>       Home directory name (default: ${home_dir})
 ║   --file <filename>      Script filename (default: ${file})
-║   --timeout <seconds>    Wait time before starting the process (default: ${timeout})
+║   --timeout <seconds>    Wait time before starting the process (default: ${timeout} or 0 if --quick)
 ║
 ║ Process Control:
 ║   --quick                Skip confirmation delays
@@ -70,8 +75,8 @@ show_help() {
 ║
 ║ Script Execution:
 ║   --run <path>           Path to the script to run (default: ${run})
+║   --debug                Set debug verbosity level
 ║   --job <args>           Arguments for the script (default: ${job})
-║                          Known job types: release, devel, debug
 ║
 ║ NOTE: --job must always be the LAST ARGUMENT!
 ║
@@ -79,18 +84,155 @@ show_help() {
 ║   --help                 Show this help message
 ║
 ║ Examples:
-║   sudo $0 --from /dev/sda1 --quick
-║   sudo $0 --brestore
-║   sudo $0 --job release
+║   sudo $0 --from /media/pi/usb_label --quick
+║   sudo $0 --from /dev/sd[a-z]1 --target ~/mnt --job devel
 ╚══════════════════════════════════════════════════════════════════════════════
 EOF
 }
 
-noquick() {
-  if [ "$quick" -eq 0 ]; then
-      echo "3, 2, 1... Ctrl+C to cancel."
-      sleep 4
+# Usage: command || report_error errno "message"
+echo_error() {
+  local status=$?        # Capture exit status of previous command
+  local errno="$1"       # Error number/code
+  local message="$2"     # Error message text
+  local cmd_status="${3:-$status}"  # Use provided status or captured status
+  
+  # Ensure errno is a valid number
+  if ! [[ "$errno" =~ ^[0-9]+$ ]]; then
+    echo_info "Invalid error number: $errno. Using 255 instead."
+    errno=255
   fi
+  
+  # Include command status if available
+  if [ -n "$cmd_status" ]; then
+    echo_info "[err$errno] $message [status=$cmd_status]"
+  else
+    echo_info "[err$errno] $message"
+  fi
+  
+  # Interactive mode for user
+  if [ "$USER_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
+    echo_info "[Enter] to continue, Ctrl+C to cancel..."
+    read -r
+  fi
+  
+  # Return the errno as exit code (ensuring it's in valid range 0-255)
+  exit $(( errno % 256 ))
+}
+
+echo_info() {
+  local msg="$1"
+  local cmd_status="$2"
+
+  # If command status is provided, include it in the output
+  if [ -n "$cmd_status" ]; then
+    msg="$msg [status=$cmd_status]"
+  fi
+
+  # Interactive mode with debug
+  if [ "$DEBUG_LEVEL" -eq 1 ] && [ "$USER_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
+    echo_info "$msg //Enter..."
+    read -r
+  else
+    echo_info "$msg"
+  fi
+
+  # Sleep in debug mode for better readability
+  if [ "$DEBUG_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
+    sleep 1
+  fi
+}
+
+echo_info "copy4prepare ver: $WERSJA"
+verify_prepare_script() {
+  local script_file="$target/$file"
+  local wersja_in_script
+  
+  echo_info "Verifying prepare script integrity before running: $script_file"
+  
+  # Check if script exists
+  if ! is_file "$script_file"; then
+    echo_error 20 "Prepare script not found at $script_file"
+  fi
+  
+  # Check if script is readable
+  if [ ! -r "$script_file" ]; then
+    echo_error 60 "Prepare script exists but is not readable: $script_file"
+  fi
+  
+  # Validate bash syntax
+  if ! bash -n "$script_file"; then
+    echo_error 200 "Prepare script contains syntax errors: $script_file"
+  fi
+  
+  # Extract version from script
+  wersja_in_script=$(grep -m 1 "^WERSJA=" "$script_file" | cut -d'=' -f2)
+  
+  # Check if version was extracted successfully
+  if [ -z "$wersja_in_script" ]; then
+    echo_info "Warning: Could not extract version from prepare script"
+    echo_wait "Script version not found, continue anyway?"
+  else
+    # Compare versions
+    if [ "$wersja_in_script" != "$WERSJA" ]; then
+      echo_info "WARNING: Version mismatch detected!"
+      echo_info "  copy4prepare.sh version: $WERSJA"
+      echo_info "  $file version: $wersja_in_script"
+      echo_stop "Version mismatch" "Running prepare script with different version may cause issues"
+    else
+      echo_info "Version check passed: Both scripts at version $WERSJA"
+    fi
+  fi
+  
+  # Check execute permission
+  if [ ! -x "$script_file" ]; then
+    echo_info "Adding execute permission to prepare script"
+    chmod +x "$script_file" || echo_error 60 "Failed to add execute permission to prepare script"
+  fi
+  
+  echo_info "Script verification completed"
+  return 0
+}
+# Before running prepare script
+if [ "$norun" -ne 1 ] || [ "$dry" -eq 1 ]; then
+  verify_prepare_script || echo_error 200 "Prepare script verification failed"
+fi
+
+echo_stop() {
+  local operation="$1"
+  local details="$2"
+
+  # Print operation with details if provided
+  if [ -n "$details" ]; then
+    echo_info "CRITICAL OPERATION: $operation [$details]"
+  else
+    echo_info "CRITICAL OPERATION: $operation"
+  fi
+
+  # Always flush disk buffers before critical operations
+  sync
+
+  # Interactive mode for user
+  if [ "$USER_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
+    echo_info "[Enter] to continue, Ctrl+C to cancel..."
+    read -r
+  elif [ "$DEBUG_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
+    # In debug mode without user interaction, still pause briefly
+    echo_info "Ctrl+C to cancel. 3, 2, 1..."
+    sleep 5
+  fi
+}
+
+echo_wait() {
+  local message="$1"
+  echo_info "WAIT: $message"
+  if [ "$USER_LEVEL" -eq 1 ] && [ "$quick" -eq 0 ]; then
+    echo_info "Press [Enter] to continue, or wait 5 seconds..."
+    read -t 5 -r || echo_info "Timeout waiting for user input, continuing"
+  elif [ "$DEBUG_LEVEL" -eq 1 ]; then
+    sleep 2
+  fi
+  return 0
 }
 
 handle_file() {
@@ -101,7 +243,7 @@ handle_file() {
     _file="${_file%"${_file##*[![:space:]]}"}"
     _sourcefile="${_sourcefile%"${_sourcefile##*[![:space:]]}"}"
 
-    echo "Handling file $_file"
+    echo_info "Handling file $_file"
 
     # Check if source file exists using is_file
     if ! is_file "$_sourcefile"; then
@@ -111,35 +253,30 @@ handle_file() {
 
     # Check if the files are identical using cmp (faster binary comparison)
     if ! cmp -s "$_file" "$_sourcefile"; then
-        echo "Files are different after rsync: $_file and $_sourcefile"
+        echo_info "Files are different after rsync: $_file and $_sourcefile"
         # If verbose debugging is needed, uncomment the diff line
         # diff -u "$_file" "$_sourcefile" || true
         # Continue processing even if files are different, as rsync might have modified them
     fi
 
     # Convert to Unix format (safely)
-    echo "Converting $_file to Unix format"
+    echo_info "Converting $_file to Unix format"
     if ! dos2unix -f -k "$_file" 2>/dev/null; then
-        echo "Warning: dos2unix conversion issue with $_file, continuing"
+        echo_info "Warning: dos2unix conversion issue with $_file, continuing"
     fi
 
     # Handle special files
     if [[ "$_file" == *.sh ]]; then
-        echo "Making $_file executable"
+        echo_info "Making $_file executable"
         if ! chmod +x "$_file"; then
-            echo "Warning: Failed to make $_file executable, continuing"
+            echo_info "Warning: Failed to make $_file executable, continuing"
         fi
 
-        echo "Validating bash script $_file"
+        echo_info "Validating bash script $_file"
         if ! bash -n "$_file"; then
-            echo "Warning: $_file contains syntax errors, continuing anyway"
-            # Don't return error - let the script continue even with syntax errors
-            # This allows more files to be processed even if some have issues
+            echo_error 1 "$_file contains syntax errors"
         fi
     fi
-    
-    # Optional sleep for monitoring
-    [ "$timeout" -ne 0 ] && sleep 1
     
     return 0
 }
@@ -147,41 +284,36 @@ handle_file() {
 create_backup() {
     local filepath="$1"
     if [ "$nobackup" -eq 1 ]; then
-        echo "--nobackup enabled. Skipping backup creation for $filepath"
-        [ "$timeout" -ne 0 ] && sleep 1
+        echo_info "--nobackup enabled. Skipping backup creation for $filepath"
         return 0
     fi
     local backup_path="${filepath}.mentorbak"
 
     # Check if filepath contains "home/pi/.mentor" or "home/pi/.source4rpi"
     if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
-        echo "Skipping backup creation for $filepath (excluded path)"
-        [ "$timeout" -ne 0 ] && sleep 1
+        echo_info "Skipping backup creation for $filepath (excluded path)"
         return 0
     fi
 
     # If backup already exists, don't overwrite it
     if [ -f "$backup_path" ]; then
-        echo "Backup already exists for $filepath, skipping backup creation"
-        [ "$timeout" -ne 0 ] && sleep 1
+        echo_info "Backup already exists for $filepath, skipping backup creation"
         return 0
     fi
 
     # Create backup only if original file exists using is_file
     if is_file "$filepath"; then
         if [ "$dry" -ne 1 ]; then
-            echo "backup: $filepath to $backup_path"
+            echo_info "backup: $filepath to $backup_path"
             if ! sudo -u pi cp "$filepath" "$backup_path"; then
                 print_warning "Failed to create backup file $backup_path but continuing"
                 # Not exiting with error, just warning
             fi
         else
-            echo "dry: backup: $filepath to $backup_path"
+            echo_info "dry: backup: $filepath to $backup_path"
         fi
-        
-        [ "$timeout" -ne 0 ] && sleep 1
     else
-        echo "Original file $filepath does not exist, no backup needed"
+        echo_info "Original file $filepath does not exist, no backup needed"
     fi
     return 0
 }
@@ -192,7 +324,7 @@ rsync_line_test() {
 
   # Skip if parameters are empty or contain certain patterns
   if [ -z "$p1" ] || [ -z "$p2" ]; then
-    echo "Skipping empty rsync line parameters"
+    echo_info "Skipping empty rsync line parameters"
     return 1
   fi
   
@@ -206,21 +338,19 @@ rsync_line_test() {
   p2="/${p2#/}"
 
   # Debug output for path processing
-  if [ "$timeout" -ne 0 ]; then
-    echo "Processing rsync paths:"
-    echo "  Path 1: '$p1'"
-    echo "  Path 2: '$p2'"
-  fi
+  echo_info "Processing rsync paths:"
+  echo_info "  Path 1: '$p1'"
+  echo_info "  Path 2: '$p2'"
 
   # Skip directories (paths ending with "/")
   if [[ "${p1: -1}" == "/" ]]; then
-    [ "$timeout" -ne 0 ] && echo "Skipping directory path: $p1"
+    echo_info "Skipping directory path: $p1"
     return 1
   fi
 
   # Skip paths with trailing slashes in the second part too
   if [[ "${p2: -1}" == "/" ]]; then
-    [ "$timeout" -ne 0 ] && echo "Skipping path with trailing slash: $p2"
+    echo_info "Skipping path with trailing slash: $p2"
     return 1
   fi
   
@@ -231,7 +361,7 @@ rsync_line_test() {
   
   # Skip paths with mentorbak extension
   if [[ "$p1" == *.mentorbak || "$p2" == *.mentorbak ]]; then
-    [ "$timeout" -ne 0 ] && echo "Skipping backup file: $p1"
+    echo_info "Skipping backup file: $p1"
     return 1
   fi
 
@@ -240,7 +370,7 @@ rsync_line_test() {
 }
 
 run_rsync() {
-  echo "Running rsync for home_dir (copy4prepare)"
+  echo_info "Running rsync for home_dir (copy4prepare)"
 
   # Define excluded paths
   local exclude_option
@@ -267,8 +397,8 @@ run_rsync() {
   local dry_rsync_cmd
   dry_rsync_cmd="$rcmd --dry-run $dry_exclude_option $cont"
 
-  echo "Performing dry run to identify files for backup..."
-  echo "DRY RSYNC: $from/$home_dir/ >> $target ($dry_exclude_option)"
+  echo_info "Performing dry run to identify files for backup..."
+  echo_info "DRY RSYNC: $from/$home_dir/ >> $target ($dry_exclude_option)"
   
   # Use a temporary file to store the dry run results
   local dry_run_file
@@ -276,7 +406,7 @@ run_rsync() {
   
   # Capture dry run output to file to avoid pipe issues
   if ! $dry_rsync_cmd > "$dry_run_file"; then
-    echo "Warning: Dry run rsync failed, continuing anyway"
+    echo_info "Warning: Dry run rsync failed, continuing anyway"
   fi
   
   # Process dry run results from file
@@ -297,20 +427,20 @@ run_rsync() {
     if [ "$dry" -ne 1 ]; then
       create_backup "$fpath"
       
-      echo "Removing $fpath before copy"
+      echo_info "Removing $fpath before copy"
       if [ -e "$fpath" ] && ! rm -rf "$fpath"; then
-        echo "Warning: Failed to remove $fpath, attempting to continue"
+        echo_info "Warning: Failed to remove $fpath, attempting to continue"
       fi
     else
-      echo "dry: Would remove $fpath"
+      echo_info "dry: Would remove $fpath"
     fi
   done < "$dry_run_file"
   
   # Remove temporary file
   rm -f "$dry_run_file"
 
-  echo "Starting actual rsync operation..."
-  echo "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
+  echo_info "Starting actual rsync operation..."
+  echo_info "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
   
   # Perform the actual rsync operation
   if [ "$dry" -ne 1 ]; then
@@ -318,7 +448,7 @@ run_rsync() {
     rsync_output_file=$(mktemp)
     
     if ! $rsync_cmd > "$rsync_output_file"; then
-      echo "Warning: Rsync operation completed with errors, checking results"
+      echo_info "Warning: Rsync operation completed with errors, checking results"
     fi
     
     # Process rsync results from file
@@ -335,7 +465,7 @@ run_rsync() {
 
       # Process successful transfers
       if [[ $first_part == "$second_part" ]] || [[ $second_part == *uptodate* ]]; then
-        echo "Processing $target/$first_part"
+        echo_info "Processing $target/$first_part"
         # Process file even if handle_file returns error
         handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
       fi
@@ -344,26 +474,22 @@ run_rsync() {
     # Remove temporary file
     rm -f "$rsync_output_file"
   else
-    echo "Dry run mode: skipping actual rsync operation"
+    echo_info "Dry run mode: skipping actual rsync operation"
   fi
   
-  echo "Rsync operation completed"
+  echo_info "Rsync operation completed"
 }
 
 un_un() {
   if [ "$do_umount" -eq 1 ]; then
-    echo "Unmounting $mntdir"
-    if [ "$quick" -eq 0 ]; then
-      echo "3, 2, 1... Ctrl+C to cancel."
-      sleep 4
-    fi
+    echo_wait "Unmounting $mntdir"
     
     # Set flag to indicate unmounting is in progress
     do_umount=0
     
     # Check if the directory is still mounted
     if mount | grep -q "$mntdir"; then
-      echo "Unmounting $mntdir..."
+      echo_info "Unmounting $mntdir..."
       # Try to unmount with a retry mechanism
       local max_attempts=3
       local attempt=1
@@ -371,11 +497,10 @@ un_un() {
       
       while [ $attempt -le $max_attempts ] && [ $unmounted -eq 0 ]; do
         if sudo umount "$mntdir"; then
-          echo "Successfully unmounted $mntdir"
+          echo_info "Successfully unmounted $mntdir"
           unmounted=1
         else
-          echo "Attempt $attempt to unmount $mntdir failed, waiting and retrying..."
-          sleep 2
+          echo_wait "Attempt $attempt to unmount $mntdir failed, retrying..."
           attempt=$((attempt + 1))
         fi
       done
@@ -384,12 +509,12 @@ un_un() {
         print_warning "Failed to unmount $mntdir after $max_attempts attempts, continuing anyway"
       fi
     else
-      echo "$mntdir is not mounted"
+      echo_info "$mntdir is not mounted"
     fi
     
     # Remove mount directory if it exists
     if [ -d "$mntdir" ]; then
-      echo "Removing mount directory $mntdir"
+      echo_info "Removing mount directory $mntdir"
       if ! rm -rf "$mntdir"; then
         print_warning "Failed to remove directory $mntdir, continuing anyway"
       fi
@@ -398,11 +523,11 @@ un_un() {
 }
 
 mnt_mnt() {
-  echo "Preparing mount point $mntdir"
+  echo_info "Preparing mount point $mntdir"
   
   # Ensure mount directory exists with better error handling
   if [ ! -d "$mntdir" ]; then
-    echo "Creating mount directory $mntdir"
+    echo_info "Creating mount directory $mntdir"
     if ! sudo -u pi mkdir -p "$mntdir"; then
       print_error "Failed to create mount directory $mntdir"
     fi
@@ -410,11 +535,11 @@ mnt_mnt() {
   
   # Check if already mounted
   if is_mounted "$from" "$mntdir"; then
-    echo "$from is already mounted at $mntdir"
+    echo_info "$from is already mounted at $mntdir"
     # Get actual mount point to ensure correct path
     local actual_mntdir
     actual_mntdir=$(mount | grep "$from" | awk '{print $3}')
-    echo "Using actual mount point: $actual_mntdir"
+    echo_info "Using actual mount point: $actual_mntdir"
     set_from "$actual_mntdir"
     return 0
   fi
@@ -423,138 +548,132 @@ mnt_mnt() {
   local existing_mount
   existing_mount=$(mount | grep "$from" | awk '{print $3}' | head -n1)
   if [ -n "$existing_mount" ]; then
-    echo "$from is already mounted at $existing_mount, using that mount point"
+    echo_info "$from is already mounted at $existing_mount, using that mount point"
     set_from "$existing_mount"
     return 0
   fi
   
   # Mount the device
-  echo "Mounting device $from at $mntdir"
+  echo_info "Mounting device $from at $mntdir"
   if ! sudo mount "$from" "$mntdir"; then
     # Try with more options if first attempt fails
-    echo "First mount attempt failed, trying with additional options..."
+    echo_info "First mount attempt failed, trying with additional options..."
     if ! sudo mount -o rw,noatime "$from" "$mntdir"; then
       print_error "Failed to mount $from at $mntdir after multiple attempts"
     fi
   fi
   
-  echo "Successfully mounted $from at $mntdir"
+  echo_info "Successfully mounted $from at $mntdir"
   do_umount=1
   set_from "$mntdir"
 }
 
-
 mnt_init() {
-  echo "Initializing mount system for source: $from"
+  echo_info "Initializing mount system for source: $from"
   
   # Diagnostics before starting
-  print_debug "Current mounts:"
-  if [ "$timeout" -ne 0 ]; then
-      mount | grep -E '(^/dev/sd|^/media/pi)' || print_debug "No relevant mounts found"
-  fi
+  echo_info "Current mounts:"
+  mount | grep -E '(^/dev/sd|^/media/pi)' || echo_info "No relevant mounts found"
 
-  print_debug "Available block devices:"
-  if [ "$timeout" -ne 0 ]; then
-      lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL 2>/dev/null || print_debug "lsblk failed or no devices found"
-  fi
+  echo_info "Available block devices:"
+  lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL 2>/dev/null || echo_info "lsblk failed or no devices found"
 
   # Case 1: from is a block device
   if is_block_device "$from"; then
-      echo "$from is a block device, proceeding with mount"
+      echo_info "$from is a block device, proceeding with mount"
       mnt_mnt "$from"
       return 0
   fi
 
   # Case 2: from is an existing directory
   if is_directory "$from"; then
-      echo "$from is a directory, using directly"
+      echo_info "$from is a directory, using directly"
       set_from "$from"
       return 0
   fi
 
-  # Case 3: from is a pattern for a block device
-  if echo "$from" | grep -q '/dev/sd[a-z][0-9]'; then
-      echo "Searching for block device matching pattern: $from"
+  # Case 3: from potentially contains a pattern with ranges
+  if echo "$from" | grep -q '\[[a-z]-[a-z]\]' || echo "$from" | grep -q '\[[0-9]-[0-9]\]'; then
+      echo_info "Detected range pattern in: $from"
       local gotit=0
-
-      # First try exact match
-      if [ -b "$from" ]; then
-          echo "Found exact match for block device: $from"
-          gotit=1
-          mnt_mnt "$from"
-          return 0
-      fi
-
-      # Try to find any matching block device
-      echo "Searching for available block devices..."
-      for dev in /dev/sd*[0-9]; do
-          if is_block_device "$dev"; then
-              echo "Found block device $dev"
+      
+      # Use bash's built-in pattern matching
+      shopt -s nullglob  # Ensure non-matching globs expand to nothing
+      
+      # Try to find all matching devices
+      local matching_devices=("$from")
+      
+      # Reset globbing behavior
+      shopt -u nullglob
+      
+      echo_info "Found ${#matching_devices[@]} potential matches for pattern $from"
+      
+      # Try each potentially matching device
+      for dev in "${matching_devices[@]}"; do
+          echo_info "Checking: $dev"
+          if [ -b "$dev" ]; then
+              echo_info "Found matching block device: $dev"
               gotit=1
               from=$dev
               mnt_mnt "$from"
               return 0
           fi
       done
-
-      # Additional search for USB devices
+      
+      # If no matches were found, fail
       if [ "$gotit" -eq 0 ]; then
-          echo "Checking for USB block devices..."
-          for dev in /dev/disk/by-id/usb-*-part*; do
-              if is_block_device "$dev"; then
-                  echo "Found USB block device $dev"
-                  gotit=1
-                  from=$dev
-                  mnt_mnt "$from"
-                  return 0
-              fi
-          done
-      fi
-
-      if [ "$gotit" -eq 0 ]; then
-          print_error "Failed to find any suitable block device"
+          print_error 1 "Failed to find any suitable block device matching pattern: $from"
+          return 1
       fi
   else
       # Case 4: None of the above, try to guess what the user meant
-      echo "Path '$from' is not recognized as a block device or directory"
+      echo_info "Path '$from' is not recognized as a block device or directory"
 
       # Extended diagnostics
-      print_debug "Detailed path analysis for '$from':"
-      print_debug "- Directory test: $([ -d "$from" ] && echo "YES" || echo "NO")"
-      print_debug "- Block device test: $([ -b "$from" ] && echo "YES" || echo "NO")"
-      print_debug "- File exists test: $([ -e "$from" ] && echo "YES" || echo "NO")"
-
-      if [ "$timeout" -ne 0 ]; then
-          print_debug "- ls -la output: $(ls -la "$from" 2>&1 || echo "Cannot access")"
-          print_debug "- mountpoint check: $(mountpoint "$from" 2>&1 || echo "Not a mountpoint")"
+      echo_info "Detailed path analysis for '$from':"
+      if [ -d "$from" ]; then
+          echo_info "- Directory test: YES"
+      else
+          echo_info "- Directory test: NO"
       fi
+      if [ -b "$from" ]; then
+          echo_info "- Block device test: YES"
+      else
+          echo_info "- Block device test: NO"
+      fi
+      if [ -e "$from" ]; then
+          echo_info "- File exists test: YES"
+      else
+          echo_info "- File exists test: NO"
+      fi
+
+      echo_info "- ls -la output: $(ls -la "$from" 2>&1 || echo_info "Cannot access")"
+      echo_info "- mountpoint check: $(mountpoint "$from" 2>&1 || echo_info "Not a mountpoint")"
 
       # Check if the path is in /proc/mounts
       if grep -q " $from " /proc/mounts 2>/dev/null; then
-          print_debug "Found '$from' in /proc/mounts:"
-          if [ "$timeout" -ne 0 ]; then
-              grep " $from " /proc/mounts
-          fi
+          echo_info "Found '$from' in /proc/mounts:"
+          grep " $from " /proc/mounts
       else
-          print_debug "Path '$from' not found in /proc/mounts"
+          echo_info "Path '$from' not found in /proc/mounts"
       fi
 
       # Try to interpret as a partial path in /media/pi/
-      print_debug "Checking /media/pi/ for matching paths..."
+      echo_info "Checking /media/pi/ for matching paths..."
       local found=0
 
       for media_path in /media/pi/*; do
           if [ -d "$media_path" ]; then
-              print_debug "Found directory: $media_path"
+              echo_info "Found directory: $media_path"
 
               # Check if it's a mountpoint
               if mountpoint -q "$media_path" 2>/dev/null; then
-                  print_debug "$media_path is a mountpoint"
+                  echo_info "$media_path is a mountpoint"
 
                   # Check if the basename matches or contains our from value
                   media_basename=$(basename "$media_path")
                   if [ "$media_basename" = "$from" ] || [[ "$media_basename" == *"$from"* ]]; then
-                      echo "Found matching directory at $media_path"
+                      echo_info "Found matching directory at $media_path"
                       from="$media_path"
                       set_from "$from"
                       found=1
@@ -565,7 +684,7 @@ mnt_init() {
       done
 
       if [ "$found" -eq 0 ] && [ -d "/media/pi/$from" ]; then
-          echo "Found matching directory at /media/pi/$from"
+          echo_info "Found matching directory at /media/pi/$from"
           from="/media/pi/$from"
           set_from "$from"
           return 0
@@ -573,10 +692,10 @@ mnt_init() {
 
       # Last resort: check if any path in /media/pi contains files we need
       if [ "$found" -eq 0 ]; then
-          print_debug "Checking if any mountpoint contains required files..."
+          echo_info "Checking if any mountpoint contains required files..."
           for media_path in /media/pi/*; do
               if [ -d "$media_path" ] && [ -d "$media_path/$home_dir" ]; then
-                  echo "Found directory with $home_dir at $media_path"
+                  echo_info "Found directory with $home_dir at $media_path"
                   from="$media_path"
                   set_from "$from"
                   found=1
@@ -593,21 +712,21 @@ mnt_init() {
 }
 
 print_parsed_arguments() {
-    echo "  stad: $from"
-    echo "  mount: $mntdir"
-    echo "  tu: $target"
-    echo "  home: $home_dir"
-    echo "  skrypt: $file"
-    echo "  szybko: $quick"
-    echo "  bez skryptu? $norun"
-    echo "  bez kopiowania? $nosync"
-    echo "  zadanie: $job"
-    echo "  oczekiwanie na uzytkownika: $timeout"
-    echo "  skrypt na miejscu: $run"
-    echo "  tylko udajemy? $dry"
-    echo "  przywracamy? $brestore"
-    echo "  czyscimy? $bclear"
-    echo "  nie robimy kopii? $nobackup"
+    echo_info "  stad: $from"
+    echo_info "  mount: $mntdir"
+    echo_info "  tu: $target"
+    echo_info "  home: $home_dir"
+    echo_info "  skrypt: $file"
+    echo_info "  szybko: $quick"
+    echo_info "  bez skryptu? $norun"
+    echo_info "  bez kopiowania? $nosync"
+    echo_info "  zadanie: $job"
+    echo_info "  oczekiwanie na uzytkownika: $timeout"
+    echo_info "  skrypt na miejscu: $run"
+    echo_info "  tylko udajemy? $dry"
+    echo_info "  przywracamy? $brestore"
+    echo_info "  czyscimy? $bclear"
+    echo_info "  nie robimy kopii? $nobackup"
 }
 
 # Function to create a copy4prepare.marker file similar to prepare4lab.marker
@@ -629,114 +748,111 @@ create_copy4prepare_marker() {
   
   # Write marker content
   {
-    echo "# $marker_file"
-    echo "WERSJA=$WERSJA"
-    echo "# "
-    echo "# $timestamp"
-    echo "# ${username}@${hostname}"
-    echo "# Source: $from"
-    echo "# Target: $target"
-    echo "# Home directory: $home_dir"
-    echo "# Job: $job"
-    echo "# "
-    echo "# STATISTICS"
-    echo "# Warnings: $warning_count"
-    echo "# Errors: $error_count"
-    echo "# "
-    echo "# CONFIGURATION"
-    echo "# quick=$quick"
-    echo "# norun=$norun"
-    echo "# nosync=$nosync"
-    echo "# dry=$dry"
-    echo "# nobackup=$nobackup"
-    echo "# "
-    echo "# ---"
+    echo_info "# $marker_file"
+    echo_info "WERSJA=$WERSJA"
+    echo_info "# "
+    echo_info "# $timestamp"
+    echo_info "# ${username}@${hostname}"
+    echo_info "# Source: $from"
+    echo_info "# Target: $target"
+    echo_info "# Home directory: $home_dir"
+    echo_info "# Job: $job"
+    echo_info "# "
+    echo_info "# STATISTICS"
+    echo_info "# Warnings: $warning_count"
+    echo_info "# Errors: $error_count"
+    echo_info "# "
+    echo_info "# CONFIGURATION"
+    echo_info "# quick=$quick"
+    echo_info "# norun=$norun"
+    echo_info "# nosync=$nosync"
+    echo_info "# dry=$dry"
+    echo_info "# nobackup=$nobackup"
+    echo_info "# user_level=$USER_LEVEL"
+    echo_info "# debug_level=$DEBUG_LEVEL"
+    echo_info "# "
+    echo_info "# ---"
   } > "$marker_dir/$marker_file" || {
     print_warning "Failed to write to marker file"; 
   }
   
-  echo "Created marker file: $marker_dir/$marker_file"
+  echo_info "Created marker file: $marker_dir/$marker_file"
   return 0
 }
 
 main() {
-    echo "Starting script with arguments: $*"
+    local status=0
+    echo_info "Starting script with arguments: $*"
 
     if [ "$(id -u)" -ne 0 ]; then
-      echo "Requires sudo!"
+      echo_info "Requires sudo!"
       show_help
-      echo "Requires sudo!"
-      exit 1
+      echo_info "Requires sudo!"
+      return 1
     fi
     
     parse "$@"
     print_parsed_arguments    
-    echo "Will clean previous mentor files..."
+    echo_info "Will clean previous mentor files..."
     noquick
     
     if [ "$brestore" -eq 1 ]; then
-        echo "Restoring configuration from backup files..."
+        echo_info "Restoring configuration from backup files..."
         # Use a more targeted find command to avoid system-wide search
         sudo find "/home/pi" -name "*.mentorbak" -exec sh -c '
             original_file="${1%.mentorbak}"
-            echo "Restoring $original_file from $1"
+            echo_info "Restoring $original_file from $1"
             if [ -f "$1" ]; then
                 if sudo -u pi cp -f "$1" "$original_file"; then
-                    echo "Successfully restored $original_file"
+                    echo_info "Successfully restored $original_file"
                     sudo rm -f "$1"
                 else
-                    echo "Warning: Failed to restore $original_file from $1, keeping backup file"
+                    echo_info "Warning: Failed to restore $original_file from $1, keeping backup file"
                 fi
             else
-                echo "Warning: Backup file $1 not found"
+                echo_info "Warning: Backup file $1 not found"
             fi
         ' sh {} \;
-        echo "Restoration complete"
-        exit 0
+        echo_info "Restoration complete"
+        return 0
     fi
     
     if [ "$bclear" -eq 1 ]; then
-        echo "Clearing backup files..."
+        echo_info "Clearing backup files..."
         # Use a more targeted find command to avoid system-wide search
         restore_count=0
         fail_count=0
         sudo find "/home/pi" -name "*.mentorbak" -exec sh -c '
-            echo "Removing $1"
+            echo_info "Removing $1"
             if sudo rm -f "$1"; then
                 restore_count=$((restore_count + 1))
             else
-                echo "Warning: Failed to clear backup file $1"
+                echo_info "Warning: Failed to clear backup file $1"
                 fail_count=$((fail_count + 1))
             fi
         ' sh {} \;
-        echo "Cleared $restore_count backup files, $fail_count failures"
-        exit 0
+        echo_info "Cleared $restore_count backup files, $fail_count failures"
+        return 0
     fi
 
+    echo_stop "Starting after $timeout seconds from pressing [Enter]. During this time, disconnect the keyboard and connect the USB drive with $home_dir."
+    echo_info "Now connect the USB drive containing $home_dir."
     if [ "$timeout" -ne 0 ]; then
-      echo "Starting after $timeout seconds from pressing [Enter]. During this time, disconnect the keyboard and connect the USB drive with $home_dir."
-      read -rp "Press [Enter] when ready..."
-      echo "Now connect the USB drive containing $home_dir."
-      echo "It will be safe to disconnect the USB drive after the script asks you to press [Enter] again."
-      if [ "$timeout" -gt 0 ]; then
-        echo ""
-        echo "Sleeping for $timeout seconds..."
-        read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
-        sleep "$timeout"
-      fi
+      sleep "$timeout"
     fi
+    echo_wait "It will be safe to disconnect the USB drive after the script asks you to press [Enter] again."
     
     # Clean up previous files with better error handling
     for path in "$target/.mentor" "$target/.source4rpi" "$target/.config/Mentor" "$target/.prepare4lab.step"; do
         if [ -e "$path" ]; then
-            echo "Removing $path"
+            echo_info "Removing $path"
             if ! rm -rf "$path"; then
                 print_warning "Failed to remove $path, continuing anyway"
             fi
         fi
     done
     
-    echo "0" | sudo -u pi tee "$target"/.prepare4lab.step > /dev/null || { 
+    echo_info "0" | sudo -u pi tee "$target"/.prepare4lab.step > /dev/null || { 
         print_error "Failed to write to '$target'/.prepare4lab.step"
     }
     
@@ -754,134 +870,136 @@ main() {
     un_un
     
     if [ "$norun" -ne 1 ]; then      
-      echo "Will run $run with job \"$job\""
+      echo_info "Will run $run with job \"$job\" (user_level=$USER_LEVEL, debug_level=$DEBUG_LEVEL)"
       log_file="/home/pi/copy4prepare.log"
-      echo "Log file: $log_file"
-      if [ "$quick" -eq 0 ]; then
-          echo "3, 2, 1... Ctrl+C to cancel."
-          sleep 4
-      fi
+      echo_wait "Log file: $log_file"
 
       if [ "$dry" -eq 0 ]; then
         eval "$run" "$job" 2>&1 | sudo -u pi tee "$log_file"
     else
-        echo "--dry mode enabled. Skipping script execution."
+        echo_info "--dry mode enabled. Skipping script execution."
     fi
   fi
         
-        # Create marker file with operation information
-        if [ "$dry" -eq 0 ]; then
-      create_copy4prepare_marker
-        else
-      echo "--dry mode enabled. Skipping marker file creation."
-        fi
-        
-        echo "Operation complete with $error_count errors and $warning_count warnings"
-  exit 0
+  # Create marker file with operation information
+  if [ "$dry" -eq 0 ]; then
+    create_copy4prepare_marker
+  else
+    echo_info "--dry mode enabled. Skipping marker file creation."
+  fi
+  
+  echo_info "Operation complete with $error_count errors and $warning_count warnings"
+  return $status
 }
 
 parse() {
     local invalid_args=0
-    
+    local user_timeout=0
+
     while [[ $# -gt 0 ]]; do
         case $1 in
+            --debug)
+                DEBUG_LEVEL=1
+                shift
+                ;;
             --from)
                if [[ -z "$2" || "$2" == --* ]]; then
-                   echo "Error: Missing or invalid value for --from"
+                   echo_info "Error: Missing or invalid value for --from"
                    invalid_args=1
                    shift
                else
                    from="${2%/}" # Remove trailing slash if present
-                   echo "Option --from with value $from"
+                   echo_info "Option --from with value $from"
                    shift 2
                fi
                ;;
            --mnt)
                if [[ -z "$2" || "$2" == --* ]]; then
-                   echo "Error: Missing or invalid value for --mnt"
+                   echo_info "Error: Missing or invalid value for --mnt"
                    invalid_args=1
                    shift
                else
                    mntdir="${2%/}" # Remove trailing slash if present
-                   echo "Option --mnt with value $mntdir"
+                   echo_info "Option --mnt with value $mntdir"
                    shift 2
                fi
                ;;
            --target)
                if [[ -z "$2" || "$2" == --* ]]; then
-                   echo "Error: Missing or invalid value for --target"
+                   echo_info "Error: Missing or invalid value for --target"
                    invalid_args=1
                    shift
                else
                    target="${2%/}" # Remove trailing slash if present
-                   echo "Option --target with value $target"
+                   echo_info "Option --target with value $target"
                    shift 2
                fi
                ;;
            --home_dir)
                if [[ -z "$2" || "$2" == --* ]]; then
-                   echo "Error: Missing or invalid value for --home_dir"
+                   echo_info "Error: Missing or invalid value for --home_dir"
                    invalid_args=1
                    shift
                else
                    home_dir="${2%/}" # Remove trailing slash if present
-                   echo "Option --home_dir with value $home_dir"
+                   echo_info "Option --home_dir with value $home_dir"
                    shift 2
                fi
                ;;
             --file)
                 if [[ -z "$2" || "$2" == --* ]]; then
-                    echo "Error: Missing or invalid value for --file"
+                    echo_info "Error: Missing or invalid value for --file"
                     invalid_args=1
                     shift
                 else
                     file="$2"
-                    echo "Option --file with value $file"
+                    echo_info "Option --file with value $file"
                     shift 2
                 fi
                 ;;
             --quick)
                 quick=1
-                echo "Option --quick enabled"
+                echo_info "Option --quick enabled"
                 shift
                 ;;
             --norun)
                 norun=1
-                echo "Option --norun enabled"
+                echo_info "Option --norun enabled"
                 shift
                 ;;
             --nosync)
                 nosync=1
-                echo "Option --nosync enabled"
+                echo_info "Option --nosync enabled"
                 shift
                 ;;
             --brestore)
                 brestore=1
-                echo "Option --brestore enabled"
+                echo_info "Option --brestore enabled"
                 shift
                 ;;
             --bclear)
                 bclear=1
-                echo "Option --bclear enabled"
+                echo_info "Option --bclear enabled"
                 shift
                 ;;
             --nobackup)
                 nobackup=1
-                echo "Option --nobackup enabled"
+                echo_info "Option --nobackup enabled"
                 shift
                 ;;
             --timeout)
                 if [[ -z "$2" || "$2" == --* ]]; then
-                    echo "Error: Missing or invalid value for --timeout"
+                    echo_info "Error: Missing or invalid value for --timeout"
                     invalid_args=1
                     shift
                 else
                     # Validate timeout is a number
                     if [[ "$2" =~ ^[0-9]+$ ]]; then
                         timeout="$2"
-                        echo "Option --timeout with value $timeout"
+                        echo_info "Option --timeout with value $timeout"
+                        user_timeout=1
                     else
-                        echo "Error: --timeout value must be a positive integer"
+                        echo_info "Error: --timeout value must be a positive integer"
                         invalid_args=1
                     fi
                     shift 2
@@ -889,36 +1007,41 @@ parse() {
                 ;;
             --run)
                 if [[ -z "$2" || "$2" == --* ]]; then
-                    echo "Error: Missing or invalid value for --run"
+                    echo_info "Error: Missing or invalid value for --run"
                     invalid_args=1
                     shift
                 else
                     run="$2"
-                    echo "Option --run with value $run"
+                    echo_info "Option --run with value $run"
                     shift 2
                 fi
                 ;;
             --dry)
                 dry=1
-                echo "Option --dry enabled (simulation mode)"
+                echo_info "Option --dry enabled (simulation mode)"
                 shift
                 ;;
             --help)
                 show_help
-                exit 0
+                return 0
                 ;;
             --job)
                 shift
                 # Capture all remaining arguments as the job
                 job="$*"
-                echo "Raw job value: $job"
+                echo_info "Raw job value: $job"
                 
                 # Define known job types
-                declare -a known_job_types=("release" "devel" "debug")
+                declare -a known_job_types=("release" "devel" "test")
 
                 # Extract the base job type (first word)
-                base_job=$(echo "$job" | awk '{print $1}')
-                rest_args=$(echo "$job" | cut -d' ' -f2-)
+                base_job=$(echo_info "$job" | awk '{print $1}')
+                rest_args=$(echo_info "$job" | cut -d' ' -f2-)
+                
+                if [ "$base_job" == "test" ]; then
+                  USER_LEVEL=0
+                  job="devel"
+                fi
 
                 # Check if base_job is a known type
                 is_known=0
@@ -930,33 +1053,31 @@ parse() {
                 done
 
                 if [ $is_known -eq 1 ]; then
-                    # Add --user flag by default to ensure consistency
-                    if ! echo " $rest_args " | grep -q " --user "; then
-                        rest_args="--user $rest_args"
+                    if [ $USER_LEVEL -eq 1 ] && ! echo " $rest_args " | grep -q " --user "; then
+                        rest_args="$rest_args --user"
+                    fi
+                    if [ $quick -eq 1 ] && ! echo " $job " | grep -q " --quick "; then
+                        rest_args="$rest_args --quick"
+                    fi
+                    if [ $DEBUG_LEVEL -eq 1 ] && ! echo " $rest_args " | grep -q " --debug "; then
+                        rest_args="$rest_args --debug"
                     fi
 
                     # Combine job and arguments
                     job="$base_job $rest_args"
-                    echo "Prepared job command: $job"
+                    echo_info "Prepared job command: $job"
                 else
-                    echo ""
-                    echo "Warning: Unknown job type: '$base_job'"
-                    echo "Known job types are: ${known_job_types[*]}"
-                    echo "Continuing with provided job value: $job"
-                    read -rp "Press [Enter] to continue, Ctrl+C to cancel..."
+                    echo_info "Unknown job type: '$base_job'"
+                    echo_info "Known job types are: ${known_job_types[*]}"
+                    echo_stop "Continuing with provided job value: $job"
                 fi
 
-                
-                # Add quick flag if needed
-                if [ $quick -eq 1 ] && ! echo " $job " | grep -q " --quick "; then
-                    job="$job --quick"
-                fi
-                echo "Final job value: $job"
+                echo_info "Final job value: $job"
                 break
                 ;;
             --)
                 if [[ $# -gt 1 ]]; then
-                    echo "Error: '--' must not be followed by any arguments"
+                    echo_info "Error: '--' must not be followed by any arguments"
                     show_help
                     invalid_args=1
                 fi
@@ -964,87 +1085,67 @@ parse() {
                 break
                 ;;
             *)
-                echo "Error: Unknown option: $1"
+                echo_info "Error: Unknown option: $1"
                 invalid_args=1
                 shift
                 ;;
         esac
     done
     
+    if [ $quick -eq 1 ] && [ $user_timeout -eq 1 ]; then
+      timeout=0
+    fi
+      
+    
     # If there were invalid arguments, show help and exit
     if [ $invalid_args -eq 1 ]; then
-        echo "One or more arguments were invalid. Please check your command."
+        echo_info "One or more arguments were invalid. Please check your command."
         show_help
-        exit 1
+        return 1
     fi
     
     # Validate essential parameters
     if [ -z "$from" ]; then
-        echo "Warning: No source specified, using default: $from"
+        echo_info "Warning: No source specified, using default: $from"
     fi
     
     if [ -z "$mntdir" ]; then
-        echo "Warning: No mount directory specified, using default: $mntdir"
+        echo_info "Warning: No mount directory specified, using default: $mntdir"
     fi
     
     if [ -z "$target" ]; then
-        echo "Warning: No target directory specified, using default: $target"
+        echo_info "Warning: No target directory specified, using default: $target"
     fi
     
     # Check for mutually exclusive options
     if [ "$brestore" -eq 1 ] && [ "$bclear" -eq 1 ]; then
-        echo "Error: --brestore and --bclear cannot be used together"
-        exit 1
+        echo_error 1 "--brestore and --bclear cannot be used together"
     fi
-}
-
-print_error() {
-  local message="$1"
-  error_count=$((error_count + 1))
-  echo "Error: $message"
-  # Log the error to a file for debugging
-  echo "$(date): ERROR: $message" >> /tmp/copy4prepare_error.log
-  exit 1
-}
-
-print_warning() {
-  local message="$1"
-  warning_count=$((warning_count + 1))
-  echo "Warning: $message"
-  # Log the warning to a file for debugging
-  echo "$(date): WARNING: $message" >> /tmp/copy4prepare_warning.log
-}
-
-print_debug() {
-  if [ "$timeout" -ne 0 ]; then
-    local message="$1"
-    echo "Debug: $message"
-  fi
 }
 
 is_directory() {
     local path="$1"
 
     if [ -z "$path" ]; then
-        print_warning "Empty path provided to is_directory"
+        echo_info "Empty path provided to is_directory"
         return 1
     fi
 
     # Standard directory test
     if [ -d "$path" ]; then
-        print_debug "$path is a standard directory (-d test succeeded)"
+        echo_info "$path is a standard directory (-d test succeeded)"
         return 0
     fi
 
     # Check if it's a mountpoint
     if mountpoint -q "$path" 2>/dev/null; then
-        print_debug "$path is a mountpoint (mountpoint command succeeded)"
+        echo_info "$path is a mountpoint (mountpoint command succeeded)"
         return 0
     fi
 
     # Check if it's in /proc/mounts
     if grep -q " $path " /proc/mounts 2>/dev/null; then
-        print_debug "$path found in /proc/mounts"
+        echo_info "$path found in /proc/mounts"
         return 0
     fi
 
@@ -1053,7 +1154,7 @@ is_directory() {
         if ! cd - >/dev/null 2>&1; then
             print_error "Failed to return to previous directory"
         fi
-        print_debug "$path is accessible via cd"
+        echo_info "$path is accessible via cd"
         return 0
     fi
 
@@ -1063,17 +1164,17 @@ is_directory() {
         for dir in /media/pi/*; do
             if [ -d "$dir" ]; then
                 # Compare after removing problematic characters
-                normalized_dir=$(echo "$dir" | tr -d '[:cntrl:]')
-                normalized_path=$(echo "$path" | tr -d '[:cntrl:]')
+                normalized_dir=$(echo_info "$dir" | tr -d '[:cntrl:]')
+                normalized_path=$(echo_info "$path" | tr -d '[:cntrl:]')
                 if [ "$normalized_dir" = "$normalized_path" ]; then
-                    print_debug "$path matches normalized path $dir"
+                    echo_info "$path matches normalized path $dir"
                     return 0
                 fi
             fi
         done
     fi
 
-    print_debug "$path is not a directory (all tests failed)"
+    echo_info "$path is not a directory (all tests failed)"
     return 1
 }
 
@@ -1088,23 +1189,23 @@ is_file() {
 
     # Standard file test
     if [ -f "$path" ]; then
-        print_debug "$path is a standard file (-f test succeeded)"
+        echo_info "$path is a standard file (-f test succeeded)"
         return 0
     fi
 
     # Check if it's a symlink to a file
     if [ -L "$path" ] && [ -f "$(readlink -f "$path")" ]; then
-        print_debug "$path is a symlink to a file"
+        echo_info "$path is a symlink to a file"
         return 0
     fi
 
     # Try to access the file with cat (zero bytes)
     if cat "$path" >/dev/null 2>&1; then
-        print_debug "$path is accessible via cat"
+        echo_info "$path is accessible via cat"
         return 0
     fi
 
-    print_debug "$path is not a file (all tests failed)"
+    echo_info "$path is not a file (all tests failed)"
     return 1
 }
 
@@ -1118,7 +1219,7 @@ is_block_device() {
 
     # Standard block device test
     if [ -b "$path" ]; then
-        print_debug "$path is a standard block device (-b test succeeded)"
+        echo_info "$path is a standard block device (-b test succeeded)"
         return 0
     fi
 
@@ -1130,7 +1231,7 @@ is_block_device() {
                 if [ -L "$link" ]; then
                     target=$(readlink -f "$link")
                     if [ "$target" = "$path" ] || [ "$target" = "$(readlink -f "$path")" ]; then
-                        print_debug "$path resolves to block device via symlink $link"
+                        echo_info "$path resolves to block device via symlink $link"
                         return 0
                     fi
                 fi
@@ -1140,17 +1241,17 @@ is_block_device() {
 
     # Check if it appears as a block device in /proc/partitions
     if grep -q "$(basename "$path")" /proc/partitions 2>/dev/null; then
-        print_debug "$path found in /proc/partitions"
+        echo_info "$path found in /proc/partitions"
         return 0
     fi
 
     # Check if lsblk recognizes it
     if lsblk "$path" >/dev/null 2>&1; then
-        print_debug "$path recognized by lsblk"
+        echo_info "$path recognized by lsblk"
         return 0
     fi
 
-    print_debug "$path is not a block device (all tests failed)"
+    echo_info "$path is not a block device (all tests failed)"
     return 1
 }
 
@@ -1183,13 +1284,13 @@ is_mounted() {
 
     # Check if device is mounted at the specified mountpoint
     if mount | grep -q "^$real_dev on $real_mnt "; then
-        print_debug "$dev is mounted at $mnt (exact match in mount output)"
+        echo_info "$dev is mounted at $mnt (exact match in mount output)"
         return 0
     fi
 
     # Check /proc/mounts which contains canonical device paths
     if grep -q "^$real_dev $real_mnt " /proc/mounts 2>/dev/null; then
-        print_debug "$dev is mounted at $mnt (found in /proc/mounts)"
+        echo_info "$dev is mounted at $mnt (found in /proc/mounts)"
         return 0
     fi
 
@@ -1205,11 +1306,11 @@ is_mounted() {
             local mounted_dev
             mounted_dev=$(grep " $real_mnt " /proc/mounts | cut -d' ' -f1)
 
-            print_debug "Mountpoint $mnt is used by device $mounted_dev"
+            echo_info "Mountpoint $mnt is used by device $mounted_dev"
 
             # Check if it's our device or a link to it
             if [ "$mounted_dev" = "$real_dev" ] || readlink -f "$mounted_dev" 2>/dev/null | grep -q "$devname"; then
-                print_debug "$dev is mounted at $mnt (device match by name)"
+                echo_info "$dev is mounted at $mnt (device match by name)"
                 return 0
             fi
         fi
@@ -1224,11 +1325,11 @@ is_mounted() {
                 auto_dev=$(grep " $mounted " /proc/mounts 2>/dev/null | cut -d' ' -f1)
 
                 if [ -n "$auto_dev" ]; then
-                    print_debug "Found automounted device $auto_dev at $mounted"
+                    echo_info "Found automounted device $auto_dev at $mounted"
 
                     # Check if it matches our device
                     if [ "$auto_dev" = "$real_dev" ] || [ "$auto_dev" = "$dev" ]; then
-                        print_debug "$dev is automounted at $mounted (device match)"
+                        echo_info "$dev is automounted at $mounted (device match)"
                         return 0
                     fi
 
@@ -1238,7 +1339,7 @@ is_mounted() {
                     norm_auto_dev=$(basename "$auto_dev" | tr -d '[:cntrl:]')
                     norm_dev=$(basename "$dev" | tr -d '[:cntrl:]')
                     if [ "$norm_auto_dev" = "$norm_dev" ]; then
-                        print_debug "$dev matches normalized device $auto_dev at $mounted"
+                        echo_info "$dev matches normalized device $auto_dev at $mounted"
                         return 0
                     fi
                 fi
@@ -1246,7 +1347,7 @@ is_mounted() {
         done
     fi
 
-    print_debug "$dev is not mounted at $mnt (all tests failed)"
+    echo_info "$dev is not mounted at $mnt (all tests failed)"
     return 1
 }
 
@@ -1257,27 +1358,39 @@ set_from() {
     fi
     
     from="$1"
-    echo "Source location set to: $from"
+    echo_info "Source location set to: $from"
     
     # Validate the path exists
     if ! [ -e "$from" ]; then
-        print_warning "Source path does not exist: $from"
         # Additional diagnostics for non-existent paths
-        print_debug "Path diagnostics for non-existent path: $from"
-        if [ "$timeout" -ne 0 ]; then
-            print_debug "- Parent directory: $(dirname "$from")"
-            print_debug "- Parent exists: $([ -d "$(dirname "$from")" ] && echo "YES" || echo "NO")"
-            print_debug "- Parent contents: $(ls -la "$(dirname "$from")" 2>&1 || echo "Cannot access")"
+        echo_info "Path diagnostics for non-existent path: $from"
+        if [ "$quick" -ne 0 ]; then
+            echo_info "- Parent directory: $(dirname "$from")"
+            if [ -d "$(dirname "$from")" ]; then
+                echo_info "- Parent exists: YES"
+            else
+                echo_info "- Parent exists: NO"
+            fi
+            if parent_contents=$(ls -la "$(dirname "$from")" 2>&1); then
+                echo_info "- Parent contents: $parent_contents"
+            else
+                echo_info "- Parent contents: Cannot access"
+            fi
         fi
+        echo_error 1 "Source path does not exist: $from"
     else
         # Check if the source path contains the required home_dir
         if [ -d "$from/$home_dir" ]; then
-            print_debug "Found required $home_dir directory in $from"
+            echo_info "Found required $home_dir directory in $from"
         else
-            print_warning "Required directory $home_dir not found in $from"
-            if [ "$timeout" -ne 0 ]; then
-                print_debug "Contents of $from: $(ls -la "$from" 2>&1 || echo "Cannot access")"
+            if [ "$quick" -ne 0 ]; then
+                if source_contents=$(ls -la "$from" 2>&1); then
+                    echo_info "Contents of $from: $source_contents"
+                else
+                    echo_info "Contents of $from: Cannot access"
+                fi
             fi
+            echo_error 1 "Required directory $home_dir not found in $from"
         fi
     fi
     
@@ -1285,3 +1398,4 @@ set_from() {
 }
 
 main "$@"
+exit $?
