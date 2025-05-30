@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 # installer4lab STEP 0 //prepare4lab.sh.0
-WERSJA=4.2.0
+WERSJA=0.7.7
 # WERSJA nie moze byc zadeklarowana ponizej 10 linii skryptu!
 
 MIC_TYPE=0 # 1 dla dynamicznego
-DEBUG_LEVEL=2
+debug=2
 # 0 - debug, sieczka
 # 1 - informacyjnie, nie dla klienta
 # 2 - ostrzezenia, domyslne
@@ -34,13 +34,12 @@ PORT=0
 # installer4lab vars
 # HOST, PORT, VER_PC
 
-# todo - automate via installer4lab:
 VER_APP="$WERSJA"
 VER_LIB="$WERSJA"
 
 prep=0 # runs preinstall.sh
 user=0 # runs preinstall.sh, apt full-upgrade
-dbg=0 # waits for [Enter] often
+debug=0 # waits for [Enter] often
 devel=0
 clear=1 # clears step file before beginning by default
 job="" # arg0 for step 1+
@@ -149,7 +148,7 @@ if [ $# -gt 0 ]; then
         clear=1 # reinstall when --user is specified
         ;;
       --debug)
-        dbg=1
+        debug=1
         ;;
       --continue)
         continue_flag=1
@@ -185,16 +184,11 @@ echo_info() {
   fi
 
   # Interactive mode with debug
-  if [ $dbg -eq 1 ] && [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
+  if [ $debug -eq 1 ] && [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
     echo "$msg //Enter..."
     read -r
   else
     echo "$msg"
-  fi
-
-  # Sleep in debug mode for better readability
-  if [ $dbg -eq 1 ] && [ $quick -eq 0 ]; then
-    sleep 1
   fi
 }
 
@@ -204,9 +198,9 @@ echo_stop() {
 
   # Print operation with details if provided
   if [ -n "$details" ]; then
-    echo "CRITICAL OPERATION: $operation [$details]"
+    echo_info "CRITICAL OPERATION: $operation [$details]"
   else
-    echo "CRITICAL OPERATION: $operation"
+    echo_info "CRITICAL OPERATION: $operation"
   fi
 
   # Always flush disk buffers before critical operations
@@ -214,23 +208,21 @@ echo_stop() {
 
   # Interactive mode for user
   if [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
-    echo "[Enter] to continue, Ctrl+C to cancel..."
+    echo_info "[Enter] to continue, Ctrl+C to cancel..."
     read -r
-  elif [ $dbg -eq 1 ] && [ $quick -eq 0 ]; then
+  elif [ $debug -eq 1 ] && [ $quick -eq 0 ]; then
     # In debug mode without user interaction, still pause briefly
-    echo "Ctrl+C to cancel. 3, 2, 1..."
-    sleep 5
+    echo_info "[Enter]/wait 5 seconds..."
+    read -t 5 -r || echo_info "timeout"
   fi
 }
 
 echo_wait() {
   local message="$1"
   echo_info "WAIT: $message"
-  if [ "$user" -eq 1 ] && [ "$quick" -eq 0 ]; then
-    echo "Press [Enter] to continue, or wait 5 seconds..."
-    read -t 5 -r || echo_info "Timeout waiting for user input, continuing"
-  elif [ "$dbg" -eq 1 ]; then
-    sleep 2
+  if [[ "$user" -eq 1 || "$debug" -eq 1 ]] && [ "$quick" -eq 0 ]; then
+    echo_info "[Enter]/wait 3 seconds..."
+    read -t 3 -r || echo_info "timeout"
   fi
   return 0
 }
@@ -244,15 +236,15 @@ rere() {
   # Try multiple methods of system reboot based on verbosity and interactivity settings
 
   # Most verbose with user interaction
-  if [ "$dbg" -eq 1 ] && [ "$user" -eq 1 ]; then
+  if [ "$debug" -eq 1 ] && [ "$user" -eq 1 ]; then
     echo "Rebooting with verbose output and interaction allowed..."
     shutdown -r now || systemctl reboot || reboot || echo_error 1 "Reboot command failed"
   # Verbose but non-interactive
-  elif [ "$dbg" -eq 1 ] && [ "$user" -eq 0 ]; then
+  elif [ "$debug" -eq 1 ] && [ "$user" -eq 0 ]; then
     echo "Rebooting with verbose output but non-interactive..."
     shutdown -r -f now || systemctl reboot || reboot || echo_error 1 "Reboot command failed"
   # Least verbose, still with interaction if needed
-  elif [ "$dbg" -eq 0 ] && [ "$user" -eq 1 ]; then
+  elif [ "$debug" -eq 0 ] && [ "$user" -eq 1 ]; then
     shutdown -r now >/dev/null || systemctl reboot >/dev/null || reboot >/dev/null || echo_error 1 "Reboot command failed"
   # Least verbose, no interaction (fails on interaction)
   else
@@ -591,17 +583,6 @@ EOF
 main() {
   echo_info "Starting prepare4lab script version $WERSJA"
 
-  # Check for environment variables overriding user and debug settings
-  if [ -n "$USER_LEVEL" ]; then
-    user=$USER_LEVEL
-    echo_info "Using environment USER_LEVEL=$USER_LEVEL"
-  fi
-
-  if [ -n "$DEBUG_LEVEL" ]; then
-    dbg=$DEBUG_LEVEL
-    echo_info "Using environment DEBUG_LEVEL=$DEBUG_LEVEL"
-  fi
-
   echo_info "Checking for apt locks"
   wait_apt || echo_info "Continuing despite wait_apt issues"
 
@@ -708,17 +689,15 @@ step0() {
   echo_info "Testing network connectivity"
   test_network || echo_info "Network test completed with issues, continuing anyway" $?
 
-  if [ "$user" -eq 1 ]; then
-      echo_info "User mode enabled, performing system updates"
-
+  if [ "$debug" -eq 1 ] || [ "$user" -eq 1 ] || [ "$devel" -eq 1 ]; then
       echo_info "Waiting for apt locks"
       wait_apt || echo_error 1 "Failed to wait for apt locks"
-
+    
       # Use echo_stop before system updates
       echo_stop "System updates" "Will update all system packages"
-
-      # Most verbose with user interaction
-      if [ "$dbg" -eq 1 ] && [ "$user" -eq 1 ]; then
+      echo_info "Performing system updates"
+      
+      if [ "$user" -eq 1 ]; then
           echo_info "Running apt-get --allow-releaseinfo-change update (verbose interactive mode)"
           apt-get --allow-releaseinfo-change update || echo_error 1 "Failed to update release info"
 
@@ -733,39 +712,6 @@ step0() {
 
           echo_info "Running apt-get full-upgrade"
           apt-get full-upgrade || echo_error 1 "Failed to upgrade packages"
-      # Verbose but non-interactive
-      elif [ "$dbg" -eq 1 ] && [ "$user" -eq 0 ]; then
-          echo_info "Running non-interactive apt-get update with release info change (verbose)"
-          DEBIAN_FRONTEND=noninteractive apt-get -y --allow-releaseinfo-change update || echo_error 1 "Failed to update release info"
-
-          echo_info "Waiting for apt locks after release info update"
-          wait_apt || echo_info "Apt lock wait issues after release info update, continuing" $?
-
-          echo_info "Running apt-get update (non-interactive verbose)"
-          DEBIAN_FRONTEND=noninteractive apt-get -y update || echo_error 1 "Failed to update package lists"
-
-          echo_info "Waiting for apt locks after package list update"
-          wait_apt || echo_info "Apt lock wait issues after package list update, continuing" $?
-
-          echo_info "Running apt-get full-upgrade (non-interactive verbose)"
-          DEBIAN_FRONTEND=noninteractive apt-get -y full-upgrade || echo_error 1 "Failed to upgrade packages"
-      # Least verbose, still with interaction if needed
-      elif [ "$dbg" -eq 0 ] && [ "$user" -eq 1 ]; then
-          echo_info "Running quiet apt-get update with release info change (interactive)"
-          DEBIAN_FRONTEND=noninteractive apt-get -q -y --allow-releaseinfo-change update || echo_error 1 "Failed to update release info"
-
-          echo_info "Waiting for apt locks after release info update"
-          wait_apt || echo_info "Apt lock wait issues after release info update, continuing" $?
-
-          echo_info "Running apt-get update (quiet interactive)"
-          DEBIAN_FRONTEND=noninteractive apt-get -q -y update || echo_error 1 "Failed to update package lists"
-
-          echo_info "Waiting for apt locks after package list update"
-          wait_apt || echo_info "Apt lock wait issues after package list update, continuing" $?
-
-          echo_info "Running apt-get upgrade (quiet interactive)"
-          DEBIAN_FRONTEND=noninteractive apt-get -q -y upgrade || echo_error 1 "Failed to upgrade packages"
-      # Least verbose, no interaction (fails on interaction)
       else
           echo_info "Running silent apt-get update with release info change (non-interactive)"
           DEBIAN_FRONTEND=noninteractive apt-get -qq -y --allow-releaseinfo-change update || echo_error 1 "Failed to update release info"
@@ -788,7 +734,7 @@ step0() {
 
       echo_info "Running package cleanup"
       # Apply same pattern for autoremove and clean
-      if [ "$dbg" -eq 1 ] && [ "$user" -eq 1 ]; then
+      if [ "$debug" -eq 1 ] && [ "$user" -eq 1 ]; then
           echo_info "Running apt-get autoremove (verbose interactive)"
           apt-get autoremove || echo_error 1 "Failed to autoremove packages"
 
@@ -797,7 +743,7 @@ step0() {
 
           echo_info "Running apt-get clean (verbose interactive)"
           apt-get clean || echo_error 1 "Failed to clean package cache"
-      elif [ "$dbg" -eq 1 ] && [ "$user" -eq 0 ]; then
+      elif [ "$debug" -eq 1 ] && [ "$user" -eq 0 ]; then
           echo_info "Running apt-get autoremove (verbose non-interactive)"
           DEBIAN_FRONTEND=noninteractive apt-get -y autoremove || echo_error 1 "Failed to autoremove packages"
 
@@ -806,7 +752,7 @@ step0() {
 
           echo_info "Running apt-get clean (verbose non-interactive)"
           DEBIAN_FRONTEND=noninteractive apt-get -y clean || echo_error 1 "Failed to clean package cache"
-      elif [ "$dbg" -eq 0 ] && [ "$user" -eq 1 ]; then
+      elif [ "$debug" -eq 0 ] && [ "$user" -eq 1 ]; then
           echo_info "Running apt-get autoremove (quiet interactive)"
           DEBIAN_FRONTEND=noninteractive apt-get -q -y autoremove || echo_error 1 "Failed to autoremove packages"
 
@@ -839,19 +785,19 @@ step0() {
   echo_stop "Installing system packages" "Will modify system packages"
 
   # Most verbose with user interaction
-  if [ "$dbg" -eq 1 ] && [ "$user" -eq 1 ]; then
+  if [ "$debug" -eq 1 ] && [ "$user" -eq 1 ]; then
       echo_info "Installing dependencies (verbose interactive mode)"
       apt-get install \
       # installer4lab deps
       echo_info "Installation status: $?"
   # Verbose but non-interactive
-  elif [ "$dbg" -eq 1 ] && [ "$user" -eq 0 ]; then
+  elif [ "$debug" -eq 1 ] && [ "$user" -eq 0 ]; then
       echo_info "Installing dependencies (verbose non-interactive mode)"
       DEBIAN_FRONTEND=noninteractive apt-get -y install \
       # installer4lab deps
       echo_info "Installation status: $?"
   # Least verbose, still with interaction if needed
-  elif [ "$dbg" -eq 0 ] && [ "$user" -eq 1 ]; then
+  elif [ "$debug" -eq 0 ] && [ "$user" -eq 1 ]; then
       echo_info "Installing dependencies (quiet interactive mode)"
       DEBIAN_FRONTEND=noninteractive apt-get -q -y install \
       # installer4lab deps
@@ -873,19 +819,19 @@ step0() {
       echo_stop "Installing development packages" "Will modify system packages"
 
       # Most verbose with user interaction
-      if [ "$dbg" -eq 1 ] && [ "$user" -eq 1 ]; then
+      if [ "$debug" -eq 1 ] && [ "$user" -eq 1 ]; then
           echo_info "Installing development packages (verbose interactive mode)"
           apt-get install \
           # installer4lab devps
           echo_info "Development packages installation status: $?"
       # Verbose but non-interactive
-      elif [ "$dbg" -eq 1 ] && [ "$user" -eq 0 ]; then
+      elif [ "$debug" -eq 1 ] && [ "$user" -eq 0 ]; then
           echo_info "Installing development packages (verbose non-interactive mode)"
           DEBIAN_FRONTEND=noninteractive apt-get -y install \
           # installer4lab devps
           echo_info "Development packages installation status: $?"
       # Least verbose, still with interaction if needed
-      elif [ "$dbg" -eq 0 ] && [ "$user" -eq 1 ]; then
+      elif [ "$debug" -eq 0 ] && [ "$user" -eq 1 ]; then
           echo_info "Installing development packages (quiet interactive mode)"
           DEBIAN_FRONTEND=noninteractive apt-get -q -y install \
           # installer4lab devps
@@ -1165,7 +1111,7 @@ EOF
   MENU_TIMER=1500
   SERIAL=ttyAMA0
 
-  pairs="MIC_TYPE $MIC_TYPE DEBUG_LEVEL $DEBUG_LEVEL HOST $HOST VER_APP $VER_APP VER_LIB $VER_LIB PORT $PORT PROTOCOL $PROTOCOL HIDE_CURSOR $HIDE_CURSOR MAXIMIZE $MAXIMIZE ACK_RETRY $ACK_RETRY ACK_WAIT $ACK_WAIT PING $PING PING_MISS $PING_MISS LNR_ADD $LNR_ADD LNR_SWAP $LNR_SWAP MENU_TIMER $MENU_TIMER USERNAME pi SERIAL $SERIAL"
+  pairs="MIC_TYPE $MIC_TYPE debug $debug HOST $HOST VER_APP $VER_APP VER_LIB $VER_LIB PORT $PORT PROTOCOL $PROTOCOL HIDE_CURSOR $HIDE_CURSOR MAXIMIZE $MAXIMIZE ACK_RETRY $ACK_RETRY ACK_WAIT $ACK_WAIT PING $PING PING_MISS $PING_MISS LNR_ADD $LNR_ADD LNR_SWAP $LNR_SWAP MENU_TIMER $MENU_TIMER USERNAME pi SERIAL $SERIAL"
 
   echo_info "Creating Mentor config directory"
   sudo -u pi mkdir -p /home/pi/.config/Mentor || echo_error 1 "Failed to create /home/pi/.config/Mentor"

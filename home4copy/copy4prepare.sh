@@ -1,9 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 
-# Script version
-WERSJA=4.2.2
-
 ###############################################################################
 # copy4prepare.sh - Mentor Lab Preparation Utility
 # 
@@ -44,8 +41,10 @@ error_count=0
 warning_count=0
     
 # Initialize user and debug level variables
-USER_LEVEL=1
-DEBUG_LEVEL=0
+user=1
+debug=0
+
+WERSJA="!WERSJA!"
 
 show_help() {
     cat << EOF
@@ -100,7 +99,7 @@ echo_error() {
   fi
   
   # Interactive mode for user
-  if [ "$USER_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
+  if [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
     echo_info "[Enter] to continue, Ctrl+C to cancel..."
     read -r
   fi
@@ -119,16 +118,11 @@ echo_info() {
   fi
 
   # Interactive mode with debug
-  if [ "$DEBUG_LEVEL" -eq 1 ] && [ "$USER_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
+  if [ "$debug" -eq 1 ] && [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
     echo "$msg //Enter..."
     read -r
   else
     echo "$msg"
-  fi
-
-  # Sleep in debug mode for better readability
-  if [ "$DEBUG_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
-    sleep 1
   fi
 }
 
@@ -197,24 +191,21 @@ echo_stop() {
   sync
 
   # Interactive mode for user
-  if [ "$USER_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
+  if [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
     echo_info "[Enter] to continue, Ctrl+C to cancel..."
     read -r
-  elif [ "$DEBUG_LEVEL" -eq 1 ] && [ $quick -eq 0 ]; then
-    # In debug mode without user interaction, still pause briefly
-    echo_info "Ctrl+C to cancel. 3, 2, 1..."
-    sleep 5
+  elif [ "$debug" -eq 1 ] && [ $quick -eq 0 ]; then
+    echo_info "[Enter]/wait 5 seconds..."
+    read -t 5 -r || echo_info "timeout"
   fi
 }
 
 echo_wait() {
   local message="$1"
   echo_info "WAIT: $message"
-  if [ "$USER_LEVEL" -eq 1 ] && [ "$quick" -eq 0 ]; then
-    echo_info "Press [Enter] to continue, or wait 5 seconds..."
-    read -t 5 -r || echo_info "Timeout waiting for user input, continuing"
-  elif [ "$DEBUG_LEVEL" -eq 1 ]; then
-    sleep 2
+  if [[ "$user" -eq 1 || "$debug" -eq 1 ]] && [ "$quick" -eq 0 ]; then
+    echo_info "[Enter]/wait 3 seconds..."
+    read -t 3 -r || echo_info "timeout"
   fi
   return 0
 }
@@ -231,8 +222,7 @@ handle_file() {
 
     # Check if source file exists using is_file
     if ! is_file "$_sourcefile"; then
-        print_warning "$_sourcefile does not exist. Please check the paths."
-        return 1
+        echo_error 1 "$_sourcefile does not exist. Please check the paths."
     fi
 
     # Check if the files are identical using cmp (faster binary comparison)
@@ -290,7 +280,7 @@ create_backup() {
         if [ "$dry" -ne 1 ]; then
             echo_info "backup: $filepath to $backup_path"
             if ! sudo -u pi cp "$filepath" "$backup_path"; then
-                print_warning "Failed to create backup file $backup_path but continuing"
+                echo_into "Failed to create backup file $backup_path but continuing"
                 # Not exiting with error, just warning
             fi
         else
@@ -308,7 +298,6 @@ rsync_line_test() {
 
   # Skip if parameters are empty or contain certain patterns
   if [ -z "$p1" ] || [ -z "$p2" ]; then
-    echo_info "Skipping empty rsync line parameters"
     return 1
   fi
   
@@ -346,6 +335,14 @@ rsync_line_test() {
   # Skip paths with mentorbak extension
   if [[ "$p1" == *.mentorbak || "$p2" == *.mentorbak ]]; then
     echo_info "Skipping backup file: $p1"
+    return 1
+  fi
+  if [[ "$p1" == *.fill || "$p2" == *.mentorbak ]]; then
+    echo_info "Skipping fill file: $p1"
+    return 1
+  fi
+  if [[ "$p1" == *.fix || "$p2" == *.mentorbak ]]; then
+    echo_info "Skipping fix file: $p1"
     return 1
   fi
 
@@ -490,7 +487,7 @@ un_un() {
       done
       
       if [ $unmounted -eq 0 ]; then
-        print_warning "Failed to unmount $mntdir after $max_attempts attempts, continuing anyway"
+        echo_stop "Failed to unmount $mntdir after $max_attempts attempts, continuing anyway"
       fi
     else
       echo_info "$mntdir is not mounted"
@@ -500,7 +497,7 @@ un_un() {
     if [ -d "$mntdir" ]; then
       echo_info "Removing mount directory $mntdir"
       if ! rm -rf "$mntdir"; then
-        print_warning "Failed to remove directory $mntdir, continuing anyway"
+        print_stop "Failed to remove directory $mntdir, continuing anyway"
       fi
     fi
   fi
@@ -607,7 +604,6 @@ mnt_init() {
       # If no matches were found, fail
       if [ "$gotit" -eq 0 ]; then
           print_error 1 "Failed to find any suitable block device matching pattern: $from"
-          return 1
       fi
   else
       # Case 4: None of the above, try to guess what the user meant
@@ -752,12 +748,12 @@ create_copy4prepare_marker() {
     echo_info "# nosync=$nosync"
     echo_info "# dry=$dry"
     echo_info "# nobackup=$nobackup"
-    echo_info "# user_level=$USER_LEVEL"
-    echo_info "# debug_level=$DEBUG_LEVEL"
+    echo_info "# user_level=$user"
+    echo_info "# debug_level=$debug"
     echo_info "# "
     echo_info "# ---"
   } > "$marker_dir/$marker_file" || {
-    print_warning "Failed to write to marker file"; 
+    echo_error 1 "Failed to write to marker file"; 
   }
   
   echo_info "Created marker file: $marker_dir/$marker_file"
@@ -771,8 +767,7 @@ main() {
     if [ "$(id -u)" -ne 0 ]; then
       echo_info "Requires sudo!"
       show_help
-      echo_info "Requires sudo!"
-      return 1
+      echo_error 1 "Requires sudo!"
     fi
     
     parse "$@"
@@ -830,7 +825,7 @@ main() {
         if [ -e "$path" ]; then
             echo_info "Removing $path"
             if ! rm -rf "$path"; then
-                print_warning "Failed to remove $path, continuing anyway"
+                echo_stop "Failed to remove $path, continuing anyway"
             fi
         fi
     done
@@ -840,7 +835,7 @@ main() {
     }
     
     if ! cp -rf /etc/skel/.profile "$target/." ; then
-        print_warning "Failed to copy profile template, continuing anyway"
+        echo_error 1 "Failed to copy profile template"
     fi
 
     mnt_init
@@ -852,7 +847,7 @@ main() {
     un_un
     
     if [ "$norun" -ne 1 ]; then      
-      echo_info "Will run $run with job \"$job\" (user_level=$USER_LEVEL, debug_level=$DEBUG_LEVEL)"
+      echo_info "Will run $run with job \"$job\" (user_level=$user, debug_level=$debug)"
       log_file="/home/pi/copy4prepare.log"
       echo_wait "Log file: $log_file"
 
@@ -882,7 +877,7 @@ parse() {
     while [[ $# -gt 0 ]]; do
         case $1 in
             --debug)
-                DEBUG_LEVEL=1
+                debug=1
                 shift
                 ;;
             --from)
@@ -1006,7 +1001,7 @@ parse() {
                 ;;
             --help)
                 show_help
-                return 0
+                exit 0
                 ;;
             --job)
                 shift
@@ -1022,7 +1017,7 @@ parse() {
                 rest_args=$(echo_info "$job" | cut -d' ' -f2-)
                 
                 if [ "$base_job" == "test" ]; then
-                  USER_LEVEL=0
+                  user=0
                   job="devel"
                 fi
 
@@ -1036,13 +1031,13 @@ parse() {
                 done
 
                 if [ $is_known -eq 1 ]; then
-                    if [ $USER_LEVEL -eq 1 ] && ! echo " $rest_args " | grep -q " --user "; then
+                    if [ $user -eq 1 ] && ! echo " $rest_args " | grep -q " --user "; then
                         rest_args="$rest_args --user"
                     fi
                     if [ $quick -eq 1 ] && ! echo " $job " | grep -q " --quick "; then
                         rest_args="$rest_args --quick"
                     fi
-                    if [ $DEBUG_LEVEL -eq 1 ] && ! echo " $rest_args " | grep -q " --debug "; then
+                    if [ $debug -eq 1 ] && ! echo " $rest_args " | grep -q " --debug "; then
                         rest_args="$rest_args --debug"
                     fi
 
@@ -1079,25 +1074,23 @@ parse() {
       timeout=0
     fi
       
-    
     # If there were invalid arguments, show help and exit
     if [ $invalid_args -eq 1 ]; then
-        echo_info "One or more arguments were invalid. Please check your command."
         show_help
-        return 1
+        echo_error 1 "One or more arguments were invalid. Please check your command."
     fi
     
     # Validate essential parameters
     if [ -z "$from" ]; then
-        echo_info "Warning: No source specified, using default: $from"
+        echo_info "no source specified, using default: $from"
     fi
     
     if [ -z "$mntdir" ]; then
-        echo_info "Warning: No mount directory specified, using default: $mntdir"
+        echo_info "no mount directory specified, using default: $mntdir"
     fi
     
     if [ -z "$target" ]; then
-        echo_info "Warning: No target directory specified, using default: $target"
+        echo_info "no target directory specified, using default: $target"
     fi
     
     # Check for mutually exclusive options
@@ -1166,8 +1159,7 @@ is_file() {
     local path="$1"
 
     if [ -z "$path" ]; then
-        print_warning "Empty path provided to is_file"
-        return 1
+        echo_error 1  "Empty path provided to is_file"
     fi
 
     # Standard file test
@@ -1196,7 +1188,7 @@ is_block_device() {
     local path="$1"
 
     if [ -z "$path" ]; then
-        print_warning "Empty path provided to is_block_device"
+        print_info "Empty path provided to is_block_device"
         return 1
     fi
 
@@ -1244,7 +1236,7 @@ is_mounted() {
     local mnt="$2"
 
     if [ -z "$dev" ] || [ -z "$mnt" ]; then
-        print_warning "Empty parameters provided to is_mounted"
+        echo_into "Empty parameters provided to is_mounted"
         return 1
     fi
 
@@ -1337,8 +1329,7 @@ is_mounted() {
 
 set_from() {
     if [ -z "$1" ]; then
-        print_warning "Empty path provided to set_from"
-        return 1
+        echo_error 1 "Empty path provided to set_from"
     fi
     
     from="$1"
