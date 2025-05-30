@@ -134,28 +134,27 @@ echo_info() {
 
 echo_info "copy4prepare ver: $WERSJA"
 verify_prepare_script() {
-  local script_file="$target/$file"
   local wersja_in_script
   
-  echo_info "Verifying prepare script integrity before running: $script_file"
+  echo_info "Verifying prepare script integrity before running: $run"
   
   # Check if script exists
-  if ! is_file "$script_file"; then
-    echo_error 20 "Prepare script not found at $script_file"
+  if ! is_file "$run"; then
+    echo_error 20 "Prepare script not found at $run"
   fi
   
   # Check if script is readable
-  if [ ! -r "$script_file" ]; then
-    echo_error 60 "Prepare script exists but is not readable: $script_file"
+  if [ ! -r "$run" ]; then
+    echo_error 60 "Prepare script exists but is not readable: $run"
   fi
   
   # Validate bash syntax
-  if ! bash -n "$script_file"; then
-    echo_error 200 "Prepare script contains syntax errors: $script_file"
+  if ! bash -n "$run"; then
+    echo_error 200 "Prepare script contains syntax errors: $run"
   fi
   
   # Extract version from script
-  wersja_in_script=$(grep -m 1 "^WERSJA=" "$script_file" | cut -d'=' -f2)
+  wersja_in_script=$(grep -m 1 "^WERSJA=" "$run" | cut -d'=' -f2)
   
   # Check if version was extracted successfully
   if [ -z "$wersja_in_script" ]; then
@@ -174,9 +173,9 @@ verify_prepare_script() {
   fi
   
   # Check execute permission
-  if [ ! -x "$script_file" ]; then
+  if [ ! -x "$run" ]; then
     echo_info "Adding execute permission to prepare script"
-    chmod +x "$script_file" || echo_error 60 "Failed to add execute permission to prepare script"
+    chmod +x "$run" || echo_error 60 "Failed to add execute permission to prepare script"
   fi
   
   echo_info "Script verification completed"
