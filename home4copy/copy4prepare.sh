@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Script version
-WERSJA=4.2.1
+WERSJA=4.2.2
 
 ###############################################################################
 # copy4prepare.sh - Mentor Lab Preparation Utility
@@ -182,10 +182,6 @@ verify_prepare_script() {
   echo_info "Script verification completed"
   return 0
 }
-# Before running prepare script
-if [ "$norun" -ne 1 ] || [ "$dry" -eq 1 ]; then
-  verify_prepare_script || echo_error 200 "Prepare script verification failed"
-fi
 
 echo_stop() {
   local operation="$1"
@@ -864,6 +860,7 @@ main() {
       echo_wait "Log file: $log_file"
 
       if [ "$dry" -eq 0 ]; then
+        verify_prepare_script || echo_error 200 "Prepare script verification failed"
         eval "$run" "$job" 2>&1 | sudo -u pi tee "$log_file"
     else
         echo_info "--dry mode enabled. Skipping script execution."
