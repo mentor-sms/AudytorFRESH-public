@@ -56,7 +56,7 @@ SERVICES. Enable SSH: TAK, Allow public-key authentication only: TAK, Set author
 
 # install4lab (2)
 
-1. Przygotuj czysty pendrive FAT32
+1. Przygotuj czysty pendrive FAT32, opcjonalnie nazwij patrycje docelowa `prepare4lab`
 2. Konfiguruj SSH: TAK (pierwsze uruchomienie, nowy pulpit/instalacja w sieci, blad bezpieczenstwa), Dalej (Test).
 3. aaa.bbb.ccc.ddd:port - teacher4lab IP (port dowolny).
 4. Kopiuj student4lab zdalnie: NIE, student4lab zostanie zapisany na pendrive (przy aktualizacji: TAK, student4lab zostanie zapisany do `Mentor\home4copy`).
@@ -75,36 +75,38 @@ sudo apt full-upgrade -y
 sudo apt autoremove
 sudo apt clean
 reboot
+```
+Pomoc:
+```bash
+./copy4prepare.sh --help
+```
+__Instalacja 1x USB__:
 
+Przygotuj pendrive do podmiany z klawiatura zgodnie z instrukcja na ekranie:
+```bash
 cd ~
 curl -L -o copy4prepare.sh https://tinyurl.com/copy4prepare
 dos2unix -f -k copy4prepare.sh
 chmod +x copy4prepare.sh
 ```
-__Instalacja 2x USB__:
-```bash
-lsblk
-```
+__Instalacja GUI__:
+
+lub gdy usb juz zamontowano:
+
 `/dev/sda` -> `/media/pi/[...]`
 
-np. `/media/pi/003E-54D5`
+np. `--from /media/pi/prepare4lab`
 
-Instalacja (`--job release` __zawsze na koncu!__):
-```bash
-sudo ./copy4prepare.sh --timeout 0 --from /media/pi/003E-54D5 --job release
-```
 __Instalacja 2x USB__:
-
-Przygotuj pendrive do podmiany z klawiatura zgodnie z instrukcja na ekranie:
 ```bash
-sudo ./copy4prepare.sh --job release
+sudo /media/pi/home4copy/copy4prepare.sh --timeout 0 [--from /media/pi/prepare4lab]
+```
+__Instalacja 1x USB__:
+```bash
+sudo /media/pi/home4copy/copy4prepare.sh
 ```
 __Finalizacja__:
 
-Pomoc (np. gdy `lsblk` zwraca `/dev/sdb`):
-```bash
-./copy4prepare.sh --help
-```
 Po komunikacje o ponownym uruchomieniu w sieci docelowej:
 ```bash
 poweroff

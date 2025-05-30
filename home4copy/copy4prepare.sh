@@ -779,7 +779,6 @@ main() {
     parse "$@"
     print_parsed_arguments    
     echo_info "Will clean previous mentor files..."
-    noquick
     
     if [ "$brestore" -eq 1 ]; then
         echo_info "Restoring configuration from backup files..."
@@ -846,7 +845,6 @@ main() {
     fi
 
     mnt_init
-    noquick
 
     if [ "$nosync" -ne 1 ]; then
         run_rsync || { print_error "Failed to run rsync"; }
@@ -1078,7 +1076,7 @@ parse() {
         esac
     done
     
-    if [ $quick -eq 1 ] && [ $user_timeout -eq 1 ]; then
+    if [ $quick -eq 1 ] && [ $user_timeout -ne 1 ]; then
       timeout=0
     fi
       
@@ -1210,13 +1208,14 @@ is_block_device() {
     fi
 
     # Check in /dev/disk/by-* symlinks
+    local _target
     for disk_by in /dev/disk/by-id /dev/disk/by-uuid /dev/disk/by-label /dev/disk/by-path; do
         if [ -d "$disk_by" ]; then
             # Check if our path is a target of any symlink in these directories
             for link in "$disk_by"/*; do
                 if [ -L "$link" ]; then
-                    target=$(readlink -f "$link")
-                    if [ "$target" = "$path" ] || [ "$target" = "$(readlink -f "$path")" ]; then
+                    _target=$(readlink -f "$link")
+                    if [ "$_target" = "$path" ] || [ "$_target" = "$(readlink -f "$path")" ]; then
                         echo_info "$path resolves to block device via symlink $link"
                         return 0
                     fi
