@@ -261,7 +261,7 @@ create_backup() {
         echo_info "--nobackup enabled. Skipping backup creation for $filepath"
         return 0
     fi
-    local backup_path="${filepath}.mentorbak"
+    local backup_path="${filepath}.lab.bak"
 
     # Check if filepath contains "home/pi/.mentor" or "home/pi/.source4rpi"
     if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
@@ -333,15 +333,15 @@ rsync_line_test() {
   fi
   
   # Skip paths with mentorbak extension
-  if [[ "$p1" == *.mentorbak || "$p2" == *.mentorbak ]]; then
+  if [[ "$p1" == *.lab.bak || "$p2" == *.lab.bak ]]; then
     echo_info "Skipping backup file: $p1"
     return 1
   fi
-  if [[ "$p1" == *.fill || "$p2" == *.mentorbak ]]; then
+  if [[ "$p1" == *.fill || "$p2" == *.lab.bak ]]; then
     echo_info "Skipping fill file: $p1"
     return 1
   fi
-  if [[ "$p1" == *.fix || "$p2" == *.mentorbak ]]; then
+  if [[ "$p1" == *.fix || "$p2" == *.lab.bak ]]; then
     echo_info "Skipping fix file: $p1"
     return 1
   fi
@@ -355,7 +355,7 @@ run_rsync() {
 
   # Define excluded paths
   local exclude_option
-  exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.mentorbak"
+  exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.lab.bak"
 
   # Add mount directory to exclusions if needed
   if [[ "$mntdir" == "$target/"* ]]; then
@@ -709,10 +709,10 @@ print_parsed_arguments() {
     echo_info "  nie robimy kopii? $nobackup"
 }
 
-# Function to create a copy4prepare.marker file similar to prepare4lab.marker
+# Function to create a copy4prepare.lab.marker file similar to prepare4lab.lab.marker
 create_copy4prepare_marker() {
   local marker_dir="$target/.mentor"
-  local marker_file="copy4prepare.marker"
+  local marker_file="copy4prepare.lab.marker"
   
   # Create parent directory if it doesn't exist
   mkdir -p "$marker_dir" || { 
@@ -777,8 +777,8 @@ main() {
     if [ "$brestore" -eq 1 ]; then
         echo_info "Restoring configuration from backup files..."
         # Use a more targeted find command to avoid system-wide search
-        sudo find "/home/pi" -name "*.mentorbak" -exec sh -c '
-            original_file="${1%.mentorbak}"
+        sudo find "/home/pi" -name "*.lab.bak" -exec sh -c '
+            original_file="${1%.lab.bak}"
             echo_info "Restoring $original_file from $1"
             if [ -f "$1" ]; then
                 if sudo -u pi cp -f "$1" "$original_file"; then
@@ -800,7 +800,7 @@ main() {
         # Use a more targeted find command to avoid system-wide search
         restore_count=0
         fail_count=0
-        sudo find "/home/pi" -name "*.mentorbak" -exec sh -c '
+        sudo find "/home/pi" -name "*.lab.bak" -exec sh -c '
             echo_info "Removing $1"
             if sudo rm -f "$1"; then
                 restore_count=$((restore_count + 1))
@@ -848,7 +848,7 @@ main() {
     
     if [ "$norun" -ne 1 ]; then      
       echo_info "Will run $run with job \"$job\" (user_level=$user, debug_level=$debug)"
-      log_file="/home/pi/copy4prepare.log"
+      log_file="/home/pi/copy4prepare.lab.log"
       echo_wait "Log file: $log_file"
 
       if [ "$dry" -eq 0 ]; then

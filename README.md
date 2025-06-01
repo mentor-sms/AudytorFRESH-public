@@ -34,8 +34,8 @@ copy4prepare.sh
 
 __jezeli usunales lub dodales pliki: Przeladuj__
 
-Nie zmieniaj nazw plikow *\*.marker* w dialogach.
-Zapisz plik *nazwa.marker* w miejsciu gdzie ma zostac utworzony katalog *nazwa*.
+Nie zmieniaj nazw plikow *\*.lab.marker* w dialogach.
+Zapisz plik *nazwa.lab.marker* w miejsciu gdzie ma zostac utworzony katalog *nazwa*.
 
 # SD
 

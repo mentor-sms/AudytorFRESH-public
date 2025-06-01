@@ -437,7 +437,7 @@ create_files() {
 new_profile() {
   # Backup existing profile if it exists
   if [ -f /home/pi/.profile ]; then
-    cp /home/pi/.profile /home/pi/.profile.mentorbak || true
+    cp /home/pi/.profile /home/pi/.profile.lab.bak || true
   fi
 
   # Copy skeleton profile
@@ -560,7 +560,7 @@ EOF
       # Backup existing config if it exists
       if [ -f /etc/dhcpcd.conf ]; then
         echo_info "Backing up existing dhcpcd.conf"
-        cp /etc/dhcpcd.conf /etc/dhcpcd.conf.mentorbak || echo_error 1 "Failed to backup dhcpcd.conf" $?
+        cp /etc/dhcpcd.conf /etc/dhcpcd.conf.lab.bak || echo_error 1 "Failed to backup dhcpcd.conf" $?
       fi
 
       echo_info "Writing new dhcpcd.conf configuration"
@@ -863,7 +863,7 @@ step0() {
 
     echo_stop "Running preinstall script" "Will execute /home/pi/.mentor/preinstall.sh$po"
     echo_info "Executing preinstall script with: /home/pi/.mentor/preinstall.sh$po"
-    bash -c "/home/pi/.mentor/preinstall.sh$po" 2>&1 | tee /home/pi/.mentor/preinstall_output.log
+    bash -c "/home/pi/.mentor/preinstall.sh$po" 2>&1 | tee /home/pi/.mentor/preinstall_output.lab.log
 
     preinstall_status=${PIPESTATUS[0]}
     echo_info "Preinstall script exited with status: $preinstall_status"
@@ -897,7 +897,7 @@ step0() {
   fi
 
   echo_info "Backing up sudoers file"
-  cp -rf /etc/sudoers /etc/sudoers.mentorbak || echo_error 1 "Failed to backup sudoers file"
+  cp -rf /etc/sudoers /etc/sudoers.lab.bak || echo_error 1 "Failed to backup sudoers file"
 
   echo_info "Modifying sudoers file to enable passwordless sudo"
   sed -i 's/%sudo\s\+ALL=(ALL:ALL)\s\+ALL/%sudo ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || echo_error 1 "Failed to modify sudoers file"
@@ -907,7 +907,7 @@ step0() {
     echo_info "Sudoers file validation passed"
   else
     echo_info "Sudoers file validation failed, restoring backup"
-    mv -f /etc/sudoers.mentorbak /etc/sudoers || echo_error 1 "Failed to restore sudoers backup"
+    mv -f /etc/sudoers.lab.bak /etc/sudoers || echo_error 1 "Failed to restore sudoers backup"
   fi
 
   echo_stop "Removing pi user password" "Security implications: auto-login will be enabled"
@@ -952,17 +952,17 @@ step12() {
   # Back up SSH configuration files before modification
   if [ -f /etc/ssh/ssh_config ]; then
     echo_info "Backing up ssh_config"
-    cp /etc/ssh/ssh_config /etc/ssh/ssh_config.mentorbak || echo_info "Failed to create ssh_config backup, continuing anyway" $?
+    cp /etc/ssh/ssh_config /etc/ssh/ssh_config.lab.bak || echo_info "Failed to create ssh_config backup, continuing anyway" $?
   fi
 
   if [ -f /etc/ssh/sshd_config ]; then
     echo_info "Backing up sshd_config"
-    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.mentorbak || echo_info "Failed to create sshd_config backup, continuing anyway" $?
+    cp /etc/ssh/sshd_config /etc/ssh/sshd_config.lab.bak || echo_info "Failed to create sshd_config backup, continuing anyway" $?
   fi
 
   if [ -f /home/pi/.ssh/authorized_keys ]; then
     echo_info "Backing up authorized_keys"
-    cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.mentorbak || echo_info "Failed to create authorized_keys backup, continuing anyway" $?
+    cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.lab.bak || echo_info "Failed to create authorized_keys backup, continuing anyway" $?
   fi
 
   # Set correct permissions for SSH files and directories
@@ -1023,7 +1023,7 @@ EOF
   fi
 
   echo_info "Backing up new authorized_keys"
-  cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.mentorbak || echo_info "Failed to backup new authorized_keys, continuing anyway" $?
+  cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.lab.bak || echo_info "Failed to backup new authorized_keys, continuing anyway" $?
 
   # Add id_rsa.pub key if it exists
   if [ -f /home/pi/.ssh/id_rsa.pub ]; then
@@ -1052,7 +1052,7 @@ EOF
   echo_info "Setting up known_hosts file"
   if [ -f /home/pi/.ssh/known_hosts ]; then
     echo_info "Backing up existing known_hosts"
-    cp -f /home/pi/.ssh/known_hosts /home/pi/.ssh/known_hosts.mentorbak || echo_info "Failed to backup known_hosts, continuing anyway" $?
+    cp -f /home/pi/.ssh/known_hosts /home/pi/.ssh/known_hosts.lab.bak || echo_info "Failed to backup known_hosts, continuing anyway" $?
 
     echo_info "Removing existing known_hosts"
     rm -f /home/pi/.ssh/known_hosts || echo_error 1 "Failed to remove known_hosts"
@@ -1158,7 +1158,7 @@ step3() {
   echo_info "Starting step 3: User groups and hostname configuration"
 
   # Check for wait marker file
-  if [ -f /home/pi/.mentor/wait.marker ]; then
+  if [ -f /home/pi/.mentor/wait.lab.marker ]; then
     echo_info "Found wait marker, clearing screen and exiting"
     clear
     return 0
@@ -1199,13 +1199,13 @@ step3() {
 
   # Create hosts file backup
   echo_info "Creating backup of /etc/hosts"
-  cp /etc/hosts /etc/hosts.mentorbak || echo_error 1 "Failed to backup hosts file" $?
+  cp /etc/hosts /etc/hosts.lab.bak || echo_error 1 "Failed to backup hosts file" $?
 
   # Update hosts file with error handling
   echo_info "Updating hostname in /etc/hosts"
   sed -i "s/127.0.1.1.*/127.0.1.1 $new_hostname/" /etc/hosts || { 
     echo_info "Failed to update hosts file, restoring backup" $?; 
-    cp /etc/hosts.mentorbak /etc/hosts || echo_info "Failed to restore hosts backup, continuing anyway" $?; 
+    cp /etc/hosts.lab.bak /etc/hosts || echo_info "Failed to restore hosts backup, continuing anyway" $?; 
   }
 
   # Verify the changes
@@ -1234,8 +1234,8 @@ step4() {
   echo_info "Current IP address: $ip_address"
 
   # Create a marker file with collected system information
-  echo_info "Creating prepare4lab.marker with system information"
-  create_marker_file "/home/pi/.mentor" "prepare4lab.marker" "$(collect_system_info)" || {
+  echo_info "Creating prepare4lab.lab.marker with system information"
+  create_marker_file "/home/pi/.mentor" "prepare4lab.lab.marker" "$(collect_system_info)" || {
     echo_error 1 "Failed to create marker file" $?
     
   }
@@ -1263,9 +1263,9 @@ create_marker_file() {
   fi
 
   # Handle path construction
-  if [[ ! "$marker" == *.marker ]]; then
+  if [[ ! "$marker" == *.lab.marker ]]; then
     if [[ -z "$filename" ]]; then
-      filename="$(basename "$marker" | tr '[:upper:]' '[:lower:]').marker"
+      filename="$(basename "$marker" | tr '[:upper:]' '[:lower:]').lab.marker"
       echo_info "No filename provided, generated filename: $filename"
     fi
     marker="${marker}/${filename}"
