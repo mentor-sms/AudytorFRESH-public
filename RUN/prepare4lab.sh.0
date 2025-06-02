@@ -688,8 +688,9 @@ step0() {
 
   echo_info "Testing network connectivity"
   test_network || echo_info "Network test completed with issues, continuing anyway" $?
-
-  if [ "$debug" -eq 1 ] || [ "$user" -eq 1 ] || [ "$devel" -eq 1 ]; then
+  
+  if test_network; then
+    if [ "$debug" -eq 1 ] || [ "$user" -eq 1 ] || [ "$devel" -eq 1 ]; then
       echo_info "Waiting for apt locks"
       wait_apt || echo_error 1 "Failed to wait for apt locks"
     
@@ -774,8 +775,11 @@ step0() {
 
       echo_info "Final apt lock wait"
       wait_apt || echo_info "Final apt lock wait issues, continuing" $?
-  else
+    else
       echo_info "Skipping system updates (not in user mode)"
+    fi
+  else
+   echo_info "Skipping system updates (not in user mode)"
   fi
   
   echo_info "Installing required dependencies"
