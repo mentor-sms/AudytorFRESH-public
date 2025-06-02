@@ -1,0 +1,6 @@
+# Handle all text files
+* text=auto eol=lf
+
+# Explicitly set shell scripts to LF
+*.sh text eol=lf
+*.sh.0 text eol=lf
