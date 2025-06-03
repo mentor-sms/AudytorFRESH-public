@@ -531,6 +531,7 @@ run_rsync() {
     if [ "$dry" -ne 1 ]; then
         local rsync_output_file
         rsync_output_file=$(mktemp)
+        rm -f "$rsync_output_file" || true
         $rsync_cmd > "$rsync_output_file" || echo_info "Warning: Rsync operation completed with errors, checking results"
         while read -r line; do
             local first_part
@@ -538,15 +539,13 @@ run_rsync() {
             first_part="${line%% *}"
             second_part="${line#* }"
             rsync_line_test "$first_part" "$second_part"
-            if [ $last_rsync_test -ne 1 ]; then
-                echo_error $LINENO "$first_part $second_part"
-            fi
-            if [[ $first_part == "$second_part" ]] || [[ $second_part == *uptodate* ]]; then
-                echo_info "Processing $target/$first_part"
-                handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
+            if [ $last_rsync_test -eq 1 ]; then
+              if [[ $first_part == "$second_part" ]] || [[ $second_part == *uptodate* ]]; then
+                  echo_info "Processing $target/$first_part"
+                  handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
+              fi
             fi
         done < "$rsync_output_file"
-        rm -f "$rsync_output_file"
     else
         echo_info "Dry run mode: skipping actual rsync operation"
     fi
