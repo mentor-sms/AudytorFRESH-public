@@ -246,8 +246,8 @@ do_step() {
 prepare() {
     pkill -f student4lab || true
     directory_path=/home/pi/.mentor
-    if [ ! -d $directory_path ]; then
-        mkdir -p $directory_path || echo_error $LINENO "17"
+    if [ ! -d "$directory_path" ]; then
+        mkdir -p "$directory_path" || echo_error $LINENO "17"
     fi
     aptcmd=$(APT)
     debian_upgrade "$aptcmd"
@@ -266,22 +266,17 @@ step0() {
 }
 step1() { # SSH
     systemctl stop ssh || echo_error $LINENO "21"
-    if [ ! -d /ssh ]; then
+    if [ ! -d "/ssh" ]; then
         mkdir -p /ssh || echo_error $LINENO "22"
     fi
     if [ ! -d /home/pi/.ssh ]; then
         mkdir -p /home/pi/.ssh || echo_error $LINENO "23"
         chown pi:pi /home/pi/.ssh || echo_error $LINENO "24"
     fi
-    if [ -f /etc/ssh/ssh_config ]; then
-        cp /etc/ssh/ssh_config /etc/ssh/ssh_config.lab.bak || true
-    fi
-    if [ -f /etc/ssh/sshd_config ]; then
-        cp /etc/ssh/sshd_config /etc/ssh/sshd_config.lab.bak || true
-    fi
-    if [ -f /home/pi/.ssh/authorized_keys ]; then
-        cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.lab.bak || true
-    fi
+    create_backup_if_needed /etc/ssh/ssh_config
+    create_backup_if_needed /etc/ssh/sshd_config
+    create_backup_if_needed /home/pi/.ssh/authorized_keys
+    create_backup_if_needed /home/pi/.ssh/known_hosts
     chown_chmod 700 /home/pi/.ssh
     if [ -f /home/pi/.ssh/id_rsa ]; then
         chown_chmod 600 /home/pi/.ssh/id_rsa
@@ -303,10 +298,9 @@ step1() { # SSH
 # installer4lab id_ed25519.pub
 EOF
     )
-    if ! echo "$authorized_keys" >> /home/pi/.ssh/authorized_keys; then
+    if ! echo "$authorized_keys" >> "/home/pi/.ssh/authorized_keys"; then
         echo_error $LINENO "32"
     fi
-    cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.lab.bak || true
     if [ -f /home/pi/.ssh/id_rsa.pub ]; then
         cat /home/pi/.ssh/id_rsa.pub >> /home/pi/.ssh/authorized_keys || echo_error $LINENO "33"
     fi
@@ -320,7 +314,6 @@ EOF
         done
     fi
     if [ -f /home/pi/.ssh/known_hosts ]; then
-        cp /home/pi/.ssh/known_hosts /home/pi/.ssh/known_hosts.lab.bak || true
         rm -f /home/pi/.ssh/known_hosts || echo_error $LINENO "35"
     fi
     touch /home/pi/.ssh/known_hosts || echo_error $LINENO "36"
@@ -429,14 +422,14 @@ ask_user() {
 }
 set_step() {
     step=$1
-    if ! echo "$step" | grep -Eq '^[0-9]+$'; then
+    if ! [[ "$step" =~ ^[0-9]+$ ]]; then
         echo_error $LINENO "44 set_step"
     fi
     if [ ! -d /home/pi ]; then
         echo_error $LINENO "45 set_step" 
     fi
-    if [ -f /home/pi/.prepare4lab.step ]; then
-        rm -f /home/pi/.prepare4lab.step || echo_error $LINENO "46"
+    if [ -f "/home/pi/.prepare4lab.step" ]; then
+        rm -f "/home/pi/.prepare4lab.step" || echo_error $LINENO "46"
     fi
     echo "$step" | sudo -u pi tee /home/pi/.prepare4lab.step > /dev/null || echo_error $LINENO "47"
     if [ ! -f /home/pi/.prepare4lab.step ]; then
@@ -454,19 +447,20 @@ set_hostname_noreturn()
     local new_hostname
     new_hostname="$1"
     echo_wait "new hostname: $new_hostname, reboot pulpitu"
+    create_backup_if_needed /etc/hostname
+    create_backup_if_needed /etc/hosts
     shutdown -r +1 >/dev/null 2>&1 || echo_error $LINENO "51"
     echo_info "nie przeszkadzaj!"
-    if ! echo "$new_hostname" > /etc/hostname; then
+    if ! echo "$new_hostname" > "/etc/hostname"; then
         echo_error $LINENO "52"
     fi
-    cp /etc/hosts /etc/hosts.lab.bak || true
     sed -i "s/127.0.1.1.*/127.0.1.1 $new_hostname/" /etc/hosts || {
-        cp /etc/hosts.lab.bak /etc/hosts || echo_error $LINENO "53 popsulem system: $?";
+        sudo mv -f /etc/hosts.lab.bak /etc/hosts || echo_error $LINENO "53 popsulem system: $?";
     }
-    if ! grep -q "$new_hostname" /etc/hostname; then
+    if ! grep -q "$new_hostname" "/etc/hostname"; then
         echo_error $LINENO "54 popsulem system"
     fi
-    if ! grep -q "127.0.1.1.*$new_hostname" /etc/hosts; then
+    if ! grep -q "127.0.1.1.*$new_hostname" "/etc/hosts"; then
         echo_error $LINENO "55 popsulem system"
     fi
     exit 0
@@ -492,7 +486,7 @@ wait_apt() {
         if [ "$elapsed_time" -gt "$max_wait" ]; then
             pid=$(fuser /var/lib/dpkg/lock-frontend 2>/dev/null)
             if [ -n "$pid" ]; then
-                if ! ps -p "$pid" > /dev/null; then
+                                if ! ps -p "$pid" > /dev/null 2>&1; then
                     rm -f /var/lib/dpkg/lock-frontend || echo_info "$LINENO $?"
                     rm -f /var/lib/dpkg/lock || echo_info "$LINENO $?"
                     dpkg --configure -a || echo_info "$LINENO $?"
@@ -536,7 +530,7 @@ chown_chmod() {
             touch "$2" || echo_error $LINENO "62 $2"
         fi
     fi
-    if ! id pi &>/dev/null; then
+    if ! id "pi" &>/dev/null; then
         echo_error $LINENO "63"
     fi
     chown pi:pi "$2" || echo_error $LINENO "64 $2"
@@ -570,7 +564,7 @@ setup_swap() {
     if [ $swap_size -eq 0 ]; then
         systemctl disable dphys-swapfile
     else
-        if ! sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${swap_size}/" /etc/dphys-swapfile; then
+        if ! sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${swap_size}/" "/etc/dphys-swapfile"; then
             echo_error $LINENO "72"
         fi
         dphys-swapfile setup || echo_error $LINENO "73"
@@ -608,7 +602,7 @@ create_files() {
     mkdir -p /etc/systemd/system/getty@tty1.service.d || echo_error $LINENO "82"
     if ! echo "[Service]
         ExecStart=
-        ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM" > /etc/systemd/system/getty@tty1.service.d/autologin.conf; then
+        ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM" > "/etc/systemd/system/getty@tty1.service.d/autologin.conf"; then
         echo_error $LINENO "83"
     fi
     systemctl daemon-reload
@@ -636,40 +630,38 @@ create_files() {
     done
 }
 setup_autostart() {
-    if [ -f /home/pi/.profile ]; then
-        cp /home/pi/.profile /home/pi/.profile.lab.bak || true
-    fi
+    create_backup_if_needed /home/pi/.profile
+    create_backup_if_needed /etc/sudoers
     cp -rf /etc/skel/.profile /home/pi/.profile || echo_error $LINENO "89"
     chown pi:pi /home/pi/.profile || echo_error $LINENO "90"
     chmod 644 /home/pi/.profile || echo_error $LINENO "91"
-    if [ ! -d /home/pi/.mentor ]; then
+    if [ ! -d "/home/pi/.mentor" ]; then
         echo_error $LINENO "92"
     fi
-    if [ ! -f /home/pi/.mentor/profile.sh ]; then
+    if [ ! -f "/home/pi/.mentor/profile.sh" ]; then
         echo_error $LINENO "93"
     fi
     if [ ! -r /home/pi/.mentor/profile.sh ]; then
         chmod 644 /home/pi/.mentor/profile.sh || echo_error $LINENO "94"
     fi
     printf "job=%s%s --continue\n" "$job" "${args_string:+ }${args_string}" >> /home/pi/.profile || echo_error $LINENO "95"
-    if [ ! -f /home/pi/.mentor/prepare4lab.run ]; then
+    if [ ! -f "/home/pi/.mentor/prepare4lab.run" ]; then
         echo_error $LINENO "96"
     fi
     echo_info "job: $job ${args_string}"
-    if [ ! -r /home/pi/.mentor/prepare4lab.run ]; then
-        chmod 644 /home/pi/.mentor/prepare4lab.run || echo_error $LINENO "97"
+    if [ ! -r "/home/pi/.mentor/prepare4lab.run" ]; then
+        chmod 644 "/home/pi/.mentor/prepare4lab.run" || echo_error $LINENO "97"
     fi
     cat /home/pi/.mentor/prepare4lab.run >> /home/pi/.profile || echo_error $LINENO "98"
     dos2unix /home/pi/.profile 2>/dev/null || echo_error $LINENO "99"
     echo ""
     cat /home/pi/.profile
     echo_stop "^ contents of /home/pi/.profile after modification."
-    cp /etc/sudoers /etc/sudoers.lab.bak || true
     sed -i 's/%sudo\s\+ALL=(ALL:ALL)\s\+ALL/%sudo ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || echo_error $LINENO "100"
     if visudo -c; then
         true
     else
-        mv -f /etc/sudoers.lab.bak /etc/sudoers || echo_error $LINENO "101"
+        sudo mv -f /etc/sudoers.lab.bak /etc/sudoers || echo_error $LINENO "101"
         echo_error $LINENO "102"
     fi
     passwd -d pi || echo_error $LINENO "103"
@@ -712,6 +704,53 @@ APT() {
         fi
     fi
     echo "$ooo"
+}
+i4lab_create_file_before() {
+  local key="$1"
+  local dir
+  dir="$(dirname "$key")"
+  local filename
+  mkdir -p "$dir"
+  rm -rf "$key" || echo_error $LINENO "b1"
+  touch "$key" || echo_error $LINENO "b2"
+
+  if [[ "$key" != /home/pi/.mentor/* ]] && [[ "$key" != /home/pi/.source4rpi/* ]]; then
+    cp "$key" "$key.lab.bak" || true
+  fi
+}
+i4lab_create_file_after() {
+  local key="$1"
+  dos2unix -f -k "$key" || true
+  if [[ "$key" == *.sh ]]; then
+    chmod +x "$key" || echo_error $LINENO "a3"
+  fi
+  if [[ "$key" == /home/pi/* ]]; then
+    chown pi:pi "$key" || echo_error $LINENO "a4"
+  fi
+  echo_wait "Created $key"
+}
+create_backup_if_needed() {
+    local filepath="$1"
+    local backup_path="${filepath}.lab.bak"
+    
+    if [ -f "$backup_path" ]; then
+        echo_info "Backup already exists for $filepath, skipping backup creation"
+        return 0
+    fi
+    
+    if [ -f "$filepath" ]; then
+        echo_info "Creating backup: $filepath -> $backup_path"
+        cp "$filepath" "$backup_path" || echo_error $LINENO "Failed to create backup $backup_path"
+        
+        # Verify backup integrity
+        if ! cmp -s "$filepath" "$backup_path"; then
+            echo_error $LINENO "Backup verification failed for $backup_path"
+        fi
+    else
+        echo_info "Source file $filepath does not exist, no backup needed"
+    fi
+    
+    return 0
 }
 debian_upgrade() {
     if test_network; then
