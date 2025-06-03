@@ -118,7 +118,7 @@ is_file() {
 is_directory() {
     local path="$1"
     last_is_directory=0
-    if [ -d "$path" ]; then
+    if [ -d "$path" ] || [[ "$path" =~ /$ ]]; then
         last_is_directory=1
     fi
 }
@@ -126,8 +126,38 @@ is_directory() {
 is_block_device() {
     local path="$1"
     last_is_block_device=0
-    if [ -b "$path" ]; then
+    
+    # Extract device name (e.g., sda1 -> sda)
+    local device_name
+    device_name=$(basename "$path")
+    local base_device=${device_name%[0-9]*}  # Remove partition number
+    # Check if it's a removable device
+    local removable_file="/sys/block/$base_device/removable"
+    if [ -f "$removable_file" ] && [ "$(cat "$removable_file")" = "1" ]; then
         last_is_block_device=1
+        return
+    fi
+    
+    # Additional check: look for USB subsystem in device path
+    local device_path="/sys/block/$base_device"
+    if [ -d "$device_path" ]; then
+        # Follow symlinks to find if device is connected via USB
+        local real_path
+        real_path=$(readlink -f "$device_path")
+        if [[ "$real_path" == *"/usb"* ]]; then
+            last_is_block_device=1
+            return
+        fi
+    fi
+    
+    # Check if device is in typical removable media mount points
+    if [[ "$path" == /media/* ]] || [[ "$path" == /mnt/* ]]; then
+        # Additional safety: check if it's not a system partition
+        if ! grep -q "^$path " /proc/mounts 2>/dev/null || \
+           ! grep -q " / \| /boot \| /home \| /var \| /usr " /proc/mounts 2>/dev/null; then
+            last_is_block_device=1
+            return
+        fi
     fi
 }
 
