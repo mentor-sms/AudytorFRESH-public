@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 do_umount=0                          # Flag to track if we mounted a device
 from="/dev/sd[a-z][1-9]"                       # Source location (block device or directory)
-mntdir=/mnt                          # Mount point for block devices
+mntdir=/home/pi/mnt                          # Mount point for block devices
 target=/home/pi                      # Target directory for file operations
 home_dir=home4copy                   # Directory name on source containing files
 file=prepare4lab.sh                  # Script filename to run after copying
@@ -90,15 +90,11 @@ echo_info "copy4prepare ver: $WERSJA"
 verify_prepare_script() {
     local wersja_in_script
     echo_info "Verifying prepare script integrity before running: $run"
-    if ! is_file "$run"; then
-        echo_error 20 "Prepare script not found at $run"
+    is_file "$run"
+    if [ $last_is_file -ne 1 ]; then
+        echo_error $LINENO "$run"
     fi
-    if [ ! -r "$run" ]; then
-        echo_error 60 "Prepare script exists but is not readable: $run"
-    fi
-    if ! bash -n "$run"; then
-        echo_error 200 "Prepare script contains syntax errors: $run"
-    fi
+    bash -n "$run" || echo_error $LINENO "$run"
     wersja_in_script=$(grep -m 1 "^WERSJA=" "$run" | cut -d'=' -f2)
     if [ -z "$wersja_in_script" ]; then
         echo_info "Warning: Could not extract version from prepare script"
@@ -115,7 +111,7 @@ verify_prepare_script() {
     fi
     if [ ! -x "$run" ]; then
         echo_info "Adding execute permission to prepare script"
-        chmod +x "$run" || echo_error 60 "Failed to add execute permission to prepare script"
+        chmod +x "$run" || echo_error $LINENO ""
     fi
     echo_info "Script verification completed"
     return 0
@@ -152,8 +148,9 @@ handle_file() {
     _file="${_file%"${_file##*[![:space:]]}"}"
     _sourcefile="${_sourcefile%"${_sourcefile##*[![:space:]]}"}"
     echo_info "Handling file $_file"
-    if ! is_file "$_sourcefile"; then
-        echo_error 1 "$_sourcefile does not exist. Please check the paths."
+    is_file "$_sourcefile"
+    if [ $last_is_file -ne 1 ]; then
+        echo_error $LINENO "$_sourcefile"
     fi
     if ! cmp -s "$_file" "$_sourcefile"; then
         echo_info "Files are different after rsync: $_file and $_sourcefile"
@@ -169,7 +166,7 @@ handle_file() {
         fi
         echo_info "Validating bash script $_file"
         if ! bash -n "$_file"; then
-            echo_error 1 "$_file contains syntax errors"
+            echo_error $LINENO "$_file"
         fi
     fi
     return 0
@@ -189,17 +186,17 @@ create_backup() {
         echo_info "Backup already exists for $filepath, skipping backup creation"
         return 0
     fi
-    if is_file "$filepath"; then
-        if [ "$dry" -ne 1 ]; then
-            echo_info "backup: $filepath to $backup_path"
-            if ! sudo -u pi cp "$filepath" "$backup_path"; then
-                echo_into "Failed to create backup file $backup_path but continuing"
-            fi
-        else
-            echo_info "dry: backup: $filepath to $backup_path"
+    is_file "$_sourcefile"
+    if [ $last_is_file -ne 1 ]; then
+        echo_error $LINENO "$_sourcefile"
+    fi
+    if [ "$dry" -ne 1 ]; then
+        echo_info "backup: $filepath to $backup_path"
+        if ! sudo -u pi cp "$filepath" "$backup_path"; then
+            echo_into "Failed to create backup file $backup_path but continuing"
         fi
     else
-        echo_info "Original file $filepath does not exist, no backup needed"
+        echo_info "dry: backup: $filepath to $backup_path"
     fi
     return 0
 }
@@ -370,13 +367,7 @@ mnt_mnt() {
         return 0
     fi
     echo_info "Mounting device $from at $mntdir"
-    if ! sudo mount "$from" "$mntdir"; then
-        echo_info "First mount attempt failed, trying with additional options..."
-        if ! sudo mount -o rw,noatime "$from" "$mntdir"; then
-            print_error "Failed to mount $from at $mntdir after multiple attempts"
-        fi
-    fi
-    echo_info "Successfully mounted $from at $mntdir"
+    sudo mount "$from" "$mntdir" || print_error "Failed to mount $from at $mntdir"
     do_umount=1
     set_from "$mntdir"
 }
@@ -538,7 +529,7 @@ create_copy4prepare_marker() {
         echo_info "# "
         echo_info "# ---"
         } > "$marker_dir/$marker_file" || {
-        echo_error 1 "Failed to write to marker file";
+        echo_error $LINENO ""
     }
     echo_info "Created marker file: $marker_dir/$marker_file"
     return 0
@@ -549,7 +540,7 @@ main() {
     if [ "$(id -u)" -ne 0 ]; then
         echo_info "Requires sudo!"
         show_help
-        echo_error 1 "Requires sudo!"
+        echo_error $LINENO ""
     fi
     parse "$@"
     print_parsed_arguments
@@ -607,7 +598,7 @@ main() {
         print_error "Failed to write to '$target'/.prepare4lab.step"
     }
     if ! cp -rf /etc/skel/.profile "$target/." ; then
-        echo_error 1 "Failed to copy profile template"
+        echo_error $LINENO ""
     fi
     mnt_init
     if [ "$nosync" -ne 1 ]; then
@@ -620,7 +611,7 @@ main() {
         
         if [ "$dry" -ne 1 ]; then
             if ! sudo "$run" "${prepare4lab_args[@]}"; then
-                echo_error 75 "Prepare script execution failed"
+                echo_error $LINENO ""
             fi
         else
             echo_info "dry: Would run: sudo $run ${prepare4lab_args[*]}"
@@ -649,14 +640,14 @@ parse() {
               shift
               ;;
           --*)
-              echo_error 1 "First argument must be a job type (prepare/install/setup), not an option"
+              echo_error $LINENO ""
               ;;
           *)
-              echo_error 1 "Invalid job type: $1. Must be prepare, install, or setup"
+              echo_error $LINENO "$1"
               ;;
       esac
   else
-      echo_error 1 "Job type required as first argument"
+      echo_error $LINENO ""
   fi
   
   copy4prepare_args=()
@@ -684,17 +675,17 @@ parse() {
                   if [ $# -gt 0 ]; then
                       prepare4lab_args+=("$1")  # student IP
                   else
-                      echo_error 1 "--student requires both number and IP address"
+                      echo_error $LINENO ""
                   fi
               else
-                  echo_error 1 "--student requires both number and IP address"
+                  echo_error $LINENO ""
               fi
               ;;
           --from)
               shift
               from="${1:-}"
               if [ -z "$from" ]; then
-                  echo_error 1 "--from requires a path argument"
+                  echo_error $LINENO ""
               fi
               copy4prepare_args+=("--from" "$from")
               ;;
@@ -702,7 +693,7 @@ parse() {
               shift
               mntdir="${1:-}"
               if [ -z "$mntdir" ]; then
-                  echo_error 1 "--mnt requires a path argument"
+                  echo_error $LINENO ""
               fi
               copy4prepare_args+=("--mnt" "$mntdir")
               ;;
@@ -710,7 +701,7 @@ parse() {
               shift
               target="${1:-}"
               if [ -z "$target" ]; then
-                  echo_error 1 "--target requires a path argument"
+                  echo_error $LINENO ""
               fi
               copy4prepare_args+=("--target" "$target")
               ;;
@@ -718,7 +709,7 @@ parse() {
               shift
               timeout="${1:-}"
               if [ -z "$timeout" ] || ! [[ "$timeout" =~ ^[0-9]+$ ]]; then
-                  echo_error 1 "--timeout requires a numeric argument"
+                  echo_error $LINENO ""
               fi
               copy4prepare_args+=("--timeout" "$timeout")
               ;;
@@ -734,7 +725,7 @@ parse() {
               copy4prepare_args+=("$1")
               ;;
           *)
-              echo_error 1 "Unknown option: $1"
+              echo_error $LINENO "$1"
               ;;
       esac
       shift
@@ -753,7 +744,7 @@ parse() {
       echo_info "no target directory specified, using default: $target"
   fi
   if [ "$brestore" -eq 1 ] && [ "$bclear" -eq 1 ]; then
-      echo_error 1 "--brestore and --bclear cannot be used together"
+      echo_error $LINENO ""
   fi
 }
 is_directory() {
@@ -796,25 +787,26 @@ is_directory() {
     echo_info "$path is not a directory (all tests failed)"
     return 1
 }
+last_is_file=0
 is_file() {
+    last_is_file=0
     local path="$1"
     if [ -z "$path" ]; then
-        echo_error 1  "Empty path provided to is_file"
+        echo_error $LINENO ""
     fi
     if [ -f "$path" ]; then
         echo_info "$path is a standard file (-f test succeeded)"
-        return 0
+        last_is_file=1
     fi
     if [ -L "$path" ] && [ -f "$(readlink -f "$path")" ]; then
         echo_info "$path is a symlink to a file"
-        return 0
+        last_is_file=1
     fi
     if cat "$path" >/dev/null 2>&1; then
         echo_info "$path is accessible via cat"
-        return 0
+        last_is_file=1
     fi
-    echo_info "$path is not a file (all tests failed)"
-    return 1
+    echo_wait "$path is not a file (all tests failed)"
 }
 is_block_device() {
     local path="$1"
@@ -919,13 +911,13 @@ is_mounted() {
 }
 set_from() {
     if [ -z "$1" ]; then
-        echo_error 1 "Empty path provided to set_from"
+        echo_error $LINENO ""
     fi
     from="$1"
     echo_info "Source location set to: $from"
     if ! [ -e "$from" ]; then
-        echo_info "Path diagnostics for non-existent path: $from"
-        if [ "$quick" -ne 0 ]; then
+        if [ "$quick" -eq 0 ]; then
+            echo_info "Path diagnostics for non-existent path: $from"
             echo_info "- Parent directory: $(dirname "$from")"
             if [ -d "$(dirname "$from")" ]; then
                 echo_info "- Parent exists: YES"
@@ -938,7 +930,7 @@ set_from() {
                 echo_info "- Parent contents: Cannot access"
             fi
         fi
-        echo_error 1 "Source path does not exist: $from"
+        echo_error $LINENO "$from"
     else
         if [ -d "$from/$home_dir" ]; then
             echo_info "Found required $home_dir directory in $from"
@@ -950,7 +942,7 @@ set_from() {
                     echo_info "Contents of $from: Cannot access"
                 fi
             fi
-            echo_error 1 "Required directory $home_dir not found in $from"
+            echo_error $LINENO "$from $home_dir"
         fi
     fi
     return 0

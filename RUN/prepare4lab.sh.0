@@ -126,15 +126,15 @@ main() {
         rm -fr /home/pi/.prepare4lab.step || echo_error $LINENO ""
         set_step 0 || echo_error $LINENO ""
     else
-        if [ ! -f "/home/pi/.prepare4lab.step" ]; then
-            set_step 0 || echo_error $LINENO ""
-        else
+        if [ -f "/home/pi/.prepare4lab.step" ]; then
             file_content=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO ""
             if echo "$file_content" | grep -Eq '^[0-9]+$'; then
                 set_step "$file_content" || echo_error $LINENO "$file_content"
             else
                 set_step 0
             fi
+        else
+            set_step 0 || echo_error $LINENO ""
         fi
     fi
     if [ $stp -eq 1 ]; then
@@ -651,7 +651,7 @@ setup_autostart() {
     if [ ! -r /home/pi/.mentor/profile.sh ]; then
         chmod 644 /home/pi/.mentor/profile.sh || echo_error $LINENO ""
     fi
-    printf "job=%s %s\n" "$job" "${args_string} --continue" >> /home/pi/.profile || echo_error $LINENO ""
+    printf "job=%s%s --continue\n" "$job" "${args_string:+ }${args_string}" >> /home/pi/.profile || echo_error $LINENO ""
     if [ ! -f /home/pi/.mentor/prepare4lab.run ]; then
         echo_error $LINENO ""
     fi
