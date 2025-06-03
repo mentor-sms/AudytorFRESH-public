@@ -1,8 +1,8 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=0.9.3
+WERSJA=0.9.9
 do_umount=0                          # Flag to track if we mounted a device
-from="/dev/sd[a-z][1-9]"                       # Source location (block device or directory)
+from="USB"                       # Source location (block device or directory)
 mntdir=/home/pi/mnt                          # Mount point for block devices
 target=/home/pi                      # Target directory for file operations
 home_dir=home4copy                   # Directory name on source containing files
@@ -127,6 +127,11 @@ is_block_device() {
     local path="$1"
     last_is_block_device=0
     
+    if [ -b "$path" ]; then
+        last_is_block_device=1
+        return
+    fi
+
     # Extract device name (e.g., sda1 -> sda)
     local device_name
     device_name=$(basename "$path")
@@ -609,35 +614,57 @@ mnt_mnt() {
 
 mnt_init() {
     echo_info "Initializing mount system for source: $from"
-    echo_info "Current mounts:"
-    mount | grep -E '(^/dev/sd|^/media/pi)' || echo_info "No relevant mounts found"
-    echo_info "Available block devices:"
-    lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL 2>/dev/null || echo_info "lsblk failed or no devices found"
     
-    # Check if from contains a pattern and expand it
-    if [[ "$from" == *"["* ]] && [[ "$from" == *"]"* ]]; then
-        echo_info "Pattern detected in from: $from"
-        # Use shell globbing to expand the pattern
-        local expanded_devices=("$from")
-        if [ ${#expanded_devices[@]} -gt 0 ] && [ -e "${expanded_devices[0]}" ]; then
-            from="${expanded_devices[0]}"
-            echo_info "Using first matching device: $from"
-        else
-            echo_error $LINENO "No devices found matching pattern: $from"
+    if [ "$from" = "USB" ]; then
+        echo_info "USB mode detected, scanning for USB devices..."
+        local found_device=0
+        
+        # Iterate over /dev/sd[a-e][1-4] possibilities
+        for drive in {a..e}; do
+            for partition in {1..4}; do
+                local device_path="/dev/sd${drive}${partition}"
+                
+                if [ -e "$device_path" ]; then
+                    echo_info "Found device: $device_path"
+                    
+                    # Check if it's mounted
+                    local mount_point
+                    mount_point=$(mount | grep "^$device_path " | awk '{print $3}')
+                    
+                    if [ -n "$mount_point" ]; then
+                        echo_info "$device_path is mounted at $mount_point"
+                        set_from "$mount_point"
+                        found_device=1
+                        break 2
+                    else
+                        echo_info "$device_path is not mounted, attempting to mount"
+                        mnt_mnt "$device_path"
+                        found_device=1
+                        break 2
+                    fi
+                else
+                    continue
+                fi
+            done
+        done
+        
+        if [ $found_device -eq 0 ]; then
+            echo_error $LINENO "No USB devices found in /dev/sd[a-e][1-4] range"
         fi
-    fi
-    
-    is_block_device "$from"
-    if [ $last_is_block_device -eq 1 ]; then
-        echo_info "$from is a block device, proceeding with mount"
-        mnt_mnt "$from"
     else
-        is_directory "$from"
-        if [ $last_is_directory -eq 1 ]; then
-            echo_info "$from is a directory, using directly"
-            set_from "$from"
+        # Original logic for non-USB sources
+        is_block_device "$from"
+        if [ $last_is_block_device -eq 1 ]; then
+            echo_info "$from is a block device, proceeding with mount"
+            mnt_mnt "$from"
         else
-            echo_error $LINENO "Source $from is neither a valid block device nor directory"
+            is_directory "$from"
+            if [ $last_is_directory -eq 1 ]; then
+                echo_info "$from is a directory, using directly"
+                set_from "$from"
+            else
+                echo_error $LINENO "Source $from is neither a valid block device nor directory"
+            fi
         fi
     fi
 }
