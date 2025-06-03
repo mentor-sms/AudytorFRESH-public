@@ -418,7 +418,7 @@ handle_file() {
     fi
 }
 
-last_rsync_test=0
+last_rsync_test=1
 rsync_line_test() {
     last_rsync_test=0
     local p1="$1"
@@ -443,7 +443,6 @@ rsync_line_test() {
         elif [[ "$p1" == *.fix || "$p2" == *.lab.bak ]]; then
             echo_info "Skipping fix file: $p1"
         else
-            last_rsync_test=1
             echo_wait "$p1 $p2"
         fi
     fi
@@ -477,19 +476,18 @@ run_rsync() {
         first_part="${line%% *}"
         second_part="${line#* }"
         rsync_line_test "$first_part" "$second_part"
-        if [ $last_rsync_test -ne 1 ]; then
-            echo_error $LINENO "$first_part $second_part"
-        fi
-        local fpath
-        fpath="$target/$first_part"
-        if [ "$dry" -ne 1 ]; then
-            create_backup "$fpath"
-            echo_info "Removing $fpath before copy"
-            if [ -e "$fpath" ]; then
-                rm -rf "$fpath" || echo_info "Warning: Failed to remove $fpath, attempting to continue"
-            fi
-        else
-            echo_info "dry: Would remove $fpath"
+        if [ $last_rsync_test -eq 1 ]; then
+          local fpath
+          fpath="$target/$first_part"
+          if [ "$dry" -ne 1 ]; then
+              create_backup "$fpath"
+              echo_info "Removing $fpath before copy"
+              if [ -e "$fpath" ]; then
+                  rm -rf "$fpath" || echo_info "Warning: Failed to remove $fpath, attempting to continue"
+              fi
+          else
+              echo_info "dry: Would remove $fpath"
+          fi
         fi
     done < "$dry_run_file"
     rm -f "$dry_run_file"
