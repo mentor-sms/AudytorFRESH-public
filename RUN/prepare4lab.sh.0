@@ -50,14 +50,17 @@ if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     exit 0
 fi
 echo_error() {
-    local lineno="$1"
-    local message="$2"
-    echo "[err@$lineno] $message"
-    if [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
-        echo "[Enter] to continue, Ctrl+C to cancel..."
-        read -r
-    fi
-    exit 1
+  if [ "$message" != "set_step" ]; then
+    set_step 6
+  fi
+  local lineno="$1"
+  local message="$2"
+  echo "[err@$lineno] $message"
+  if [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
+      echo "[Enter] to continue, Ctrl+C to cancel..."
+      read -r
+  fi
+  exit 1
 }
 if [ $# -gt 0 ]; then
     job="$1"
@@ -138,7 +141,7 @@ main() {
     if [ $stp -eq 1 ]; then
         do_setup_noreturn # set_step 4
     else
-        do_step "$step"
+        do_step
     fi
 }
 setup_student_file() {
@@ -177,13 +180,13 @@ do_setup_noreturn() {
 }
 do_step() {
     if [ "$step" -ne 0 ]; then
-        if [ "$step" -eq 4 ] || [ "$step" -eq 9 ]; then
+        if [ "$step" -eq 4 ] || [ "$step" -eq 9 ] || [ "$step" -eq 6 ]; then
             if [ "$user" -eq 1 ]; then
                 set_step 0
             else
                 exit 0
             fi
-        elif [ "$step" -eq 1 ] || [ "$step" -eq 2 ] || [ "$step" -eq 3 ] || [ "$step" -eq 9 ]; then
+        elif [ "$step" -eq 1 ] || [ "$step" -eq 2 ] || [ "$step" -eq 3 ]; then
             true
         else
             if [ "$user" -eq 1 ]; then
@@ -393,8 +396,8 @@ echo_wait() {
         echo ""
     fi
     if [[ "$user" -eq 1 || "$debug" -eq 1 ]] && [ "$quick" -eq 0 ]; then
-        echo "!> $message //[Enter] (4s)"
-        read -t 4 -r || true
+        echo "!> $message"
+        read -t 1 -r || true
     else
         echo "!> $message"
     fi
@@ -428,21 +431,22 @@ ask_user() {
 set_step() {
     step=$1
     if ! echo "$step" | grep -Eq '^[0-9]+$'; then
-        echo_error $LINENO ""
+        echo_error $LINENO "set_step"
     fi
     if [ ! -d /home/pi ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "set_step" 
     fi
     if [ -f /home/pi/.prepare4lab.step ]; then
         rm -f /home/pi/.prepare4lab.step || echo_error $LINENO ""
     fi
     echo "$step" | sudo -u pi tee /home/pi/.prepare4lab.step > /dev/null || echo_error $LINENO ""
     if [ ! -f /home/pi/.prepare4lab.step ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "set_step"
     fi
     read_step=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO ""
     if [ "$read_step" != "$step" ]; then
-        echo_error $LINENO "$step $read_step"
+        echo_info "$step $read_step"
+        echo_error $LINENO "set_step"
     fi
     echo_info "STEP$step"
 }
@@ -646,7 +650,6 @@ setup_autostart() {
     if [ ! -r /home/pi/.mentor/profile.sh ]; then
         chmod 644 /home/pi/.mentor/profile.sh || echo_error $LINENO ""
     fi
-    cat /home/pi/.mentor/profile.sh >> /home/pi/.profile || echo_error $LINENO ""
     printf "job=%s %s\n" "$job" "${args_string} --continue" >> /home/pi/.profile || echo_error $LINENO ""
     if [ ! -f /home/pi/.mentor/prepare4lab.run ]; then
         echo_error $LINENO ""
@@ -717,12 +720,15 @@ debian_upgrade() {
             aptcmd="$1"
             wait_apt
             $aptcmd --allow-releaseinfo-change update || echo_error $LINENO ""
-            if ! ask_user "zostawic okienka?"; then
+            if ask_user "zostawic okienka"; then
+                true
+            else
                 wait_apt || echo_error $LINENO "$?"
                 $aptcmd remove --purge xserver-xorg xinit
             fi
+
             wait_apt || echo_error $LINENO "$?"
-            if [ "$user" -eq 1 ] && ask_user "pulpity sa jeszcze w firmie?"; then
+            if [ "$user" -eq 1 ] && ask_user "pulpity sa jeszcze w firmie"; then
                 $aptcmd full-upgrade || echo_error $LINENO ""
                 wait_apt || echo_error $LINENO "$?"
                 $aptcmd autoremove || echo_error $LINENO ""
