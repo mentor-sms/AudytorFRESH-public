@@ -108,7 +108,6 @@ if [ $# -gt 0 ]; then
         true
     elif [ "$job" = "setup" ]; then
         stp=1
-    else
         echo_error $LINENO "$job"
     fi
     args_string=""
@@ -448,7 +447,7 @@ set_step() {
         echo_info "$step $read_step"
         echo_error $LINENO "set_step"
     fi
-    echo_info "STEP$step"
+    echo_wait "STEP$step"
 }
 set_hostname_noreturn()
 {
