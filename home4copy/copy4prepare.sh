@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=0.9.9
+WERSJA=0.7.7
 do_umount=0                          # Flag to track if we mounted a device
 from="USB"                       # Source location (block device or directory)
 mntdir=/home/pi/mnt                          # Mount point for block devices
@@ -638,6 +638,7 @@ mnt_init() {
                         break 2
                     else
                         echo_info "$device_path is not mounted, attempting to mount"
+                        set_from "$device_path"
                         mnt_mnt "$device_path"
                         found_device=1
                         break 2
