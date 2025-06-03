@@ -54,37 +54,18 @@ show_help() {
 EOF
 }
 echo_error() {
-    local status=$?        # Capture exit status of previous command
-    local errno="$1"       # Error number/code
-    local message="$2"     # Error message text
-    local cmd_status="${3:-$status}"  # Use provided status or captured status
-    if ! [[ "$errno" =~ ^[0-9]+$ ]]; then
-        echo_info "Invalid error number: $errno. Using 255 instead."
-        errno=255
-    fi
-    if [ -n "$cmd_status" ]; then
-        echo_info "[err$errno] $message [status=$cmd_status]"
-    else
-        echo_info "[err$errno] $message"
-    fi
-    if [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
-        echo_info "[Enter] to continue, Ctrl+C to cancel..."
-        read -r
-    fi
-    exit $(( errno % 256 ))
+  local lineno="$1"
+  local message="$2"
+  echo "[err@$lineno] $message"
+  if [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
+      echo "[Enter] to continue, Ctrl+C to cancel..."
+      read -r
+  fi
+  exit 1
 }
 echo_info() {
     local msg="$1"
-    local cmd_status="$2"
-    if [ -n "$cmd_status" ]; then
-        msg="$msg [status=$cmd_status]"
-    fi
-    if [ "$debug" -eq 1 ] && [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
-        echo "$msg //Enter..."
-        read -r
-    else
-        echo "$msg"
-    fi
+    echo "$msg"
 }
 echo_info "copy4prepare ver: $WERSJA"
 verify_prepare_script() {
@@ -116,29 +97,34 @@ verify_prepare_script() {
     echo_info "Script verification completed"
     return 0
 }
+
 echo_stop() {
     local operation="$1"
-    local details="$2"
-    if [ -n "$details" ]; then
-        echo_info "CRITICAL OPERATION: $operation [$details]"
-    else
-        echo_info "CRITICAL OPERATION: $operation"
-    fi
     sync
-    if [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
-        echo_info "[Enter] to continue, Ctrl+C to cancel..."
-        read -r
-    elif [ "$debug" -eq 1 ] && [ $quick -eq 0 ]; then
-        echo_info "[Enter]/wait 5 seconds..."
-        read -t 5 -r || echo_info "timeout"
+    if [ "$user" -eq 1 ]; then
+        echo ""
+        if [ "$quick" -eq 1 ]; then
+            echo "?> $operation //[Enter] (7s)"
+            read -t 7 -r || true
+        else
+            echo "?> $operation"
+            echo "[Enter] to continue, Ctrl+C to cancel..."
+            read -r
+        fi
+    else
+        echo "?> $operation"
     fi
 }
 echo_wait() {
     local message="$1"
-    echo_info "WAIT: $message"
+    if [ "$user" -eq 1 ]; then
+        echo ""
+    fi
     if [[ "$user" -eq 1 || "$debug" -eq 1 ]] && [ "$quick" -eq 0 ]; then
-        echo_info "[Enter]/wait 3 seconds..."
-        read -t 3 -r || echo_info "timeout"
+        echo "!> $message"
+        read -t 1 -r || true
+    else
+        echo "!> $message"
     fi
     return 0
 }
