@@ -222,7 +222,7 @@ do_step() {
         if [ $user -ne 1 ]; then
             echo_error $LINENO "$step"
         fi
-        if ask_user "juz w skonfigurowanej sieci docelowej, prawda?"; then
+        if ask_user "juz w skonfigurowanej sieci docelowej, prawda"; then
             step2_noreturn # network
         else
             echo_info "nastepne uruchomienie juz w skonfigurowanej sieci docelowej!"
@@ -608,9 +608,11 @@ create_files() {
     mkdir -p /etc/systemd/system/getty@tty1.service.d || echo_error $LINENO ""
     if ! echo "[Service]
     ExecStart=
-    ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM" > /etc/systemd/system/getty@tty1.service.d/autologin.conf; then
+    ExecStart=-/sbin/agetty --autologin pi --login-program /bin/bash --login-options '-l' --noclear %I \$TERM" > /etc/systemd/system/getty@tty1.service.d/autologin.conf; then
         echo_error $LINENO ""
     fi
+    systemctl daemon-reload
+    systemctl enable getty@tty1.service
     PROTOCOL=TCP
     HIDE_CURSOR=1
     MAXIMIZE=1
