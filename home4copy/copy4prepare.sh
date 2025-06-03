@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=0.9.2
+WERSJA=0.9.3
 do_umount=0                          # Flag to track if we mounted a device
 from="/dev/sd[a-z][1-9]"                       # Source location (block device or directory)
 mntdir=/home/pi/mnt                          # Mount point for block devices
@@ -585,6 +585,19 @@ mnt_init() {
     mount | grep -E '(^/dev/sd|^/media/pi)' || echo_info "No relevant mounts found"
     echo_info "Available block devices:"
     lsblk -o NAME,SIZE,TYPE,MOUNTPOINT,LABEL 2>/dev/null || echo_info "lsblk failed or no devices found"
+    
+    # Check if from contains a pattern and expand it
+    if [[ "$from" == *"["* ]] && [[ "$from" == *"]"* ]]; then
+        echo_info "Pattern detected in from: $from"
+        # Use shell globbing to expand the pattern
+        local expanded_devices=("$from")
+        if [ ${#expanded_devices[@]} -gt 0 ] && [ -e "${expanded_devices[0]}" ]; then
+            from="${expanded_devices[0]}"
+            echo_info "Using first matching device: $from"
+        else
+            echo_error $LINENO "No devices found matching pattern: $from"
+        fi
+    fi
     
     is_block_device "$from"
     if [ $last_is_block_device -eq 1 ]; then
