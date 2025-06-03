@@ -116,9 +116,6 @@ else
     echo_error $LINENO ""
 fi
 main() {
-    if [ $user -eq 1 ]; then
-        sudo systemctl isolate multi-user.target
-    fi
     wait_apt
     if [ "$(id -u)" -ne 0 ]; then
         echo_error $LINENO ""
@@ -373,12 +370,7 @@ step3() {
 }
 echo_info() {
     local msg="$1"
-    if [ $debug -eq 1 ] && [ "$user" -eq 1 ] && [ $quick -eq 0 ]; then
-        echo "$msg //[Enter]..."
-        read -r
-    else
-        echo "$msg"
-    fi
+    echo "$msg"
 }
 echo_stop() {
     local operation="$1"

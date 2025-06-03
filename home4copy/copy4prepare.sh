@@ -46,8 +46,10 @@ show_help() {
    --devel                When student4lab from sources
  Help:
    --help                 Show this help message
- Examples:
-   sudo $0 install --devel --quick
+ Use:
+   sudo dos2unix /media/pi/audytor/home4copy/copy4prepare.sh
+   sudo chmod +x /media/pi/audytor/home4copy/copy4prepare.sh
+   sudo /media/pi/audytor/home4copy/copy4prepare.sh install --devel --quick --timeout 0 --from /media/pi/audytor
 ===============================================================================
 EOF
 }
