@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # -*- coding: utf-8 -*-
-WERSJA=0.9.1
+WERSJA=0.9.2
 show_help() {
     cat << EOF
 ===============================================================================
@@ -92,10 +92,8 @@ if [ $# -gt 0 ]; then
                 student_nr="${1:-}"
                 shift
                 student_ip="${1:-}"
-                [ -n "$student_nr" ] || echo_error $LINENO ""
-                echo "$student_nr" | grep -Eq '^[0-9]+$' || echo_error $LINENO "$student_nr"
-                [ -n "$student_ip" ] || echo_error $LINENO ""
-                echo "$student_ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || echo_error $LINENO "$student_ip"
+                echo "$student_nr" | grep -Eq '^[0-9]+$' || echo_error $LINENO "1 $student_nr"
+                echo "$student_ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || echo_error $LINENO "2 $student_ip"
                 ;;
             *)
                 ;;
@@ -108,33 +106,33 @@ if [ $# -gt 0 ]; then
         true
     elif [ "$job" = "setup" ]; then
         stp=1
-        echo_error $LINENO "$job"
     fi
     args_string=""
     for arg in "${original_args[@]:1}"; do
         args_string="$args_string $arg"
     done
 else
-    echo_error $LINENO ""
+    show_help
+    echo_error $LINENO "3 "
 fi
 main() {
     wait_apt
     if [ "$(id -u)" -ne 0 ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "4"
     fi
     if [ $clear -eq 1 ]; then
-        rm -fr /home/pi/.prepare4lab.step || echo_error $LINENO ""
-        set_step 0 || echo_error $LINENO ""
+        rm -fr /home/pi/.prepare4lab.step || echo_error $LINENO "5"
+        set_step 0 || echo_error $LINENO "6"
     else
         if [ -f "/home/pi/.prepare4lab.step" ]; then
-            file_content=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO ""
+            file_content=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO "7"
             if echo "$file_content" | grep -Eq '^[0-9]+$'; then
-                set_step "$file_content" || echo_error $LINENO "$file_content"
+                set_step "$file_content" || echo_error $LINENO "8 $file_content"
             else
                 set_step 0
             fi
         else
-            set_step 0 || echo_error $LINENO ""
+            set_step 0 || echo_error $LINENO "9"
         fi
     fi
     if [ $stp -eq 1 ]; then
@@ -146,7 +144,7 @@ main() {
 setup_student_file() {
     local filepath="$1"
     if [ "$student_ip" == "0.0.0.0" ] || [ "$student_nr" -eq 0 ]; then
-        echo_error $LINENO "$student_nr $student_ip"
+        echo_error $LINENO "10 $student_nr $student_ip"
     else
         if [ -f "$filepath" ]; then
             local temp_file
@@ -171,8 +169,8 @@ setup_student_file() {
     fi
 }
 do_setup_noreturn() {
-    sudo chmod +x /usr/local/bin/student4lab || echo_error $LINENO "$key"
-    echo "HOSTID=$student_nr" | tee -a /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "$key"
+    sudo chmod +x /usr/local/bin/student4lab || echo_error $LINENO "11 $key"
+    echo "HOSTID=$student_nr" | tee -a /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "12 $key"
     setup_student_file /etc/dhcpcd.conf
     set_step 4
     set_hostname_noreturn "rpi$student_nr"
@@ -191,7 +189,7 @@ do_step() {
             if [ "$user" -eq 1 ]; then
                 set_step 0
             else
-                echo_error $LINENO "$step"
+                echo_error $LINENO "13 $step"
             fi
         fi
     fi
@@ -203,7 +201,7 @@ do_step() {
             if [ "$user" -eq 1 ]; then
                 next_step=1
             else
-                echo_error $LINENO "$step"
+                echo_error $LINENO "14 $step"
             fi
         fi
         step0 # setup
@@ -220,7 +218,7 @@ do_step() {
         fi
     elif [ "$step" -eq 2 ]; then
         if [ $user -ne 1 ]; then
-            echo_error $LINENO "$step"
+            echo_error $LINENO "15 $step"
         fi
         if ask_user "juz w skonfigurowanej sieci docelowej, prawda"; then
             step2_noreturn # network
@@ -236,7 +234,7 @@ do_step() {
         next_step=3
         dodere=0
     else
-        echo_error $LINENO "$step"
+        echo_error $LINENO "16 $step"
     fi
     if [ "$next_step" -ne "$step" ]; then
         set_step "$next_step"
@@ -249,7 +247,7 @@ prepare() {
     pkill -f student4lab || true
     directory_path=/home/pi/.mentor
     if [ ! -d $directory_path ]; then
-        mkdir -p $directory_path || echo_error $LINENO ""
+        mkdir -p $directory_path || echo_error $LINENO "17"
     fi
     aptcmd=$(APT)
     debian_upgrade "$aptcmd"
@@ -260,20 +258,20 @@ prepare() {
 }
 step0() {
     create_files
-    usermod -a -G dialout pi || echo_error $LINENO ""
-    usermod -a -G tty pi || echo_error $LINENO ""
-    usermod -a -G video pi || echo_error $LINENO ""
+    usermod -a -G dialout pi || echo_error $LINENO "18"
+    usermod -a -G tty pi || echo_error $LINENO "19"
+    usermod -a -G video pi || echo_error $LINENO "20"
     wait_apt
     setup_autostart
 }
 step1() { # SSH
-    systemctl stop ssh || echo_error $LINENO ""
+    systemctl stop ssh || echo_error $LINENO "21"
     if [ ! -d /ssh ]; then
-        mkdir -p /ssh || echo_error $LINENO ""
+        mkdir -p /ssh || echo_error $LINENO "22"
     fi
     if [ ! -d /home/pi/.ssh ]; then
-        mkdir -p /home/pi/.ssh || echo_error $LINENO ""
-        chown pi:pi /home/pi/.ssh || echo_error $LINENO ""
+        mkdir -p /home/pi/.ssh || echo_error $LINENO "23"
+        chown pi:pi /home/pi/.ssh || echo_error $LINENO "24"
     fi
     if [ -f /etc/ssh/ssh_config ]; then
         cp /etc/ssh/ssh_config /etc/ssh/ssh_config.lab.bak || true
@@ -291,41 +289,41 @@ step1() { # SSH
     if [ -f /home/pi/.ssh/id_rsa.pub ]; then
         chown_chmod 644 /home/pi/.ssh/id_rsa.pub
     fi
-    chmod 755 /etc/ssh || echo_error $LINENO ""
-    chmod 644 /etc/ssh/ssh_config || echo_error $LINENO ""
-    chmod 644 /etc/ssh/sshd_config || echo_error $LINENO ""
+    chmod 755 /etc/ssh || echo_error $LINENO "25"
+    chmod 644 /etc/ssh/ssh_config || echo_error $LINENO "26"
+    chmod 644 /etc/ssh/sshd_config || echo_error $LINENO "27"
     if [ -f /etc/ssh/ssh_host_rsa_key.pub ]; then
-        chmod 600 /etc/ssh/ssh_host_rsa_key.pub || echo_error $LINENO ""
+        chmod 600 /etc/ssh/ssh_host_rsa_key.pub || echo_error $LINENO "28"
     fi
-    rm -f /home/pi/.ssh/authorized_keys || echo_error $LINENO ""
-    touch /home/pi/.ssh/authorized_keys || echo_error $LINENO ""
-    chown pi:pi /home/pi/.ssh/authorized_keys || echo_error $LINENO ""
+    rm -f /home/pi/.ssh/authorized_keys || echo_error $LINENO "29"
+    touch /home/pi/.ssh/authorized_keys || echo_error $LINENO "30"
+    chown pi:pi /home/pi/.ssh/authorized_keys || echo_error $LINENO "31"
     local authorized_keys
     authorized_keys=$(cat <<-EOF
 # installer4lab id_ed25519.pub
 EOF
     )
     if ! echo "$authorized_keys" >> /home/pi/.ssh/authorized_keys; then
-        echo_error $LINENO ""
+        echo_error $LINENO "32"
     fi
     cp /home/pi/.ssh/authorized_keys /home/pi/.ssh/authorized_keys.lab.bak || true
     if [ -f /home/pi/.ssh/id_rsa.pub ]; then
-        cat /home/pi/.ssh/id_rsa.pub >> /home/pi/.ssh/authorized_keys || echo_error $LINENO ""
+        cat /home/pi/.ssh/id_rsa.pub >> /home/pi/.ssh/authorized_keys || echo_error $LINENO "33"
     fi
     if [ -d /home/pi/.mentor/known_keys ]; then
         key_count=0
         for pub_file in /home/pi/.mentor/known_keys/*; do
             if [ -f "$pub_file" ]; then
-                cat "$pub_file" >> /home/pi/.ssh/authorized_keys || echo_error $LINENO "$pub_file"
+                cat "$pub_file" >> /home/pi/.ssh/authorized_keys || echo_error $LINENO "34 $pub_file"
                 key_count=$((key_count + 1))
             fi
         done
     fi
     if [ -f /home/pi/.ssh/known_hosts ]; then
         cp /home/pi/.ssh/known_hosts /home/pi/.ssh/known_hosts.lab.bak || true
-        rm -f /home/pi/.ssh/known_hosts || echo_error $LINENO ""
+        rm -f /home/pi/.ssh/known_hosts || echo_error $LINENO "35"
     fi
-    touch /home/pi/.ssh/known_hosts || echo_error $LINENO ""
+    touch /home/pi/.ssh/known_hosts || echo_error $LINENO "36"
     if [ -s /home/pi/.ssh/authorized_keys ]; then
         local line_count=0
         while IFS= read -r line; do
@@ -339,11 +337,11 @@ EOF
                 echo "$line_without_first_and_last_word"
                 line_count=$((line_count + 1))
             fi
-        done < /home/pi/.ssh/authorized_keys > /home/pi/.ssh/known_hosts || echo_error $LINENO ""
+        done < /home/pi/.ssh/authorized_keys > /home/pi/.ssh/known_hosts || echo_error $LINENO "37"
     fi
-    chown_chmod 644 /home/pi/.ssh/known_hosts || echo_error $LINENO ""
-    chown_chmod 600 /home/pi/.ssh/authorized_keys || echo_error $LINENO ""
-    systemctl enable ssh || echo_error $LINENO ""
+    chown_chmod 644 /home/pi/.ssh/known_hosts || echo_error $LINENO "38"
+    chown_chmod 600 /home/pi/.ssh/authorized_keys || echo_error $LINENO "39"
+    systemctl enable ssh || echo_error $LINENO "40"
     return 0
 }
 step2_noreturn() { # final LAN
@@ -351,7 +349,7 @@ step2_noreturn() { # final LAN
         exit 0
     fi
     local ip_address
-    ip_address=$(hostname -I | awk '{print $1}') || echo_error $LINENO ""
+    ip_address=$(hostname -I | awk '{print $1}') || echo_error $LINENO "41"
     local new_hostname
     new_hostname=rpi$(echo "$ip_address" | cut -d'.' -f3-4 | tr -d '.')
     set_step 3
@@ -360,10 +358,10 @@ step2_noreturn() { # final LAN
 step3() {
     local ip_address
     ip_address=$(hostname -I | awk '{print $1}') || {
-        echo_error $LINENO ""
+        echo_error $LINENO "42"
     }
     create_marker_file "/home/pi/.mentor" "prepare4lab.lab.marker" "$(collect_system_info)" || {
-        echo_error $LINENO "$?"
+        echo_error $LINENO "43 $?"
     }
     clear
     cat /home/pi/.mentor/prepare4lab.lab.marker
@@ -432,22 +430,22 @@ ask_user() {
 set_step() {
     step=$1
     if ! echo "$step" | grep -Eq '^[0-9]+$'; then
-        echo_error $LINENO "set_step"
+        echo_error $LINENO "44 set_step"
     fi
     if [ ! -d /home/pi ]; then
-        echo_error $LINENO "set_step" 
+        echo_error $LINENO "45 set_step" 
     fi
     if [ -f /home/pi/.prepare4lab.step ]; then
-        rm -f /home/pi/.prepare4lab.step || echo_error $LINENO ""
+        rm -f /home/pi/.prepare4lab.step || echo_error $LINENO "46"
     fi
-    echo "$step" | sudo -u pi tee /home/pi/.prepare4lab.step > /dev/null || echo_error $LINENO ""
+    echo "$step" | sudo -u pi tee /home/pi/.prepare4lab.step > /dev/null || echo_error $LINENO "47"
     if [ ! -f /home/pi/.prepare4lab.step ]; then
-        echo_error $LINENO "set_step"
+        echo_error $LINENO "48 set_step"
     fi
-    read_step=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO ""
+    read_step=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO "49"
     if [ "$read_step" != "$step" ]; then
         echo_info "$step $read_step"
-        echo_error $LINENO "set_step"
+        echo_error $LINENO "50 set_step"
     fi
     echo_wait "STEP$step"
 }
@@ -456,20 +454,20 @@ set_hostname_noreturn()
     local new_hostname
     new_hostname="$1"
     echo_wait "new hostname: $new_hostname, reboot pulpitu"
-    shutdown -r +1 >/dev/null 2>&1 || echo_error $LINENO ""
+    shutdown -r +1 >/dev/null 2>&1 || echo_error $LINENO "51"
     echo_info "nie przeszkadzaj!"
     if ! echo "$new_hostname" > /etc/hostname; then
-        echo_error $LINENO ""
+        echo_error $LINENO "52"
     fi
     cp /etc/hosts /etc/hosts.lab.bak || true
     sed -i "s/127.0.1.1.*/127.0.1.1 $new_hostname/" /etc/hosts || {
-        cp /etc/hosts.lab.bak /etc/hosts || echo_error $LINENO "popsulem system: $?";
+        cp /etc/hosts.lab.bak /etc/hosts || echo_error $LINENO "53 popsulem system: $?";
     }
     if ! grep -q "$new_hostname" /etc/hostname; then
-        echo_error $LINENO "popsulem system"
+        echo_error $LINENO "54 popsulem system"
     fi
     if ! grep -q "127.0.1.1.*$new_hostname" /etc/hosts; then
-        echo_error $LINENO "popsulem system"
+        echo_error $LINENO "55 popsulem system"
     fi
     exit 0
 }
@@ -489,7 +487,7 @@ wait_apt() {
         elapsed_time=$((current_time - start_time))
         if [ $((elapsed_time % 10)) -eq 0 ]; then
             echo_info "(${elapsed_time}s)"
-            fuser -v /var/lib/dpkg/lock-frontend 2>/dev/null || echo_error $LINENO
+            fuser -v /var/lib/dpkg/lock-frontend 2>/dev/null || echo_error $LINENO "56"
         fi
         if [ "$elapsed_time" -gt "$max_wait" ]; then
             pid=$(fuser /var/lib/dpkg/lock-frontend 2>/dev/null)
@@ -500,10 +498,10 @@ wait_apt() {
                     dpkg --configure -a || echo_info "$LINENO $?"
                     break
                 else
-                    echo_error $LINENO "$pid $max_wait"
+                    echo_error $LINENO "57 $pid $max_wait"
                 fi
             else
-                echo_error $LINENO "$max_wait"
+                echo_error $LINENO "58 $max_wait"
             fi
         fi
         sleep 1
@@ -525,36 +523,36 @@ rere() {
 
     # If we reach here, reboot failed
     sleep 10
-    echo_error $LINENO ""
+    echo_error $LINENO "59"
 }
 chown_chmod() {
     if [ -z "$1" ] || [ -z "$2" ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "60"
     fi
     if [ ! -e "$2" ]; then
         if [[ "$2" == */ ]] || [[ -d "$(dirname "$2")" && ! "$(basename "$2")" =~ \. ]]; then
-            mkdir -p "$2" || echo_error $LINENO "$2"
+            mkdir -p "$2" || echo_error $LINENO "61 $2"
         else
-            touch "$2" || echo_error $LINENO "$2"
+            touch "$2" || echo_error $LINENO "62 $2"
         fi
     fi
     if ! id pi &>/dev/null; then
-        echo_error $LINENO ""
+        echo_error $LINENO "63"
     fi
-    chown pi:pi "$2" || echo_error $LINENO "$2"
+    chown pi:pi "$2" || echo_error $LINENO "64 $2"
     if ! [[ "$1" =~ ^[0-7]{3}$ ]]; then
-        echo_error $LINENO "$1"
+        echo_error $LINENO "65 $1"
     fi
-    chmod "$1" "$2" || echo_error $LINENO "$2"
+    chmod "$1" "$2" || echo_error $LINENO "66 $2"
     local owner
-    owner=$(stat -c "%U:%G" "$2" 2>/dev/null) || echo_error $LINENO "$2"
+    owner=$(stat -c "%U:%G" "$2" 2>/dev/null) || echo_error $LINENO "67 $2"
     if [ "$owner" != "pi:pi" ]; then
-        echo_error $LINENO "$owner $2"
+        echo_error $LINENO "68 $owner $2"
     fi
     local perms
-    perms=$(stat -c "%a" "$2" 2>/dev/null) || echo_error $LINENO "$2"
+    perms=$(stat -c "%a" "$2" 2>/dev/null) || echo_error $LINENO "69 $2"
     if [ "$perms" != "$1" ]; then
-        echo_error $LINENO "$1 $2 $perms"
+        echo_error $LINENO "70 $1 $2 $perms"
     fi
     return 0
 }
@@ -566,52 +564,52 @@ setup_swap() {
         swap_size=$SWAP_SIZE_RELEASE
     fi
     if [ -z "$swap_size" ]; then
-        echo_error $LINENO "$swap_size"
+        echo_error $LINENO "71 $swap_size"
     fi
     dphys-swapfile swapoff
     if [ $swap_size -eq 0 ]; then
         systemctl disable dphys-swapfile
     else
         if ! sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${swap_size}/" /etc/dphys-swapfile; then
-            echo_error $LINENO ""
+            echo_error $LINENO "72"
         fi
-        dphys-swapfile setup || echo_error $LINENO ""
-        systemctl enable dphys-swapfile || echo_error $LINENO ""
-        dphys-swapfile swapon || echo_error $LINENO ""
+        dphys-swapfile setup || echo_error $LINENO "73"
+        systemctl enable dphys-swapfile || echo_error $LINENO "74"
+        dphys-swapfile swapon || echo_error $LINENO "75"
     fi
 }
 create_files() {
     CMDLINE_FILE="/boot/firmware/cmdline.txt"
     ROOT_PARAM=$(grep -o "root=[^ ]*" "$CMDLINE_FILE") || {
-        echo_error $LINENO "$CMDLINE_FILE"
+        echo_error $LINENO "76 $CMDLINE_FILE"
     }
     if [ -z "$ROOT_PARAM" ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "77"
     fi
     echo ""
     cat "$CMDLINE_FILE"
     echo_wait "^ contents of $CMDLINE_FILE before modification."
     # installer4lab clear generate_files
     if grep -q "root=" "$CMDLINE_FILE"; then
-        echo_error $LINENO ""
+        echo_error $LINENO "78"
     fi
     sed -i '${/^$/d;}' "$CMDLINE_FILE" || {
-        echo_error $LINENO "$CMDLINE_FILE"
+        echo_error $LINENO "79 $CMDLINE_FILE"
     }
     sed -i "\$s/\$/ ${ROOT_PARAM}/" "$CMDLINE_FILE" || {
-        echo_error $LINENO "$CMDLINE_FILE"
+        echo_error $LINENO "80 $CMDLINE_FILE"
     }
     sed -i -e '${/^$/d;}' -e 's/[[:space:]]*$//' "$CMDLINE_FILE" || {
-        echo_error $LINENO "$CMDLINE_FILE"
+        echo_error $LINENO "81 $CMDLINE_FILE"
     }
     echo ""
     cat "$CMDLINE_FILE"
     echo_stop "^ contents of $CMDLINE_FILE after modification."
-    mkdir -p /etc/systemd/system/getty@tty1.service.d || echo_error $LINENO ""
+    mkdir -p /etc/systemd/system/getty@tty1.service.d || echo_error $LINENO "82"
     if ! echo "[Service]
         ExecStart=
         ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM" > /etc/systemd/system/getty@tty1.service.d/autologin.conf; then
-        echo_error $LINENO ""
+        echo_error $LINENO "83"
     fi
     systemctl daemon-reload
     systemctl enable getty@tty1.service
@@ -627,13 +625,13 @@ create_files() {
     MENU_TIMER=1500
     SERIAL=ttyAMA0
     pairs="MIC_TYPE $mic debug $debug HOST $HOST VER_APP $VER_APP VER_LIB $VER_LIB PORT $PORT PROTOCOL $PROTOCOL HIDE_CURSOR $HIDE_CURSOR MAXIMIZE $MAXIMIZE ACK_RETRY $ACK_RETRY ACK_WAIT $ACK_WAIT PING $PING PING_MISS $PING_MISS LNR_ADD $LNR_ADD LNR_SWAP $LNR_SWAP MENU_TIMER $MENU_TIMER USERNAME pi SERIAL $SERIAL"
-    sudo -u pi mkdir -p /home/pi/.config/Mentor || echo_error $LINENO ""
-    rm -rf /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO ""
-    sudo -u pi touch /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO ""
-    sudo -u pi echo "[General]" | tee /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO ""
+    sudo -u pi mkdir -p /home/pi/.config/Mentor || echo_error $LINENO "84"
+    rm -rf /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "85"
+    sudo -u pi touch /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "86"
+    sudo -u pi echo "[General]" | tee /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "87"
     local param_count=0
     echo "$pairs" | tr ' ' '\n' | while read -r key && read -r value; do  # Fixed: proper piping
-        echo "$key=$value" | sudo -u pi tee -a /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "$key"
+        echo "$key=$value" | sudo -u pi tee -a /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "88 $key"
         param_count=$((param_count + 1))
     done
 }
@@ -641,44 +639,44 @@ setup_autostart() {
     if [ -f /home/pi/.profile ]; then
         cp /home/pi/.profile /home/pi/.profile.lab.bak || true
     fi
-    cp -rf /etc/skel/.profile /home/pi/.profile || echo_error $LINENO ""
-    chown pi:pi /home/pi/.profile || echo_error $LINENO ""
-    chmod 644 /home/pi/.profile || echo_error $LINENO ""
+    cp -rf /etc/skel/.profile /home/pi/.profile || echo_error $LINENO "89"
+    chown pi:pi /home/pi/.profile || echo_error $LINENO "90"
+    chmod 644 /home/pi/.profile || echo_error $LINENO "91"
     if [ ! -d /home/pi/.mentor ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "92"
     fi
     if [ ! -f /home/pi/.mentor/profile.sh ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "93"
     fi
     if [ ! -r /home/pi/.mentor/profile.sh ]; then
-        chmod 644 /home/pi/.mentor/profile.sh || echo_error $LINENO ""
+        chmod 644 /home/pi/.mentor/profile.sh || echo_error $LINENO "94"
     fi
-    printf "job=%s%s --continue\n" "$job" "${args_string:+ }${args_string}" >> /home/pi/.profile || echo_error $LINENO ""
+    printf "job=%s%s --continue\n" "$job" "${args_string:+ }${args_string}" >> /home/pi/.profile || echo_error $LINENO "95"
     if [ ! -f /home/pi/.mentor/prepare4lab.run ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "96"
     fi
     echo_info "job: $job ${args_string}"
     if [ ! -r /home/pi/.mentor/prepare4lab.run ]; then
-        chmod 644 /home/pi/.mentor/prepare4lab.run || echo_error $LINENO ""
+        chmod 644 /home/pi/.mentor/prepare4lab.run || echo_error $LINENO "97"
     fi
-    cat /home/pi/.mentor/prepare4lab.run >> /home/pi/.profile || echo_error $LINENO ""
-    dos2unix /home/pi/.profile 2>/dev/null || echo_error $LINENO ""
+    cat /home/pi/.mentor/prepare4lab.run >> /home/pi/.profile || echo_error $LINENO "98"
+    dos2unix /home/pi/.profile 2>/dev/null || echo_error $LINENO "99"
     echo ""
     cat /home/pi/.profile
     echo_stop "^ contents of /home/pi/.profile after modification."
     cp /etc/sudoers /etc/sudoers.lab.bak || true
-    sed -i 's/%sudo\s\+ALL=(ALL:ALL)\s\+ALL/%sudo ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || echo_error $LINENO ""
+    sed -i 's/%sudo\s\+ALL=(ALL:ALL)\s\+ALL/%sudo ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || echo_error $LINENO "100"
     if visudo -c; then
         true
     else
-        mv -f /etc/sudoers.lab.bak /etc/sudoers || echo_error $LINENO ""
-        echo_error $LINENO ""
+        mv -f /etc/sudoers.lab.bak /etc/sudoers || echo_error $LINENO "101"
+        echo_error $LINENO "102"
     fi
-    passwd -d pi || echo_error $LINENO ""
-    systemctl set-default multi-user.target || echo_error $LINENO ""
+    passwd -d pi || echo_error $LINENO "103"
+    systemctl set-default multi-user.target || echo_error $LINENO "104"
 }
 test_network() {
-    ip_address=$(hostname -I | awk '{print $1}') || echo_error $LINENO "$?"
+    ip_address=$(hostname -I | awk '{print $1}') || echo_error $LINENO "105 $?"
     local ierr
     ierr=0
     if [ -z "$ip_address" ]; then
@@ -722,23 +720,23 @@ debian_upgrade() {
         else
             aptcmd="$1"
             wait_apt
-            $aptcmd --allow-releaseinfo-change update || echo_error $LINENO ""
+            $aptcmd --allow-releaseinfo-change update || echo_error $LINENO "106"
             if ask_user "zostawic okienka"; then
                 true
             else
-                wait_apt || echo_error $LINENO "$?"
+                wait_apt || echo_error $LINENO "107 $?"
                 $aptcmd remove --purge xserver-xorg xinit
             fi
 
-            wait_apt || echo_error $LINENO "$?"
+            wait_apt || echo_error $LINENO "108 $?"
             if [ "$user" -eq 1 ] && ask_user "pulpity sa jeszcze w firmie"; then
-                $aptcmd full-upgrade || echo_error $LINENO ""
-                wait_apt || echo_error $LINENO "$?"
-                $aptcmd autoremove || echo_error $LINENO ""
-                wait_apt || echo_error $LINENO "$?"
-                $aptcmd clean || echo_error $LINENO ""
+                $aptcmd full-upgrade || echo_error $LINENO "109"
+                wait_apt || echo_error $LINENO "110 $?"
+                $aptcmd autoremove || echo_error $LINENO "111"
+                wait_apt || echo_error $LINENO "112 $?"
+                $aptcmd clean || echo_error $LINENO "113"
             elif [ "$user" -eq 1 ] || [ "$devel" -eq 1 ]; then
-                $aptcmd upgrade || echo_error $LINENO ""
+                $aptcmd upgrade || echo_error $LINENO "114"
             fi
             wait_apt
             $aptcmd install \
@@ -756,7 +754,7 @@ create_marker_file() {
     local filename="$2"
     local lines_to_append="$3"
     if [ -z "$marker" ]; then
-        echo_error $LINENO ""
+        echo_error $LINENO "115"
     fi
     if [[ ! "$marker" == *.lab.marker ]]; then
         if [[ -z "$filename" ]]; then

@@ -1,5 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
+WERSJA=0.9.2
 do_umount=0                          # Flag to track if we mounted a device
 from="/dev/sd[a-z][1-9]"                       # Source location (block device or directory)
 mntdir=/home/pi/mnt                          # Mount point for block devices
@@ -20,7 +21,6 @@ error_count=0
 warning_count=0
 user=1
 debug=0
-WERSJA="!WERSJA!"
 show_help() {
     cat << EOF
 ===============================================================================
