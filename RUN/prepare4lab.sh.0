@@ -607,8 +607,8 @@ create_files() {
     echo_stop "^ contents of $CMDLINE_FILE after modification."
     mkdir -p /etc/systemd/system/getty@tty1.service.d || echo_error $LINENO ""
     if ! echo "[Service]
-    ExecStart=
-    ExecStart=-/sbin/agetty --autologin pi --login-program /bin/bash --login-options '-l' --noclear %I \$TERM" > /etc/systemd/system/getty@tty1.service.d/autologin.conf; then
+        ExecStart=
+        ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM" > /etc/systemd/system/getty@tty1.service.d/autologin.conf; then
         echo_error $LINENO ""
     fi
     systemctl daemon-reload
