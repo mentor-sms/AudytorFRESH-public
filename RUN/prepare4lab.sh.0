@@ -44,7 +44,7 @@ PORT=0
 # from vars! todo:
 SWAP_SIZE_DEVEL=4096
 SWAP_SIZE_RELEASE=2048
-# installer4lab vars
+#!(prepare4lab)VARS
 if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     show_help
     exit 0
@@ -305,7 +305,7 @@ step1() { # SSH
     chown pi:pi /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można zmienić właściciela pliku authorized_keys"
     local authorized_keys
     authorized_keys=$(cat <<-EOF
-# installer4lab id_ed25519.pub
+#!K WINDOWS_HOST
 EOF
     )
     if ! echo "$authorized_keys" >> "/home/pi/.ssh/authorized_keys"; then
@@ -431,10 +431,10 @@ ask_user() {
 
             case "$response" in
                 [Yy]|[Tt])
-                    return 1
+                    return 0
                     ;;
                 [Nn])
-                    return 0
+                    return 1
                     ;;
                 *)
                     echo "Wpisz [t] dla tak lub [n] dla nie"
@@ -443,7 +443,7 @@ ask_user() {
             esac
         done
     else
-        return 1
+        return 0
     fi
 }
 set_step() {
@@ -818,12 +818,12 @@ debian_upgrade() {
             wait_apt
             echo_info "Instalowanie wymaganych pakietów"
             $aptcmd install \
-                # installer4lab deps
+                #!L deps4rpi.txt
             if [ "$devel" -eq 1 ]; then
                 wait_apt
                 echo_info "Instalowanie pakietów dla trybu deweloperskiego"
                 $aptcmd install \
-                    # installer4lab devps
+                    #!L deps4devel.txt
             fi
         fi
     else
@@ -1061,6 +1061,6 @@ collect_system_info() {
     echo "$info"
     return 0
 }
-# installer4lab embedded-scripts
-# installer4lab generate_files()
+#!(prepare4lab)create_files
+#!(prepare4lab)generate_files
 main "$@"
