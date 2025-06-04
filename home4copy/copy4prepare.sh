@@ -137,7 +137,8 @@ echo_stop() {
 echo_wait() {
     local message="$1"
     local wait_time="${2:-1}"
-    local current_time=$(date +"%H:%M:%S")
+    local current_time
+    current_time=$(date +"%H:%M:%S")
 
     if [ "$user" -eq 1 ]; then
         echo ""
@@ -431,8 +432,10 @@ create_backup() {
                 echo_info "Ostrzeżenie: Istniejąca kopia zapasowa różni się od aktualnego pliku, zachowanie istniejącej kopii" "WARN"
 
                 if [ "$debug" -eq 1 ]; then
-                    local orig_size=$(stat -c%s "$filepath" 2>/dev/null || echo "nieznany")
-                    local backup_size=$(stat -c%s "$backup_path" 2>/dev/null || echo "nieznany")
+                    local orig_size
+                    orig_size=$(stat -c%s "$filepath" 2>/dev/null || echo "nieznany")
+                    local backup_size
+                    backup_size=$(stat -c%s "$backup_path" 2>/dev/null || echo "nieznany")
                     echo_info "Rozmiar oryginalny: $orig_size, rozmiar kopii: $backup_size" "DEBUG"
                 fi
             fi
@@ -679,7 +682,8 @@ un_un() {
                     echo_info "Pomyślnie odmontowano: $mntdir" "SUCCESS"
                     unmounted=1
                 else
-                    local mount_processes=$(lsof "$mntdir" 2>/dev/null | tail -n +2 | awk '{print $1,$2}' | sort -u)
+                    local mount_processes
+                    mount_processes=$(lsof "$mntdir" 2>/dev/null | tail -n +2 | awk '{print $1,$2}' | sort -u)
                     if [ -n "$mount_processes" ]; then
                         echo_info "Procesy blokujące odmontowanie: $mount_processes" "WARN"
                     fi
@@ -937,9 +941,9 @@ echo_info "Katalog domowy: $home_dir"
 echo_info "Tryb szybki: $([ "$quick" -eq 1 ] && echo "tak" || echo "nie")"
 echo_info "Tryb debugowania: $([ "$debug" -eq 1 ] && echo "tak" || echo "nie")"
 echo_info "Tryb symulacji: $([ "$dry" -eq 1 ] && echo "tak" || echo "nie")"
-echo_info "Czas rozpoczęcia: $(date -d @$SECONDS_START '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
+echo_info "Czas rozpoczęcia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
 echo_info "Czas zakończenia: $(date '+%H:%M:%S')"
-echo_info "Całkowity czas wykonania: $(($(date +%s) - $SECONDS_START)) sekund"
+echo_info "Całkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
 echo_info "============================================================="
 echo_info "copy4prepare.sh zakończony pomyślnie" "SUCCESS"
 exit 0
