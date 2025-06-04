@@ -29,7 +29,7 @@ show_help() {
  Usage: sudo $0 job [options]
  Job Type (required - first argument):
    prepare              Preparation job
-   install              Installation job  
+   install              Installation job
    setup                Setup job
    bstatus              Show backup status and exit
  Main Options:
@@ -171,7 +171,7 @@ is_directory() {
 is_block_device() {
     local path="$1"
     last_is_block_device=0
-    
+
     if [ -b "$path" ]; then
         last_is_block_device=1
         return
@@ -187,7 +187,7 @@ is_block_device() {
         last_is_block_device=1
         return
     fi
-    
+
     # Additional check: look for USB subsystem in device path
     local device_path="/sys/block/$base_device"
     if [ -d "$device_path" ]; then
@@ -199,7 +199,7 @@ is_block_device() {
             return
         fi
     fi
-    
+
     # Check if device is in typical removable media mount points
     if [[ "$path" == /media/* ]] || [[ "$path" == /mnt/* ]]; then
         # Additional safety: check if it's not a system partition
@@ -236,7 +236,7 @@ restore_from_backup() {
     local filepath="$1"
     local force_restore="${2:-0}"
     local backup_path="${filepath}.lab.bak"
-    
+
     if [ ! -f "$backup_path" ]; then
         echo_info "Nie znaleziono kopii zapasowej dla $filepath, pomijam przywracanie"
         return 1
@@ -305,7 +305,7 @@ handle_brestore() {
             echo_info "Operacja przywracania zakończona. Niektóre usługi mogą wymagać ponownego uruchomienia."
             echo_info "Rozważ wykonanie: sudo systemctl restart ssh"
         fi
-        
+
         exit 0
     fi
 }
@@ -314,20 +314,20 @@ handle_bclear() {
     if [ "$bclear" -eq 1 ]; then
         echo_info "Clearing backup files..."
         echo_info "Scanning entire filesystem for .lab.bak files..."
-        
+
         local clear_count=0
         local fail_count=0
         local total_size=0
-        
+
         # Find all .lab.bak files on entire filesystem and process them without losing variable changes
         while IFS= read -r backup_file; do
             if [ -f "$backup_file" ]; then
                 local backup_size
                 backup_size=$(stat -c%s "$backup_file" 2>/dev/null || echo "0")
                 total_size=$((total_size + backup_size))
-                
+
                 echo_info "Clearing: $backup_file (${backup_size} bytes)"
-                
+
                 if [ "$dry" -ne 1 ]; then
                     if rm -f "$backup_file"; then
                         clear_count=$((clear_count + 1))
@@ -342,13 +342,13 @@ handle_bclear() {
                 fi
             fi
         done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
-        
+
         echo_info "=== Clear Summary ==="
         echo_info "Successfully cleared: $clear_count files"
         echo_info "Failed to clear: $fail_count files"
         echo_info "Total space freed: $total_size bytes"
         echo_info "==================="
-        
+
         exit 0
     fi
 }
@@ -357,10 +357,10 @@ show_backup_status() {
     echo_info "=== Backup Status Report ==="
     echo_info "Scanning entire filesystem for .lab.bak files..."
     echo_info ""
-    
+
     local backup_count=0
     local total_size=0
-    
+
     while IFS= read -r backup_file; do
         if [ -f "$backup_file" ]; then
             local original_file="${backup_file%.lab.bak}"
@@ -391,7 +391,7 @@ show_backup_status() {
             total_size=$((total_size + backup_size))
         fi
     done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
-    
+
     echo_info "=== Summary ==="
     echo_info "Total backups found: $backup_count"
     echo_info "Total backup size: $total_size bytes"
@@ -751,12 +751,12 @@ mnt_init() {
         echo_info "Wykryto tryb USB, skanowanie urządzeń USB..."
         echo_info "Szukam podłączonych dysków wymiennych USB" "DEBUG"
         local found_device=0
-        
+
         # Iterate over /dev/sd[a-e][1-4] possibilities
         for drive in {a..e}; do
             for partition in {1..4}; do
                 local device_path="/dev/sd${drive}${partition}"
-                
+
                 if [ -e "$device_path" ]; then
                     echo_info "Znaleziono urządzenie: $device_path"
 
@@ -783,7 +783,7 @@ mnt_init() {
                 fi
             done
         done
-        
+
         if [ $found_device -eq 0 ]; then
             echo_error $LINENO "Nie znaleziono urządzeń USB w zakresie /dev/sd[a-e][1-4]. Podłącz urządzenie USB i spróbuj ponownie."
         fi
@@ -814,7 +814,7 @@ fi
 if [ $# -gt 0 ]; then
     job="$1"
     shift
-    
+
     while [ $# -gt 0 ]; do
         case "$1" in
             --from)
@@ -912,12 +912,12 @@ if [ "$norun" -eq 0 ]; then
     if [ "$debug" -eq 1 ]; then
         prepare_args="$prepare_args --debug"
     fi
-    
+
     echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
     if [ "$dry" -ne 1 ]; then
         cd /home/pi || echo_error $LINENO "Nie udało się zmienić katalogu na /home/pi"
         echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..." "DEBUG"
-        sudo -u pi "$run" "$prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodło się"
+        $run "$prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodło się"
         echo_info "Skrypt przygotowawczy zakończony pomyślnie" "SUCCESS"
     else
         echo_info "Symulacja: Uruchomiłbym: $run $prepare_args" "DEBUG"

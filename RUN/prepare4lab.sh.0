@@ -345,14 +345,14 @@ EOF
     chown_chmod 644 /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie można ustawić uprawnień dla pliku known_hosts"
     chown_chmod 600 /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można ustawić uprawnień dla pliku authorized_keys"
     systemctl enable ssh || echo_error $LINENO "Nie można włączyć usługi SSH"
-    
+
     systemctl disable serial-getty@ttyAMA0.service || echo "serial-getty@ttyAMA0 already disabled"
     systemctl enable hciuart >/dev/null 2>&1 || true
-    
+
     sudo -u pi systemctl --user enable speech-dispatcher-qt.service
-    
+
     sudo chmod 666 /dev/ttyAMA0
-    
+
     return 0
 }
 step2_noreturn() { # final LAN
@@ -452,7 +452,7 @@ set_step() {
         echo_error $LINENO "Nieprawidłowy krok: wartość musi być liczbą"
     fi
     if [ ! -d /home/pi ]; then
-        echo_error $LINENO "Katalog domowy użytkownika pi nie istnieje" 
+        echo_error $LINENO "Katalog domowy użytkownika pi nie istnieje"
     fi
     if [ -f "/home/pi/.prepare4lab.step" ]; then
         rm -f "/home/pi/.prepare4lab.step" || echo_error $LINENO "Nie można usunąć pliku kroku przygotowania"
@@ -526,7 +526,6 @@ wait_apt() {
         fi
         sleep 1
     done
-    return 0
 }
 rere() {
     echo_wait "RESTART SYSTEMU"
@@ -765,7 +764,7 @@ i4lab_create_file_after() {
 create_backup_if_needed() {
     local filepath="$1"
     local backup_path="${filepath}.lab.bak"
-    
+
     if [ -f "$backup_path" ]; then
         echo_info "Kopia zapasowa już istnieje dla $filepath, pomijanie tworzenia"
         return 0
@@ -782,7 +781,7 @@ create_backup_if_needed() {
     else
         echo_info "Plik źródłowy $filepath nie istnieje, kopia zapasowa nie jest potrzebna"
     fi
-    
+
     return 0
 }
 debian_upgrade() {
