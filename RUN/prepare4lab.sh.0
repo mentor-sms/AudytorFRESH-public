@@ -148,12 +148,12 @@ setup_student_file() {
             local line
             cp "$filepath" "$filepath.lab.pre" || true
             while IFS= read -r line; do
-                if [[ "$line" == *"# prepare4lab clear "* ]]; then
-                    line="${line//# prepare4lab clear /}"
+                if [[ "$line" == *"#!+ "* ]]; then
+                    line="${line//#!+ /} #!-"
                 fi
-                if [[ "$line" == *"# prepare4lab comment"* ]]; then
+                if [[ "$line" == *" #!-"* ]]; then
                     if [[ "$line" != "#"* ]]; then
-                        line="#$line"
+                        line="#!+ ${line/ #!-/}"
                     fi
                 fi
                 line="${line//[STUDENT_IP]/$student_ip}"

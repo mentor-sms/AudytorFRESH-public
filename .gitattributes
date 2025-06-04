@@ -1,6 +1,6 @@
-# Handle all text files
-* text=auto eol=lf
+# Handle all text files - UTF-8 without BOM, LF line endings
+* text=auto eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
 
-# Explicitly set shell scripts to LF
-*.sh text eol=lf
-*.sh.0 text eol=lf
+# Explicitly set shell scripts to LF with UTF-8 encoding
+*.sh text eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
+*.sh.0 text eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
