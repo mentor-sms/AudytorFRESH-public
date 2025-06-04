@@ -2,5 +2,4 @@
 * text=auto eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
 
 # Explicitly set shell scripts to LF with UTF-8 encoding
-*.sh text eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
-*.sh.0 text eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
+*.bat text eol=crlf
