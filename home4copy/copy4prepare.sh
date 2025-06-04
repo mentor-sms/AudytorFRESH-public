@@ -60,19 +60,19 @@ EOF
 }
 
 echo_error() {
-  local lineno="$1"
-  local message="$2"
-  local context="${3:-""}"
-  local current_time
-  current_time=$(date +"%H:%M:%S")
-  echo "[BŁĄD@$lineno] $message"
-  echo "[BŁĄD@$lineno] $message" >&2
-  if [ -n "$context" ]; then
-    echo "Kontekst: $context" >&2
-  fi
-  echo "Czas: $current_time | Użytkownik: $(whoami) | Host: $(hostname)" >&2
-  echo "Kończenie pracy skryptu. Kod błędu: 1" >&2
-  exit 1
+    local lineno="$1"
+    local message="$2"
+    local context="${3:-""}"
+    local current_time
+    current_time=$(date +"%H:%M:%S")
+    echo "[BLAD@$lineno] $message"
+    echo "[BLAD@$lineno] $message" >&2
+    if [ -n "$context" ]; then
+        echo "Kontekst: $context" >&2
+    fi
+    echo "Czas: $current_time | Uzytkownik: $(whoami) | Host: $(hostname)" >&2
+    echo "Konczenie pracy skryptu. Kod bledu: 1" >&2
+    exit 1
 }
 
 echo_info() {
@@ -100,10 +100,10 @@ echo_info() {
 
 # Show startup banner
 echo_info "============================================================="
-echo_info "   copy4prepare v$WERSJA - Narzędzie Przygotowania Laboratorium Mentor"
+echo_info "   copy4prepare v$WERSJA - Narzedzie Przygotowania Laboratorium Mentor"
 echo_info "============================================================="
 echo_info "Data uruchomienia: $(date '+%Y-%m-%d %H:%M:%S')"
-echo_info "Użytkownik: $(whoami) | Host: $(hostname)"
+echo_info "Uzytkownik: $(whoami) | Host: $(hostname)"
 echo_info "============================================================="
 
 echo_stop() {
@@ -123,7 +123,7 @@ echo_stop() {
             if [ -n "$additional_info" ]; then
                 echo "$additional_info"
             fi
-            echo "Naciśnij [Enter], aby kontynuować, Ctrl+C, aby anulować..."
+            echo "Nacisnij [Enter], aby kontynuowac, Ctrl+C, aby anulowac..."
             read -r
         fi
     else
@@ -204,7 +204,7 @@ is_block_device() {
     if [[ "$path" == /media/* ]] || [[ "$path" == /mnt/* ]]; then
         # Additional safety: check if it's not a system partition
         if ! grep -q "^$path " /proc/mounts 2>/dev/null || \
-           ! grep -q " / \| /boot \| /home \| /var \| /usr " /proc/mounts 2>/dev/null; then
+            ! grep -q " / \| /boot \| /home \| /var \| /usr " /proc/mounts 2>/dev/null; then
             last_is_block_device=1
             return
         fi
@@ -222,13 +222,13 @@ is_mounted() {
 
 set_from() {
     from="$1"
-    echo_info "Ścieżka źródłowa ustawiona na: $from"
+    echo_info "Sciezka zrodlowa ustawiona na: $from"
     if [[ "$from" == /dev/* ]]; then
-        echo_info "Używam urządzenia blokowego" "DEBUG"
+        echo_info "Uzywam urzadzenia blokowego" "DEBUG"
     elif [[ "$from" == /media/* || "$from" == /mnt/* ]]; then
-        echo_info "Używam zamontowanego urządzenia" "DEBUG"
+        echo_info "Uzywam zamontowanego urzadzenia" "DEBUG"
     else
-        echo_info "Używam ścieżki katalogu" "DEBUG"
+        echo_info "Uzywam sciezki katalogu" "DEBUG"
     fi
 }
 
@@ -254,29 +254,29 @@ restore_from_backup() {
         if [ -f "$filepath" ] && ! cmp -s "$filepath" "$backup_path"; then
             local safety_backup
             safety_backup="${filepath}.before_restore.$(date +%s)"
-            echo_info "Tworzenie kopii bezpieczeństwa: $safety_backup"
-            cp "$filepath" "$safety_backup" || echo_info "Ostrzeżenie: Nie udało się utworzyć kopii bezpieczeństwa" "WARN"
+            echo_info "Tworzenie kopii bezpieczenstwa: $safety_backup"
+            cp "$filepath" "$safety_backup" || echo_info "Ostrzezenie: Nie udalo sie utworzyc kopii bezpieczenstwa" "WARN"
         fi
 
         # Restore from backup using sudo mv -f
         if [ "$dry" -ne 1 ]; then
-            sudo mv -f "$backup_path" "$filepath" || echo_error $LINENO "Nie udało się przywrócić $filepath z kopii zapasowej" "Przywracanie kopii zapasowej"
-            echo_info "Pomyślnie przywrócono $filepath z kopii zapasowej" "SUCCESS"
+            sudo mv -f "$backup_path" "$filepath" || echo_error $LINENO "Nie udalo sie przywrocic $filepath z kopii zapasowej" "Przywracanie kopii zapasowej"
+            echo_info "Pomyslnie przywrocono $filepath z kopii zapasowej" "SUCCESS"
         else
-            echo_info "Symulacja: Przywróciłbym $filepath z $backup_path" "DEBUG"
+            echo_info "Symulacja: Przywrocilbym $filepath z $backup_path" "DEBUG"
         fi
 
         return 0
     else
-        echo_info "Przywracanie nie zostało zlecone dla $filepath"
+        echo_info "Przywracanie nie zostalo zlecone dla $filepath"
         return 1
     fi
 }
 
 handle_brestore() {
     if [ "$brestore" -eq 1 ]; then
-        echo_info "Przywracanie konfiguracji z plików kopii zapasowych..."
-        echo_info "Skanowanie całego systemu plików w poszukiwaniu plików .lab.bak..."
+        echo_info "Przywracanie konfiguracji z plikow kopii zapasowych..."
+        echo_info "Skanowanie calego systemu plikow w poszukiwaniu plikow .lab.bak..."
 
         local restore_count=0
         local fail_count=0
@@ -285,25 +285,25 @@ handle_brestore() {
         while IFS= read -r backup_file; do
             local original_file="${backup_file%.lab.bak}"
 
-            echo_info "Znaleziono kopię zapasową: $backup_file"
+            echo_info "Znaleziono kopie zapasowa: $backup_file"
 
             if restore_from_backup "$original_file" 1; then
                 restore_count=$((restore_count + 1))
-                echo_info "✓ Przywrócono: $original_file"
+                echo_info "✓ Przywrocono: $original_file"
             else
                 fail_count=$((fail_count + 1))
-                echo_info "✗ Nie udało się przywrócić: $original_file"
+                echo_info "✗ Nie udalo sie przywrocic: $original_file"
             fi
         done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
 
         echo_info "=== Podsumowanie przywracania ==="
-        echo_info "Pomyślnie przywrócono: $restore_count plików"
-        echo_info "Nie udało się przywrócić: $fail_count plików"
+        echo_info "Pomyslnie przywrocono: $restore_count plikow"
+        echo_info "Nie udalo sie przywrocic: $fail_count plikow"
         echo_info "==================================="
 
         if [ $restore_count -gt 0 ]; then
-            echo_info "Operacja przywracania zakończona. Niektóre usługi mogą wymagać ponownego uruchomienia."
-            echo_info "Rozważ wykonanie: sudo systemctl restart ssh"
+            echo_info "Operacja przywracania zakonczona. Niektore uslugi moga wymagac ponownego uruchomienia."
+            echo_info "Rozwaz wykonanie: sudo systemctl restart ssh"
         fi
 
         exit 0
@@ -487,7 +487,7 @@ create_backup() {
 
 verify_prepare_script() {
     local wersja_in_script
-    echo_info "Weryfikacja integralności skryptu przed uruchomieniem: $run"
+    echo_info "Weryfikacja integralnosci skryptu przed uruchomieniem: $run"
 
     # Check if file exists
     is_file "$run"
@@ -496,25 +496,25 @@ verify_prepare_script() {
     fi
 
     # Check for syntax errors
-    echo_info "Sprawdzanie składni: $run" "DEBUG"
+    echo_info "Sprawdzanie skladni: $run" "DEBUG"
     if ! bash -n "$run"; then
-        echo_error $LINENO "Błąd składni w skrypcie: $run" "Sprawdzanie składni skryptu"
+        echo_error $LINENO "Blad skladni w skrypcie: $run" "Sprawdzanie skladni skryptu"
     else
-        echo_info "Składnia poprawna" "SUCCESS"
+        echo_info "Skladnia poprawna" "SUCCESS"
     fi
 
     # Check script version
     wersja_in_script=$(grep -m 1 "^WERSJA=" "$run" | cut -d'=' -f2)
     if [ -z "$wersja_in_script" ]; then
-        echo_info "Ostrzeżenie: Nie można odczytać wersji ze skryptu" "WARN"
-        echo_wait "Wersja skryptu nie znaleziona, kontynuować?" 3
+        echo_info "Ostrzezenie: Nie mozna odczytac wersji ze skryptu" "WARN"
+        echo_wait "Wersja skryptu nie znaleziona, kontynuowac?" 3
     else
         echo_info "Znaleziona wersja skryptu: $wersja_in_script" "DEBUG"
         if [ "$wersja_in_script" != "$WERSJA" ]; then
-            echo_info "UWAGA: Wykryto niezgodność wersji!" "WARN"
+            echo_info "UWAGA: Wykryto niezgodnosc wersji!" "WARN"
             echo_info "  Wersja copy4prepare.sh: $WERSJA" "WARN"
             echo_info "  Wersja $file: $wersja_in_script" "WARN"
-            echo_stop "Niezgodność wersji" "Uruchomienie skryptu z inną wersją może powodować problemy"
+            echo_stop "Niezgodnosc wersji" "Uruchomienie skryptu z inna wersja moze powodowac problemy"
         else
             echo_info "Weryfikacja wersji udana: Oba skrypty w wersji $WERSJA" "SUCCESS"
         fi
@@ -603,12 +603,12 @@ run_rsync() {
     rsync_cmd="$rcmd $exclude_option $cont"
     local dry_rsync_cmd
     dry_rsync_cmd="$rcmd --dry-run $dry_exclude_option $cont"
-    echo_info "Wykonywanie suchego przebiegu, aby zidentyfikować pliki do kopii zapasowej..."
+    echo_info "Wykonywanie suchego przebiegu, aby zidentyfikowac pliki do kopii zapasowej..."
     echo_info "SYMULACJA RSYNC: $from/$home_dir/ >> $target ($dry_exclude_option)"
     local dry_run_file
     dry_run_file=$(mktemp)
-    $dry_rsync_cmd > "$dry_run_file" || echo_info "Ostrzeżenie: Symulacja rsync nie powiodła się, kontynuuję mimo to" "WARN"
-    echo_info "Analizowanie wyników symulacji i tworzenie kopii zapasowych..."
+    $dry_rsync_cmd > "$dry_run_file" || echo_info "Ostrzezenie: Symulacja rsync nie powiodla sie, kontynuuje mimo to" "WARN"
+    echo_info "Analizowanie wynikow symulacji i tworzenie kopii zapasowych..."
     while read -r line; do
         local first_part
         local second_part
@@ -616,32 +616,32 @@ run_rsync() {
         second_part="${line#* }"
         rsync_line_test "$first_part" "$second_part"
         if [ $last_rsync_test -eq 1 ]; then
-          local fpath
-          fpath="$target/$first_part"
-          if [ "$dry" -ne 1 ]; then
-              create_backup "$fpath"
-              echo_info "Usuwanie pliku przed kopiowaniem: $fpath"
-              if [ -e "$fpath" ]; then
-                  echo_info "Plik istnieje, usuwanie: $fpath" "DEBUG"
-                  rm -rf "$fpath" || echo_info "Ostrzeżenie: Nie udało się usunąć pliku, próba kontynuacji" "WARN"
-              else
-                  echo_info "Plik nie istnieje: $fpath" "DEBUG"
-              fi
-          else
-              echo_info "Symulacja: Usunięty zostałby plik $fpath" "DEBUG"
-          fi
+            local fpath
+            fpath="$target/$first_part"
+            if [ "$dry" -ne 1 ]; then
+                create_backup "$fpath"
+                echo_info "Usuwanie pliku przed kopiowaniem: $fpath"
+                if [ -e "$fpath" ]; then
+                    echo_info "Plik istnieje, usuwanie: $fpath" "DEBUG"
+                    rm -rf "$fpath" || echo_info "Ostrzezenie: Nie udalo sie usunac pliku, proba kontynuacji" "WARN"
+                else
+                    echo_info "Plik nie istnieje: $fpath" "DEBUG"
+                fi
+            else
+                echo_info "Symulacja: Usunięty zostałby plik $fpath" "DEBUG"
+            fi
         fi
     done < "$dry_run_file"
     rm -f "$dry_run_file"
-    echo_info "Rozpoczynanie właściwej operacji rsync..."
+    echo_info "Rozpoczynanie wlasciwej operacji rsync..."
     echo_info "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     if [ "$dry" -ne 1 ]; then
         local rsync_output_file
         rsync_output_file=$(mktemp)
         rm -f "$rsync_output_file" || true
-        echo_info "Wykonywanie synchronizacji plików..."
-        $rsync_cmd > "$rsync_output_file" || echo_info "Ostrzeżenie: Operacja rsync zakończona z błędami, sprawdzam wyniki" "WARN"
-        echo_info "Przetwarzanie skopiowanych plików..."
+        echo_info "Wykonywanie synchronizacji plikow..."
+        $rsync_cmd > "$rsync_output_file" || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki" "WARN"
+        echo_info "Przetwarzanie skopiowanych plikow..."
         while read -r line; do
             local first_part
             local second_part
@@ -649,10 +649,10 @@ run_rsync() {
             second_part="${line#* }"
             rsync_line_test "$first_part" "$second_part"
             if [ $last_rsync_test -eq 1 ]; then
-              if [[ $first_part == "$second_part" ]] || [[ $second_part == *uptodate* ]]; then
-                  echo_info "Przetwarzanie pliku: $target/$first_part"
-                  handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
-              fi
+                if [[ $first_part == "$second_part" ]] || [[ $second_part == *uptodate* ]]; then
+                    echo_info "Przetwarzanie pliku: $target/$first_part"
+                    handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
+                fi
             fi
         done < "$rsync_output_file"
         echo_info "Usuwanie tymczasowego pliku wyjścia" "DEBUG"
@@ -665,7 +665,7 @@ run_rsync() {
 
 un_un() {
     if [ "$do_umount" -eq 1 ]; then
-        echo_wait "Odmontowywanie urządzenia: $mntdir"
+        echo_wait "Odmontowywanie urzadzenia: $mntdir"
         do_umount=0
 
         # Check if mounted
@@ -679,22 +679,22 @@ un_un() {
             while [ $attempt -le $max_attempts ] && [ $unmounted -eq 0 ]; do
                 echo_info "Próba $attempt z $max_attempts..." "DEBUG"
                 if sudo umount "$mntdir"; then
-                    echo_info "Pomyślnie odmontowano: $mntdir" "SUCCESS"
+                    echo_info "Pomyslnie odmontowano: $mntdir" "SUCCESS"
                     unmounted=1
                 else
                     local mount_processes
                     mount_processes=$(lsof "$mntdir" 2>/dev/null | tail -n +2 | awk '{print $1,$2}' | sort -u)
                     if [ -n "$mount_processes" ]; then
-                        echo_info "Procesy blokujące odmontowanie: $mount_processes" "WARN"
+                        echo_info "Procesy blokujace odmontowanie: $mount_processes" "WARN"
                     fi
-                    echo_wait "Próba $attempt odmontowania $mntdir nie powiodła się, ponawiam..." 2
+                    echo_wait "Proba $attempt odmontowania $mntdir nie powiodla sie, ponawiam..." 2
                     attempt=$((attempt + 1))
                 fi
             done
 
             # Handle unmount failure
             if [ $unmounted -eq 0 ]; then
-                echo_stop "Nie udało się odmontować $mntdir po $max_attempts próbach, kontynuuję mimo to" "Może być konieczne ręczne odmontowanie później"
+                echo_stop "Nie udalo sie odmontowac $mntdir po $max_attempts probach, kontynuuje mimo to" "Moze byc konieczne reczne odmontowanie pozniej"
             fi
         else
             echo_info "$mntdir nie jest zamontowany" "DEBUG"
@@ -704,10 +704,10 @@ un_un() {
         if [ -d "$mntdir" ]; then
             echo_info "Usuwanie katalogu montowania: $mntdir"
             if ! rm -rf "$mntdir"; then
-                echo_info "Nie udało się usunąć katalogu: $mntdir" "WARN"
-                echo_stop "Nie udało się usunąć katalogu $mntdir, kontynuuję mimo to" "Katalog może wymagać ręcznego usunięcia"
+                echo_info "Nie udalo sie usunac katalogu: $mntdir" "WARN"
+                echo_stop "Nie udalo sie usunac katalogu $mntdir, kontynuuje mimo to" "Katalog moze wymagac recznego usuniecia"
             else
-                echo_info "Katalog usunięty pomyślnie" "SUCCESS"
+                echo_info "Katalog usuniety pomyslnie" "SUCCESS"
             fi
         fi
     else
@@ -744,12 +744,12 @@ mnt_mnt() {
 }
 
 mnt_init() {
-    echo_info "Inicjalizacja systemu montowania dla źródła: $from"
+    echo_info "Inicjalizacja systemu montowania dla zrodla: $from"
     echo_info "Parametry: mntdir=$mntdir, target=$target, home_dir=$home_dir" "DEBUG"
 
     if [ "$from" = "USB" ]; then
-        echo_info "Wykryto tryb USB, skanowanie urządzeń USB..."
-        echo_info "Szukam podłączonych dysków wymiennych USB" "DEBUG"
+        echo_info "Wykryto tryb USB, skanowanie urzadzen USB..."
+        echo_info "Szukam podlaczonych dyskow wymiennych USB" "DEBUG"
         local found_device=0
 
         # Iterate over /dev/sd[a-e][1-4] possibilities
@@ -758,7 +758,7 @@ mnt_init() {
                 local device_path="/dev/sd${drive}${partition}"
 
                 if [ -e "$device_path" ]; then
-                    echo_info "Znaleziono urządzenie: $device_path"
+                    echo_info "Znaleziono urzadzenie: $device_path"
 
                     # Check if it's mounted
                     local mount_point
@@ -785,7 +785,7 @@ mnt_init() {
         done
 
         if [ $found_device -eq 0 ]; then
-            echo_error $LINENO "Nie znaleziono urządzeń USB w zakresie /dev/sd[a-e][1-4]. Podłącz urządzenie USB i spróbuj ponownie."
+            echo_error $LINENO "Nie znaleziono urzadzen USB w zakresie /dev/sd[a-e][1-4]. Podlacz urzadzenie USB i sprobuj ponownie."
         fi
     else
         # Original logic for non-USB sources
@@ -890,7 +890,7 @@ mnt_init
 
 # Check if home_dir exists in source
 if [ ! -d "$from/$home_dir" ]; then
-    echo_error $LINENO "Katalog źródłowy $from/$home_dir nie istnieje. Sprawdź, czy urządzenie jest prawidłowo podłączone i czy ścieżka jest poprawna."
+    echo_error $LINENO "Katalog zrodlowy $from/$home_dir nie istnieje. Sprawdz, czy urzadzenie jest prawidlowo podlaczone i czy sciezka jest poprawna."
 fi
 
 # Run rsync operation
@@ -903,7 +903,7 @@ fi
 # Verify and run prepare script
 if [ "$norun" -eq 0 ]; then
     verify_prepare_script
-    
+
     # Build command line for prepare4lab
     prepare_args="$job"
     if [ "$quick" -eq 1 ]; then
@@ -915,12 +915,12 @@ if [ "$norun" -eq 0 ]; then
 
     echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
     if [ "$dry" -ne 1 ]; then
-        cd /home/pi || echo_error $LINENO "Nie udało się zmienić katalogu na /home/pi"
+        cd /home/pi || echo_error $LINENO "Nie udalo sie zmienic katalogu na /home/pi"
         echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..." "DEBUG"
-        $run "$prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodło się"
-        echo_info "Skrypt przygotowawczy zakończony pomyślnie" "SUCCESS"
+        $run "$prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+        echo_info "Skrypt przygotowawczy zakonczony pomyslnie" "SUCCESS"
     else
-        echo_info "Symulacja: Uruchomiłbym: $run $prepare_args" "DEBUG"
+        echo_info "Symulacja: Uruchomilbym: $run $prepare_args" "DEBUG"
     fi
 else
     echo_info "Pomijam wykonanie skryptu przygotowawczego (--norun)"
@@ -935,15 +935,15 @@ echo_info "   PODSUMOWANIE WYKONANIA"
 echo_info "============================================================="
 echo_info "Skrypt: copy4prepare.sh v$WERSJA"
 echo_info "Zadanie: $job"
-echo_info "Źródło: $from"
+echo_info "Zrodlo: $from"
 echo_info "Cel: $target"
 echo_info "Katalog domowy: $home_dir"
 echo_info "Tryb szybki: $([ "$quick" -eq 1 ] && echo "tak" || echo "nie")"
 echo_info "Tryb debugowania: $([ "$debug" -eq 1 ] && echo "tak" || echo "nie")"
 echo_info "Tryb symulacji: $([ "$dry" -eq 1 ] && echo "tak" || echo "nie")"
-echo_info "Czas rozpoczęcia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
-echo_info "Czas zakończenia: $(date '+%H:%M:%S')"
-echo_info "Całkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
+echo_info "Czas rozpoczecia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
+echo_info "Czas zakonczenia: $(date '+%H:%M:%S')"
+echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
 echo_info "============================================================="
-echo_info "copy4prepare.sh zakończony pomyślnie" "SUCCESS"
+echo_info "copy4prepare.sh zakonczony pomyslnie" "SUCCESS"
 exit 0

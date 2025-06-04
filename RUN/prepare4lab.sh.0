@@ -46,35 +46,18 @@ if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
     show_help
     exit 0
 fi
-# Helper function to get descriptive error messages for error codes
-get_error_message() {
-  local code="$1"
-  # Strip numbers from the beginning of the message if present
-  if [[ "$code" =~ ^[0-9]+:[[:space:]]*(.*) ]]; then
-    code="${BASH_REMATCH[1]}"
-  fi
-
-  case "$code" in
-    76*|"Failed to extract 'root=' parameter from cmdline.txt") echo "Failed to extract 'root=' parameter from cmdline.txt";;
-    77*|"No 'root=' parameter found in cmdline.txt") echo "No 'root=' parameter found in cmdline.txt";;
-    78*|"Parameter 'root=' still present in cmdline.txt when it shouldn't be") echo "Parameter 'root=' still present in cmdline.txt when it shouldn't be";;
-    79*|"Failed to remove empty lines from cmdline.txt") echo "Failed to remove empty lines from cmdline.txt";;
-    80*|"Failed to append root parameter to cmdline.txt") echo "Failed to append root parameter to cmdline.txt";;
-    81*|"Failed to clean up whitespace in cmdline.txt") echo "Failed to clean up whitespace in cmdline.txt";;
-    *) echo "$code";; # Return original message if no match
-  esac
-}
-
 echo_error() {
-  if [ "$message" != "set_step" ]; then
-    set_step 6
-  fi
-  local lineno="$1"
-  local message="$2"
-  local descriptive_message
-  descriptive_message="$(get_error_message "$message")"
-  echo "[BŁĄD@$lineno] $descriptive_message"
-  exit 1
+    if [ "$message" != "set_step" ]; then
+        set_step 6
+    fi
+    local lineno="$1"
+    local message="$2"
+    # Strip numbers from the beginning of the message if present
+    if [[ "$message" =~ ^[0-9]+:[[:space:]]*(.*) ]]; then
+        message="${BASH_REMATCH[1]}"
+    fi
+    echo "[BLAD@$lineno] $message"
+    exit 1
 }
 if [ $# -gt 0 ]; then
     job="$1"
@@ -106,8 +89,8 @@ if [ $# -gt 0 ]; then
                 student_nr="${1:-}"
                 shift
                 student_ip="${1:-}"
-                echo "$student_nr" | grep -Eq '^[0-9]+$' || echo_error $LINENO "Numer studenta musi być liczbą całkowitą"
-                echo "$student_ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || echo_error $LINENO "Adres IP studenta ma nieprawidłowy format"
+                echo "$student_nr" | grep -Eq '^[0-9]+$' || echo_error $LINENO "Numer studenta musi byc liczba calkowita"
+                echo "$student_ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || echo_error $LINENO "Adres IP studenta ma nieprawidlowy format"
                 ;;
             *)
                 ;;
@@ -135,11 +118,11 @@ main() {
         echo_stop $LINENO "Ctrl+C i nie zapomnij o sudo!"
     fi
     if [ $clear -eq 1 ]; then
-        rm -fr /home/pi/.prepare4lab.step || echo_error $LINENO "Nie można usunąć pliku kroku przygotowania"
+        rm -fr /home/pi/.prepare4lab.step || echo_error $LINENO "Nie mozna usunac pliku kroku przygotowania"
         set_step 0
     else
         if [ -f "/home/pi/.prepare4lab.step" ]; then
-            file_content=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO "Nie można odczytać pliku kroku przygotowania"
+            file_content=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO "Nie mozna odczytac pliku kroku przygotowania"
             if echo "$file_content" | grep -Eq '^[0-9]+$'; then
                 set_step "$file_content"
             else
@@ -184,8 +167,8 @@ setup_student_file() {
     fi
 }
 do_setup_noreturn() {
-    sudo chmod +x /usr/local/bin/student4lab || echo_error $LINENO "Nie można ustawić uprawnień wykonywania dla student4lab"
-    echo "HOSTID=$student_nr" | tee -a /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie można dodać HOSTID do pliku konfiguracyjnego"
+    sudo chmod +x /usr/local/bin/student4lab || echo_error $LINENO "Nie mozna ustawic uprawnien wykonywania dla student4lab"
+    echo "HOSTID=$student_nr" | tee -a /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie mozna dodac HOSTID do pliku konfiguracyjnego"
     setup_student_file /etc/dhcpcd.conf
     set_step 4
     set_hostname_noreturn "rpi$student_nr"
@@ -224,9 +207,9 @@ do_step() {
         step1 # ssh
         if [ "$user" -eq 1 ]; then
             dodere=0
-            echo_info "Następne uruchomienie już w skonfigurowanej sieci docelowej!"
-            echo_info "Aby wstrzymać: \"touch ~/.mentor/wait.lab.marker\""
-            echo_info "Aby wznowić: \"rm ~/.mentor/wait.lab.marker && reboot\""
+            echo_info "Nastepne uruchomienie juz w skonfigurowanej sieci docelowej!"
+            echo_info "Aby wstrzymac: \"touch ~/.mentor/wait.lab.marker\""
+            echo_info "Aby wznowic: \"rm ~/.mentor/wait.lab.marker && reboot\""
             echo_wait ""
         else
             next_step=3
@@ -235,12 +218,12 @@ do_step() {
         if [ $user -ne 1 ]; then
             echo_error $LINENO "Krok $step niedozwolony w trybie zdalnym"
         fi
-        if ask_user "Czy jesteś już w skonfigurowanej sieci docelowej"; then
+        if ask_user "Czy jestes juz w skonfigurowanej sieci docelowej"; then
             step2_noreturn # network
         else
-            echo_info "Następne uruchomienie już w skonfigurowanej sieci docelowej!"
-            echo_info "Aby wstrzymać: \"touch ~/.mentor/wait.lab.marker\""
-            echo_info "Aby wznowić: \"rm ~/.mentor/wait.lab.marker && reboot\""
+            echo_info "Nastepne uruchomienie juz w skonfigurowanej sieci docelowej!"
+            echo_info "Aby wstrzymac: \"touch ~/.mentor/wait.lab.marker\""
+            echo_info "Aby wznowic: \"rm ~/.mentor/wait.lab.marker && reboot\""
             echo_wait "Oczekiwanie na restart w nowej sieci"
             exit 0
         fi
@@ -249,7 +232,7 @@ do_step() {
         next_step=3
         dodere=0
     else
-        echo_error $LINENO "Nieobsługiwany numer kroku"
+        echo_error $LINENO "Nieobslugiwany numer kroku"
     fi
     if [ "$next_step" -ne "$step" ]; then
         set_step "$next_step"
@@ -264,7 +247,7 @@ prepare() {
     directory_path=/home/pi/.mentor
     if [ ! -d "$directory_path" ]; then
         echo_info "Tworzenie katalogu .mentor"
-        mkdir -p "$directory_path" || echo_error $LINENO "Nie można utworzyć katalogu .mentor"
+        mkdir -p "$directory_path" || echo_error $LINENO "Nie mozna utworzyc katalogu .mentor"
     fi
     aptcmd=$(APT)
     echo_info "Rozpoczynanie aktualizacji systemu"
@@ -278,10 +261,10 @@ step0() {
     echo_info "Tworzenie plików konfiguracyjnych"
     create_files
     echo_info "Dodawanie użytkownika pi do wymaganych grup"
-    usermod -a -G dialout pi || echo_error $LINENO "Nie można dodać użytkownika pi do grupy dialout"
-    usermod -a -G tty pi || echo_error $LINENO "Nie można dodać użytkownika pi do grupy tty"
-    usermod -a -G video pi || echo_error $LINENO "Nie można dodać użytkownika pi do grupy video"
-    usermod -a -G audio pi || echo_error $LINENO "Nie można dodać użytkownika pi do grupy audio"
+    usermod -a -G dialout pi || echo_error $LINENO "Nie mozna dodac uzytkownika pi do grupy dialout"
+    usermod -a -G tty pi || echo_error $LINENO "Nie mozna dodac uzytkownika pi do grupy tty"
+    usermod -a -G video pi || echo_error $LINENO "Nie mozna dodac uzytkownika pi do grupy video"
+    usermod -a -G audio pi || echo_error $LINENO "Nie mozna dodac uzytkownika pi do grupy audio"
     wait_apt
     echo_info "Konfiguracja automatycznego uruchamiania"
     setup_autostart
@@ -290,15 +273,15 @@ step0() {
 step1() { # SSH
     echo_info "Krok 1: Konfiguracja SSH"
     echo_info "Zatrzymywanie usługi SSH"
-    systemctl stop ssh || echo_error $LINENO "Nie można zatrzymać usługi SSH"
+    systemctl stop ssh || echo_error $LINENO "Nie mozna zatrzymac uslugi SSH"
     if [ ! -d "/ssh" ]; then
         echo_info "Tworzenie katalogu /ssh"
-        mkdir -p /ssh || echo_error $LINENO "Nie można utworzyć katalogu /ssh"
+        mkdir -p /ssh || echo_error $LINENO "Nie mozna utworzyc katalogu /ssh"
     fi
     if [ ! -d /home/pi/.ssh ]; then
         echo_info "Tworzenie katalogu .ssh"
-        mkdir -p /home/pi/.ssh || echo_error $LINENO "Nie można utworzyć katalogu .ssh"
-        chown pi:pi /home/pi/.ssh || echo_error $LINENO "Nie można zmienić właściciela katalogu .ssh"
+        mkdir -p /home/pi/.ssh || echo_error $LINENO "Nie mozna utworzyc katalogu .ssh"
+        chown pi:pi /home/pi/.ssh || echo_error $LINENO "Nie mozna zmienic wlasciciela katalogu .ssh"
     fi
     echo_info "Tworzenie kopii zapasowych plików konfiguracyjnych SSH"
     create_backup_if_needed /etc/ssh/ssh_config
@@ -313,39 +296,39 @@ step1() { # SSH
     if [ -f /home/pi/.ssh/id_rsa.pub ]; then
         chown_chmod 644 /home/pi/.ssh/id_rsa.pub
     fi
-    chmod 755 /etc/ssh || echo_error $LINENO "Nie można ustawić uprawnień dla katalogu /etc/ssh"
-    chmod 644 /etc/ssh/ssh_config || echo_error $LINENO "Nie można ustawić uprawnień dla pliku ssh_config"
-    chmod 644 /etc/ssh/sshd_config || echo_error $LINENO "Nie można ustawić uprawnień dla pliku sshd_config"
+    chmod 755 /etc/ssh || echo_error $LINENO "Nie mozna ustawic uprawnien dla katalogu /etc/ssh"
+    chmod 644 /etc/ssh/ssh_config || echo_error $LINENO "Nie mozna ustawic uprawnien dla pliku ssh_config"
+    chmod 644 /etc/ssh/sshd_config || echo_error $LINENO "Nie mozna ustawic uprawnien dla pliku sshd_config"
     if [ -f /etc/ssh/ssh_host_rsa_key.pub ]; then
-        chmod 600 /etc/ssh/ssh_host_rsa_key.pub || echo_error $LINENO "Nie można ustawić uprawnień dla klucza publicznego SSH"
+        chmod 600 /etc/ssh/ssh_host_rsa_key.pub || echo_error $LINENO "Nie mozna ustawic uprawnien dla klucza publicznego SSH"
     fi
-    rm -f /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można usunąć pliku authorized_keys"
-    touch /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można utworzyć pliku authorized_keys"
-    chown pi:pi /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można zmienić właściciela pliku authorized_keys"
+    rm -f /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie mozna usunac pliku authorized_keys"
+    touch /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie mozna utworzyc pliku authorized_keys"
+    chown pi:pi /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie mozna zmienic wlasciciela pliku authorized_keys"
     local authorized_keys
     authorized_keys=$(cat <<-EOF
 #!K WINDOWS_HOST
 EOF
     )
     if ! echo "$authorized_keys" >> "/home/pi/.ssh/authorized_keys"; then
-        echo_error $LINENO "Nie można dodać kluczy SSH do pliku authorized_keys"
+        echo_error $LINENO "Nie mozna dodac kluczy SSH do pliku authorized_keys"
     fi
     if [ -f /home/pi/.ssh/id_rsa.pub ]; then
-        cat /home/pi/.ssh/id_rsa.pub >> /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można dodać klucza publicznego do authorized_keys"
+        cat /home/pi/.ssh/id_rsa.pub >> /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie mozna dodac klucza publicznego do authorized_keys"
     fi
     if [ -d /home/pi/.mentor/known_keys ]; then
         key_count=0
         for pub_file in /home/pi/.mentor/known_keys/*; do
             if [ -f "$pub_file" ]; then
-                cat "$pub_file" >> /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można dodać klucza $pub_file do authorized_keys"
+                cat "$pub_file" >> /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie mozna dodac klucza $pub_file do authorized_keys"
                 key_count=$((key_count + 1))
             fi
         done
     fi
     if [ -f /home/pi/.ssh/known_hosts ]; then
-        rm -f /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie można usunąć pliku known_hosts"
+        rm -f /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie mozna usunac pliku known_hosts"
     fi
-    touch /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie można utworzyć pliku known_hosts"
+    touch /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie mozna utworzyc pliku known_hosts"
     if [ -s /home/pi/.ssh/authorized_keys ]; then
         local line_count=0
         while IFS= read -r line; do
@@ -359,11 +342,11 @@ EOF
                 echo "$line_without_first_and_last_word"
                 line_count=$((line_count + 1))
             fi
-        done < /home/pi/.ssh/authorized_keys > /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie można przetworzyć kluczy do pliku known_hosts"
+        done < /home/pi/.ssh/authorized_keys > /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie mozna przetworzyc kluczy do pliku known_hosts"
     fi
-    chown_chmod 644 /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie można ustawić uprawnień dla pliku known_hosts"
-    chown_chmod 600 /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można ustawić uprawnień dla pliku authorized_keys"
-    systemctl enable ssh || echo_error $LINENO "Nie można włączyć usługi SSH"
+    chown_chmod 644 /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie mozna ustawic uprawnien dla pliku known_hosts"
+    chown_chmod 600 /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie mozna ustawic uprawnien dla pliku authorized_keys"
+    systemctl enable ssh || echo_error $LINENO "Nie mozna wlaczyc uslugi SSH"
 
     systemctl disable serial-getty@ttyAMA0.service || echo "serial-getty@ttyAMA0 already disabled"
     systemctl enable hciuart >/dev/null 2>&1 || true
@@ -377,7 +360,7 @@ EOF
 step2_noreturn() { # final LAN
     echo_info "Krok 2: Konfiguracja sieci docelowej"
     if [ -f /home/pi/.mentor/wait.lab.marker ]; then
-        echo_info "Znaleziono znacznik oczekiwania - wstrzymanie działania"
+        echo_info "Znaleziono znacznik oczekiwania - wstrzymanie dzialania"
         exit 0
     fi
     echo_info "Pobieranie adresu IP"
@@ -395,16 +378,16 @@ step3() {
     echo_info "Pobieranie adresu IP"
     local ip_address
     ip_address=$(hostname -I | awk '{print $1}') || {
-        echo_error $LINENO "Brak dostępnego adresu IP"
+        echo_error $LINENO "Brak dostepnego adresu IP"
     }
     echo_info "Tworzenie pliku znacznika z informacjami o systemie"
     create_marker_file "/home/pi/.mentor" "prepare4lab.lab.marker" "$(collect_system_info)" || {
-        echo_error $LINENO "Nie można utworzyć pliku znacznika"
+        echo_error $LINENO "Nie mozna utworzyc pliku znacznika"
     }
     clear
     cat /home/pi/.mentor/prepare4lab.lab.marker
     echo ""
-    echo_wait "Mentor wita! Konfiguracja zakończona pomyślnie."
+    echo_wait "Mentor wita! Konfiguracja zakonczona pomyslnie."
 }
 echo_info() {
     local msg="$1"
@@ -420,7 +403,7 @@ echo_stop() {
             read -t 7 -r || true
         else
             echo "[STOP] $operation"
-            echo "Naciśnij [Enter] aby kontynuować, Ctrl+C aby anulować..."
+            echo "Nacisnij [Enter] aby kontynuowac, Ctrl+C aby anulowac..."
             read -r
         fi
     else
@@ -468,22 +451,22 @@ ask_user() {
 set_step() {
     step=$1
     if ! [[ "$step" =~ ^[0-9]+$ ]]; then
-        echo_error $LINENO "Numer kroku musi być liczbą"
+        echo_error $LINENO "Numer kroku musi byc liczba"
     fi
     if [ ! -d /home/pi ]; then
-        echo_error $LINENO "Katalog domowy użytkownika pi nie istnieje"
+        echo_error $LINENO "Katalog domowy uzytkownika pi nie istnieje"
     fi
     if [ -f "/home/pi/.prepare4lab.step" ]; then
-        rm -f "/home/pi/.prepare4lab.step" || echo_error $LINENO "Nie można usunąć pliku kroku przygotowania"
+        rm -f "/home/pi/.prepare4lab.step" || echo_error $LINENO "Nie mozna usunac pliku kroku przygotowania"
     fi
-    echo "$step" | sudo -u pi tee /home/pi/.prepare4lab.step > /dev/null || echo_error $LINENO "Nie można zapisać kroku do pliku"
+    echo "$step" | sudo -u pi tee /home/pi/.prepare4lab.step > /dev/null || echo_error $LINENO "Nie mozna zapisac kroku do pliku"
     if [ ! -f /home/pi/.prepare4lab.step ]; then
-        echo_error $LINENO "Plik kroku przygotowania nie został utworzony poprawnie"
+        echo_error $LINENO "Plik kroku przygotowania nie zostal utworzony poprawnie"
     fi
-    read_step=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO "Nie można odczytać zapisanego kroku przygotowania"
+    read_step=$(<"/home/pi/.prepare4lab.step") || echo_error $LINENO "Nie mozna odczytac zapisanego kroku przygotowania"
     if [ "$read_step" != "$step" ]; then
         echo_info "Oczekiwano kroku $step, otrzymano $read_step"
-        echo_error $LINENO "Zapisany krok nie odpowiada oczekiwanej wartości"
+        echo_error $LINENO "Zapisany krok nie odpowiada oczekiwanej wartosci"
     fi
     echo_wait "KROK $step"
 }
@@ -491,16 +474,16 @@ set_hostname_noreturn()
 {
     local new_hostname
     new_hostname="$1"
-    echo_wait "Nowa nazwa hosta: $new_hostname, restart systemu za chwilę"
+    echo_wait "Nowa nazwa hosta: $new_hostname, restart systemu za chwile"
     create_backup_if_needed /etc/hostname
     create_backup_if_needed /etc/hosts
-    shutdown -r +1 >/dev/null 2>&1 || echo_error $LINENO "Nie można zaplanować restartu systemu"
+    shutdown -r +1 >/dev/null 2>&1 || echo_error $LINENO "Nie mozna zaplanowac restartu systemu"
     echo_info "Trwa zmiana nazwy hosta - nie przerywaj procesu!"
     if ! echo "$new_hostname" > "/etc/hostname"; then
-        echo_error $LINENO "Nie można zapisać nowej nazwy hosta do pliku /etc/hostname"
+        echo_error $LINENO "Nie mozna zapisac nowej nazwy hosta do pliku /etc/hostname"
     fi
     sed -i "s/127.0.1.1.*/127.0.1.1 $new_hostname/" /etc/hosts || {
-        sudo mv -f /etc/hosts.lab.bak /etc/hosts || echo_error $LINENO "Nie można przywrócić kopii zapasowej pliku hosts: kod błędu $?";
+        sudo mv -f /etc/hosts.lab.bak /etc/hosts || echo_error $LINENO "Nie mozna przywrocic kopii zapasowej pliku hosts: kod bledu $?";
     }
     if ! grep -q "$new_hostname" "/etc/hostname"; then
         echo_error $LINENO "Weryfikacja nazwy hosta w pliku /etc/hostname nieudana"
@@ -526,21 +509,21 @@ wait_apt() {
         elapsed_time=$((current_time - start_time))
         if [ $((elapsed_time % 10)) -eq 0 ]; then
             echo_info "Oczekiwanie na zwolnienie blokady APT (${elapsed_time}s)"
-            fuser -v /var/lib/dpkg/lock-frontend 2>/dev/null || echo_error $LINENO "Nie można sprawdzić procesu blokującego menedżer pakietów"
+            fuser -v /var/lib/dpkg/lock-frontend 2>/dev/null || echo_error $LINENO "Nie mozna sprawdzic procesu blokujacego menedzer pakietow"
         fi
         if [ "$elapsed_time" -gt "$max_wait" ]; then
             pid=$(fuser /var/lib/dpkg/lock-frontend 2>/dev/null)
             if [ -n "$pid" ]; then
-                                if ! ps -p "$pid" > /dev/null 2>&1; then
-                    rm -f /var/lib/dpkg/lock-frontend || echo_info "Nie można usunąć blokady menedżera pakietów: $?"
-                    rm -f /var/lib/dpkg/lock || echo_info "Nie można usunąć blokady dpkg: $?"
-                    dpkg --configure -a || echo_info "Nie można skonfigurować pakietów: $?"
+                if ! ps -p "$pid" > /dev/null 2>&1; then
+                    rm -f /var/lib/dpkg/lock-frontend || echo_info "Nie mozna usunac blokady menedzera pakietow: $?"
+                    rm -f /var/lib/dpkg/lock || echo_info "Nie mozna usunac blokady dpkg: $?"
+                    dpkg --configure -a || echo_info "Nie mozna skonfigurowac pakietow: $?"
                     break
                 else
-                    echo_error $LINENO "Menedżer pakietów nadal zablokowany przez proces $pid"
+                    echo_error $LINENO "Menedzer pakietow nadal zablokowany przez proces $pid"
                 fi
             else
-                echo_error $LINENO "Menedżer pakietów zablokowany przez nieznany proces"
+                echo_error $LINENO "Menedzer pakietow zablokowany przez nieznany proces"
             fi
         fi
         sleep 1
@@ -561,36 +544,36 @@ rere() {
 
     # If we reach here, reboot failed
     sleep 10
-    echo_error $LINENO "System nie zrestartował się w wymaganym czasie"
+    echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
 }
 chown_chmod() {
     if [ -z "$1" ] || [ -z "$2" ]; then
-        echo_error $LINENO "Brak wymaganych parametrów uprawnień lub ścieżki"
+        echo_error $LINENO "Brak wymaganych parametrow uprawnien lub sciezki"
     fi
     if [ ! -e "$2" ]; then
         if [[ "$2" == */ ]] || [[ -d "$(dirname "$2")" && ! "$(basename "$2")" =~ \. ]]; then
-            mkdir -p "$2" || echo_error $LINENO "Nie można utworzyć katalogu: $2"
+            mkdir -p "$2" || echo_error $LINENO "Nie mozna utworzyc katalogu: $2"
         else
-            touch "$2" || echo_error $LINENO "Nie można utworzyć pliku: $2"
+            touch "$2" || echo_error $LINENO "Nie mozna utworzyc pliku: $2"
         fi
     fi
     if ! id "pi" &>/dev/null; then
-        echo_error $LINENO "Użytkownik pi nie istnieje w systemie"
+        echo_error $LINENO "Uzytkownik pi nie istnieje w systemie"
     fi
-    chown pi:pi "$2" || echo_error $LINENO "Nie można zmienić właściciela dla: $2"
+    chown pi:pi "$2" || echo_error $LINENO "Nie mozna zmienic wlasciciela dla: $2"
     if ! [[ "$1" =~ ^[0-7]{3}$ ]]; then
-        echo_error $LINENO "Nieprawidłowy format uprawnień: $1"
+        echo_error $LINENO "Nieprawidlowy format uprawnien: $1"
     fi
-    chmod "$1" "$2" || echo_error $LINENO "Nie można zmienić uprawnień dla: $2"
+    chmod "$1" "$2" || echo_error $LINENO "Nie mozna zmienic uprawnien dla: $2"
     local owner
-    owner=$(stat -c "%U:%G" "$2" 2>/dev/null) || echo_error $LINENO "Nie można sprawdzić właściciela dla: $2"
+    owner=$(stat -c "%U:%G" "$2" 2>/dev/null) || echo_error $LINENO "Nie mozna sprawdzic wlasciciela dla: $2"
     if [ "$owner" != "pi:pi" ]; then
-        echo_error $LINENO "Nieprawidłowy właściciel pliku: $owner dla $2"
+        echo_error $LINENO "Nieprawidlowy wlasciciel pliku: $owner dla $2"
     fi
     local perms
-    perms=$(stat -c "%a" "$2" 2>/dev/null) || echo_error $LINENO "Nie można sprawdzić uprawnień dla: $2"
+    perms=$(stat -c "%a" "$2" 2>/dev/null) || echo_error $LINENO "Nie mozna sprawdzic uprawnien dla: $2"
     if [ "$perms" != "$1" ]; then
-        echo_error $LINENO "Nieprawidłowe uprawnienia: oczekiwano $1, otrzymano $perms"
+        echo_error $LINENO "Nieprawidlowe uprawnienia: oczekiwano $1, otrzymano $perms"
     fi
     return 0
 }
@@ -602,7 +585,7 @@ setup_swap() {
         swap_size=$SWAP_SIZE_RELEASE
     fi
     if [ -z "$swap_size" ]; then
-        echo_error $LINENO "Nieprawidłowy rozmiar pliku wymiany: $swap_size"
+        echo_error $LINENO "Nieprawidlowy rozmiar pliku wymiany: $swap_size"
     fi
     echo_info "Konfiguracja pliku wymiany o rozmiarze $swap_size MB"
     dphys-swapfile swapoff
@@ -611,27 +594,27 @@ setup_swap() {
         systemctl stop dphys-swapfile || true
     else
         if ! sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${swap_size}/" "/etc/dphys-swapfile"; then
-            echo_error $LINENO "Nie można zaktualizować konfiguracji pliku wymiany"
+            echo_error $LINENO "Nie mozna zaktualizowac konfiguracji pliku wymiany"
         fi
-        dphys-swapfile setup || echo_error $LINENO "Nie można skonfigurować pliku wymiany"
-        systemctl start dphys-swapfile || echo_error $LINENO "Nie można włączyć usługi pliku wymiany"
-        dphys-swapfile swapon || echo_error $LINENO "Nie można aktywować pliku wymiany"
+        dphys-swapfile setup || echo_error $LINENO "Nie mozna skonfigurowac pliku wymiany"
+        systemctl start dphys-swapfile || echo_error $LINENO "Nie mozna wlaczyc uslugi pliku wymiany"
+        dphys-swapfile swapon || echo_error $LINENO "Nie mozna aktywowac pliku wymiany"
     fi
 }
 create_files() {
     CMDLINE_FILE="/boot/firmware/cmdline.txt"
     ROOT_PARAM=$(grep -o "root=[^ ]*" "$CMDLINE_FILE") || {
-        echo_error $LINENO "Failed to extract 'root=' parameter from $CMDLINE_FILE"
+        echo_error $LINENO "76: Failed to extract 'root=' parameter from cmdline.txt"
     }
     if [ -z "$ROOT_PARAM" ]; then
-        echo_error $LINENO "No 'root=' parameter found in $CMDLINE_FILE"
+        echo_error $LINENO "77: No 'root=' parameter found in cmdline.txt"
     fi
     echo ""
     cat "$CMDLINE_FILE"
-    echo_wait "^ zawartość pliku $CMDLINE_FILE przed modyfikacją."
+    echo_wait "^ zawartosc pliku $CMDLINE_FILE przed modyfikacja."
     # installer4lab clear generate_files
     if grep -q "root=" "$CMDLINE_FILE"; then
-            echo_error $LINENO "Parameter 'root=' still present in $CMDLINE_FILE when it shouldn't be"
+        echo_error $LINENO "Parameter 'root=' still present in $CMDLINE_FILE when it shouldn't be"
     fi
     sed -i '${/^$/d;}' "$CMDLINE_FILE" || {
         echo_error $LINENO "Failed to remove empty lines from $CMDLINE_FILE"
@@ -644,12 +627,12 @@ create_files() {
     }
     echo ""
     cat "$CMDLINE_FILE"
-    echo_stop "^ zawartość pliku $CMDLINE_FILE po modyfikacji."
-    mkdir -p /etc/systemd/system/getty@tty1.service.d || echo_error $LINENO "Nie można utworzyć katalogu konfiguracji getty"
+    echo_stop "^ zawartosc pliku $CMDLINE_FILE po modyfikacji."
+    mkdir -p /etc/systemd/system/getty@tty1.service.d || echo_error $LINENO "Nie mozna utworzyc katalogu konfiguracji getty"
     if ! echo "[Service]
         ExecStart=
-        ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM" > "/etc/systemd/system/getty@tty1.service.d/autologin.conf"; then
-        echo_error $LINENO "Nie można utworzyć pliku konfiguracji autologowania"
+    ExecStart=-/sbin/agetty --autologin pi --noclear %I \$TERM" > "/etc/systemd/system/getty@tty1.service.d/autologin.conf"; then
+        echo_error $LINENO "Nie mozna utworzyc pliku konfiguracji autologowania"
     fi
     systemctl daemon-reload
     PROTOCOL=TCP
@@ -664,13 +647,13 @@ create_files() {
     MENU_TIMER=1500
     SERIAL=ttyAMA0
     pairs="MIC_TYPE $mic debug $debug HOST $HOST VER_APP $VER_APP VER_LIB $VER_LIB PORT $PORT PROTOCOL $PROTOCOL HIDE_CURSOR $HIDE_CURSOR MAXIMIZE $MAXIMIZE ACK_RETRY $ACK_RETRY ACK_WAIT $ACK_WAIT PING $PING PING_MISS $PING_MISS LNR_ADD $LNR_ADD LNR_SWAP $LNR_SWAP MENU_TIMER $MENU_TIMER USERNAME pi SERIAL $SERIAL"
-    sudo -u pi mkdir -p /home/pi/.config/Mentor || echo_error $LINENO "Nie można utworzyć katalogu konfiguracji Mentor"
-    rm -rf /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie można usunąć starego pliku konfiguracji"
-    sudo -u pi touch /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie można utworzyć pliku konfiguracji AudytorStudent"
-    sudo -u pi echo "[General]" | tee /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie można zapisać sekcji General do konfiguracji"
+    sudo -u pi mkdir -p /home/pi/.config/Mentor || echo_error $LINENO "Nie mozna utworzyc katalogu konfiguracji Mentor"
+    rm -rf /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie mozna usunac starego pliku konfiguracji"
+    sudo -u pi touch /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie mozna utworzyc pliku konfiguracji AudytorStudent"
+    sudo -u pi echo "[General]" | tee /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie mozna zapisac sekcji General do konfiguracji"
     local param_count=0
     echo "$pairs" | tr ' ' '\n' | while read -r key && read -r value; do  # Fixed: proper piping
-        echo "$key=$value" | sudo -u pi tee -a /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie można zapisać klucza $key do konfiguracji"
+        echo "$key=$value" | sudo -u pi tee -a /home/pi/.config/Mentor/AudytorStudent.conf || echo_error $LINENO "Nie mozna zapisac klucza $key do konfiguracji"
         param_count=$((param_count + 1))
     done
 }
@@ -678,9 +661,9 @@ setup_autostart() {
     echo_info "Konfiguracja automatycznego uruchamiania"
     create_backup_if_needed /home/pi/.profile
     create_backup_if_needed /etc/sudoers
-    cp -rf /etc/skel/.profile /home/pi/.profile || echo_error $LINENO "Nie można skopiować domyślnego pliku .profile"
-    chown pi:pi /home/pi/.profile || echo_error $LINENO "Nie można zmienić właściciela pliku .profile"
-    chmod 644 /home/pi/.profile || echo_error $LINENO "Nie można zmienić uprawnień pliku .profile"
+    cp -rf /etc/skel/.profile /home/pi/.profile || echo_error $LINENO "Nie mozna skopiowac domyslnego pliku .profile"
+    chown pi:pi /home/pi/.profile || echo_error $LINENO "Nie mozna zmienic wlasciciela pliku .profile"
+    chmod 644 /home/pi/.profile || echo_error $LINENO "Nie mozna zmienic uprawnien pliku .profile"
     if [ ! -d "/home/pi/.mentor" ]; then
         echo_error $LINENO "Katalog .mentor nie istnieje"
     fi
@@ -688,50 +671,50 @@ setup_autostart() {
         echo_error $LINENO "Plik profile.txt nie istnieje"
     fi
     if [ ! -r /home/pi/.mentor/profile.txt ]; then
-        chmod 644 /home/pi/.mentor/profile.txt || echo_error $LINENO "Nie można zmienić uprawnień pliku profile.txt"
+        chmod 644 /home/pi/.mentor/profile.txt || echo_error $LINENO "Nie mozna zmienic uprawnien pliku profile.txt"
     fi
-    printf "job=%s%s --continue\n" "$job" "${args_string:+ }${args_string}" >> /home/pi/.profile || echo_error $LINENO "Nie można dodać linii job do .profile"
+    printf "job=%s%s --continue\n" "$job" "${args_string:+ }${args_string}" >> /home/pi/.profile || echo_error $LINENO "Nie mozna dodac linii job do .profile"
     if [ ! -f "/home/pi/.mentor/prepare4lab.run" ]; then
         echo_error $LINENO "Plik prepare4lab.run nie istnieje"
     fi
     echo_info "Zadanie do wykonania: $job ${args_string}"
     if [ ! -r "/home/pi/.mentor/prepare4lab.run" ]; then
-        chmod 644 "/home/pi/.mentor/prepare4lab.run" || echo_error $LINENO "Nie można zmienić uprawnień pliku prepare4lab.run"
+        chmod 644 "/home/pi/.mentor/prepare4lab.run" || echo_error $LINENO "Nie mozna zmienic uprawnien pliku prepare4lab.run"
     fi
-    cat /home/pi/.mentor/prepare4lab.run >> /home/pi/.profile || echo_error $LINENO "Nie można dodać zawartości prepare4lab.run do .profile"
-    dos2unix /home/pi/.profile 2>/dev/null || echo_error $LINENO "Konwersja pliku .profile do formatu Unix nie powiodła się"
+    cat /home/pi/.mentor/prepare4lab.run >> /home/pi/.profile || echo_error $LINENO "Nie mozna dodac zawartosci prepare4lab.run do .profile"
+    dos2unix /home/pi/.profile 2>/dev/null || echo_error $LINENO "Konwersja pliku .profile do formatu Unix nie powiodla sie"
     echo ""
     cat /home/pi/.profile
-    echo_stop "^ zawartość pliku /home/pi/.profile po modyfikacji."
-    sed -i 's/%sudo\s\+ALL=(ALL:ALL)\s\+ALL/%sudo ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || echo_error $LINENO "Nie można zaktualizować pliku sudoers"
+    echo_stop "^ zawartosc pliku /home/pi/.profile po modyfikacji."
+    sed -i 's/%sudo\s\+ALL=(ALL:ALL)\s\+ALL/%sudo ALL=(ALL) NOPASSWD: ALL/' /etc/sudoers || echo_error $LINENO "Nie mozna zaktualizowac pliku sudoers"
     if visudo -c; then
         echo_info "Plik sudoers jest poprawny"
     else
-        sudo mv -f /etc/sudoers.lab.bak /etc/sudoers || echo_error $LINENO "Nie można przywrócić kopii zapasowej pliku sudoers"
-        echo_error $LINENO "Plik sudoers zawiera błędy składniowe"
+        sudo mv -f /etc/sudoers.lab.bak /etc/sudoers || echo_error $LINENO "Nie mozna przywrocic kopii zapasowej pliku sudoers"
+        echo_error $LINENO "Plik sudoers zawiera bledy skladniowe"
     fi
-    passwd -d pi || echo_error $LINENO "Nie można usunąć hasła użytkownika pi"
-    systemctl set-default multi-user.target || echo_error $LINENO "Nie można ustawić domyślnego poziomu uruchamiania"
+    passwd -d pi || echo_error $LINENO "Nie mozna usunac hasla uzytkownika pi"
+    systemctl set-default multi-user.target || echo_error $LINENO "Nie mozna ustawic domyslnego poziomu uruchamiania"
     systemctl disable lightdm >/dev/null 2>&1 || true
 }
 test_network() {
-    ip_address=$(hostname -I | awk '{print $1}') || echo_error $LINENO "Nie można uzyskać adresu IP systemu"
+    ip_address=$(hostname -I | awk '{print $1}') || echo_error $LINENO "Nie mozna uzyskac adresu IP systemu"
     local ierr
     ierr=0
     if [ -z "$ip_address" ]; then
-        echo_info "Brak adresu IP - sieć niedostępna"
+        echo_info "Brak adresu IP - siec niedostepna"
         ierr=1
     fi
     if [ $ierr -eq 0 ]; then
         echo_info "Sprawdzanie połączenia sieciowego..."
         if ping -c 3 -W 5 www.mentorpolska.pl >/dev/null 2>&1; then
-            echo_info "Połączenie z serwerem Mentor dostępne"
+            echo_info "Polaczenie z serwerem Mentor dostepne"
         else
             if ping -c 3 -W 5 google.com >/dev/null 2>&1; then
-                echo_info "Połączenie z internetem dostępne"
+                echo_info "Polaczenie z internetem dostepne"
                 ierr=0
             else
-                echo_info "Brak połączenia z internetem"
+                echo_info "Brak polaczenia z internetem"
                 ierr=1
             fi
         fi
@@ -762,8 +745,8 @@ APT() {
 #!+   dir="$(dirname "$key")"
 #!+   local filename
 #!+   mkdir -p "$dir"
-#!+   rm -rf "$key" || echo_error $LINENO "Nie można usunąć pliku: $key"
-#!+   touch "$key" || echo_error $LINENO "Nie można utworzyć pliku: $key"
+#!+   rm -rf "$key" || echo_error $LINENO "Nie mozna usunac pliku: $key"
+#!+   touch "$key" || echo_error $LINENO "Nie mozna utworzyc pliku: $key"
 
 #!+   if [[ "$key" != /home/pi/.mentor/* ]] && [[ "$key" != /home/pi/.source4rpi/* ]]; then
 #!+     cp "$key" "$key.lab.bak" || true
@@ -773,10 +756,10 @@ APT() {
 #!+   local key="$1"
 #!+   dos2unix -f -k "$key" || true
 #!+   if [[ "$key" == *.sh ]]; then
-#!+     chmod +x "$key" || echo_error $LINENO "Nie można ustawić uprawnień wykonywania dla: $key"
+#!+     chmod +x "$key" || echo_error $LINENO "Nie mozna ustawic uprawnien wykonywania dla: $key"
 #!+   fi
 #!+   if [[ "$key" == /home/pi/* ]]; then
-#!+     chown pi:pi "$key" || echo_error $LINENO "Nie można zmienić właściciela dla: $key"
+#!+     chown pi:pi "$key" || echo_error $LINENO "Nie mozna zmienic wlasciciela dla: $key"
 #!+   fi
 #!+   echo_wait "Utworzono plik: $key"
 #!+ }
@@ -785,20 +768,20 @@ create_backup_if_needed() {
     local backup_path="${filepath}.lab.bak"
 
     if [ -f "$backup_path" ]; then
-        echo_info "Kopia zapasowa już istnieje dla $filepath, pomijanie tworzenia"
+        echo_info "Kopia zapasowa juz istnieje dla $filepath, pomijanie tworzenia"
         return 0
     fi
 
     if [ -f "$filepath" ]; then
         echo_info "Tworzenie kopii zapasowej: $filepath -> $backup_path"
-        cp "$filepath" "$backup_path" || echo_error $LINENO "Nie można utworzyć kopii zapasowej $backup_path"
+        cp "$filepath" "$backup_path" || echo_error $LINENO "Nie mozna utworzyc kopii zapasowej $backup_path"
 
         # Verify backup integrity
         if ! cmp -s "$filepath" "$backup_path"; then
             echo_error $LINENO "Weryfikacja kopii zapasowej nieudana dla $backup_path"
         fi
     else
-        echo_info "Plik źródłowy $filepath nie istnieje, kopia zapasowa nie jest potrzebna"
+        echo_info "Plik zrodlowy $filepath nie istnieje, kopia zapasowa nie jest potrzebna"
     fi
 }
 debian_upgrade() {
@@ -811,40 +794,40 @@ debian_upgrade() {
             wait_apt
             $aptcmd --allow-releaseinfo-change update || echo_error $LINENO "Nie można zaktualizować listy pakietów"
             if ask_user "Czy zostawić środowisko graficzne"; then
-                echo_info "Pozostawienie środowiska graficznego"
+                echo_info "Pozostawienie srodowiska graficznego"
             else
-                wait_apt || echo_error $LINENO "Oczekiwanie na dostępność menedżera pakietów nie powiodło się: $?"
-                echo_info "Usuwanie środowiska graficznego"
+                wait_apt || echo_error $LINENO "Oczekiwanie na dostepnosc menedzera pakietow nie powiodlo sie: $?"
+                echo_info "Usuwanie srodowiska graficznego"
                 $aptcmd remove --purge xserver-xorg xinit
             fi
 
-            wait_apt || echo_error $LINENO "Oczekiwanie na dostępność menedżera pakietów nie powiodło się: $?"
-            if [ "$user" -eq 1 ] && ask_user "Czy pulpity są jeszcze w firmie"; then
+            wait_apt || echo_error $LINENO "Oczekiwanie na dostepnosc menedzera pakietow nie powiodlo sie: $?"
+            if [ "$user" -eq 1 ] && ask_user "Czy pulpity sa jeszcze w firmie"; then
                 echo_info "Wykonywanie pełnej aktualizacji systemu"
-                $aptcmd full-upgrade || echo_error $LINENO "Pełna aktualizacja systemu nie powiodła się"
-                wait_apt || echo_error $LINENO "Oczekiwanie na dostępność menedżera pakietów nie powiodło się: $?"
-                echo_info "Usuwanie niepotrzebnych pakietów"
-                $aptcmd autoremove || echo_error $LINENO "Usuwanie niepotrzebnych pakietów nie powiodło się"
-                wait_apt || echo_error $LINENO "Oczekiwanie na dostępność menedżera pakietów nie powiodło się: $?"
-                echo_info "Czyszczenie pamięci podręcznej pakietów"
-                $aptcmd clean || echo_error $LINENO "Czyszczenie pamięci podręcznej pakietów nie powiodło się"
+                $aptcmd full-upgrade || echo_error $LINENO "Pelna aktualizacja systemu nie powiodla sie"
+                wait_apt || echo_error $LINENO "Oczekiwanie na dostepnosc menedzera pakietow nie powiodlo sie: $?"
+                echo_info "Usuwanie niepotrzebnych pakietow"
+                $aptcmd autoremove || echo_error $LINENO "Usuwanie niepotrzebnych pakietow nie powiodlo sie"
+                wait_apt || echo_error $LINENO "Oczekiwanie na dostepnosc menedzera pakietow nie powiodlo sie: $?"
+                echo_info "Czyszczenie pamieci podrecznej pakietow"
+                $aptcmd clean || echo_error $LINENO "Czyszczenie pamieci podrecznej pakietow nie powiodlo sie"
             elif [ "$user" -eq 1 ] || [ "$devel" -eq 1 ]; then
                 echo_info "Wykonywanie standardowej aktualizacji systemu"
-                $aptcmd upgrade || echo_error $LINENO "Aktualizacja systemu nie powiodła się"
+                $aptcmd upgrade || echo_error $LINENO "Aktualizacja systemu nie powiodla sie"
             fi
             wait_apt
-            echo_info "Instalowanie wymaganych pakietów"
+            echo_info "Instalowanie wymaganych pakietow"
             $aptcmd install \
                 #!L deps4rpi.txt
             if [ "$devel" -eq 1 ]; then
                 wait_apt
-                echo_info "Instalowanie pakietów dla trybu deweloperskiego"
+                echo_info "Instalowanie pakietow dla trybu deweloperskiego"
                 $aptcmd install \
                     #!L deps4devel.txt
             fi
         fi
     else
-        echo_info "Brak połączenia sieciowego - pomijanie aktualizacji systemu"
+        echo_info "Brak polaczenia sieciowego - pomijanie aktualizacji systemu"
     fi
 }
 create_marker_file() {
@@ -852,7 +835,7 @@ create_marker_file() {
     local filename="$2"
     local lines_to_append="$3"
     if [ -z "$marker" ]; then
-        echo_error $LINENO "Brak ścieżki dla pliku znacznika"
+        echo_error $LINENO "Brak sciezki dla pliku znacznika"
     fi
     if [[ ! "$marker" == *.lab.marker ]]; then
         if [[ -z "$filename" ]]; then
@@ -862,14 +845,14 @@ create_marker_file() {
     fi
     filename="$(basename "$marker")"
     local timestamp
-    timestamp="$(date '+%Y-%m-%d %H:%M:%S')" || echo_error $LINENO "Nie można uzyskać znacznika czasu"
+    timestamp="$(date '+%Y-%m-%d %H:%M:%S')" || echo_error $LINENO "Nie mozna uzyskac znacznika czasu"
     local username
-    username="$(whoami)" || echo_error $LINENO "Nie można uzyskać nazwy bieżącego użytkownika"
+    username="$(whoami)" || echo_error $LINENO "Nie mozna uzyskac nazwy biezacego uzytkownika"
     local hostname
-    hostname="$(hostname)" || echo_error $LINENO "Nie można uzyskać nazwy hosta"
+    hostname="$(hostname)" || echo_error $LINENO "Nie mozna uzyskac nazwy hosta"
     local marker_dir
     marker_dir="$(dirname "$marker")"
-    mkdir -p "$marker_dir" || echo_error $LINENO "Nie można utworzyć katalogu $marker_dir"
+    mkdir -p "$marker_dir" || echo_error $LINENO "Nie mozna utworzyc katalogu $marker_dir"
     if ! {
         echo "# $filename"
         echo "WERSJA=$WERSJA"
@@ -882,18 +865,18 @@ create_marker_file() {
         echo "# ---"
         echo "# "
         } > "$marker"; then
-        echo_error $LINENO "Nie można zapisać nagłówka do pliku znacznika $marker"
+        echo_error $LINENO "Nie mozna zapisac naglowka do pliku znacznika $marker"
     fi
     if [ -n "$lines_to_append" ]; then
         if ! echo "$lines_to_append" >> "$marker"; then
-            echo_error $LINENO "Nie można dodać informacji do pliku znacznika $marker"
+            echo_error $LINENO "Nie mozna dodac informacji do pliku znacznika $marker"
         fi
     fi
     if ! {
         echo "# ---"
         echo "# "
         } >> "$marker"; then
-        echo_error $LINENO "Nie można zapisać stopki do pliku znacznika $marker"
+        echo_error $LINENO "Nie mozna zapisac stopki do pliku znacznika $marker"
     fi
     echo_info "Utworzono plik znacznika: $marker"
 }
