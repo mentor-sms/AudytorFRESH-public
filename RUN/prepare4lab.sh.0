@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # -*- coding: utf-8 -*-
-WERSJA=0.7.7
+WERSJA=0.7.2
 show_help() {
     cat << EOF
 ===============================================================================
@@ -156,8 +156,8 @@ setup_student_file() {
                         line="#$line"
                     fi
                 fi
-                line="${line//!STUDENT_IP!/$student_ip}"
-                line="${line//!STUDENT_NR!/$student_nr}"
+                line="${line//[STUDENT_IP]/$student_ip}"
+                line="${line//[STUDENT_NR]/$student_nr}"
                 echo "$line" >> "$temp_file"
             done < "$filepath"
             mv "$temp_file" "$filepath"
@@ -250,10 +250,6 @@ prepare() {
     aptcmd=$(APT)
     echo_info "Rozpoczynanie aktualizacji systemu"
     debian_upgrade "$aptcmd"
-    #systemctl disable serial-getty@ttyAMA0.service || echo "serial-getty@ttyAMA0 already disabled"
-    #systemctl disable hciuart >/dev/null 2>&1 || true
-    echo_info "Wyłączanie menedżera wyświetlania"
-    systemctl disable lightdm >/dev/null 2>&1 || true
     echo_info "Konfiguracja pamięci wymiany"
     setup_swap
     echo_info "Przygotowanie systemu zakończone"
@@ -266,6 +262,7 @@ step0() {
     usermod -a -G dialout pi || echo_error $LINENO "Nie można dodać użytkownika pi do grupy dialout"
     usermod -a -G tty pi || echo_error $LINENO "Nie można dodać użytkownika pi do grupy tty"
     usermod -a -G video pi || echo_error $LINENO "Nie można dodać użytkownika pi do grupy video"
+    usermod -a -G audio pi || echo_error $LINENO "Nie można dodać użytkownika pi do grupy video"
     wait_apt
     echo_info "Konfiguracja automatycznego uruchamiania"
     setup_autostart
@@ -348,6 +345,14 @@ EOF
     chown_chmod 644 /home/pi/.ssh/known_hosts || echo_error $LINENO "Nie można ustawić uprawnień dla pliku known_hosts"
     chown_chmod 600 /home/pi/.ssh/authorized_keys || echo_error $LINENO "Nie można ustawić uprawnień dla pliku authorized_keys"
     systemctl enable ssh || echo_error $LINENO "Nie można włączyć usługi SSH"
+    
+    systemctl disable serial-getty@ttyAMA0.service || echo "serial-getty@ttyAMA0 already disabled"
+    systemctl enable hciuart >/dev/null 2>&1 || true
+    
+    sudo -u pi systemctl --user enable speech-dispatcher-qt.service
+    
+    sudo chmod 666 /dev/ttyAMA0
+    
     return 0
 }
 step2_noreturn() { # final LAN
@@ -584,13 +589,14 @@ setup_swap() {
     echo_info "Konfiguracja pliku wymiany o rozmiarze $swap_size MB"
     dphys-swapfile swapoff
     if [ $swap_size -eq 0 ]; then
-        systemctl disable dphys-swapfile
+        systemctl disable dphys-swapfile || true
+        systemctl stop dphys-swapfile || true
     else
         if ! sed -i "s/CONF_SWAPSIZE=.*/CONF_SWAPSIZE=${swap_size}/" "/etc/dphys-swapfile"; then
             echo_error $LINENO "Nie można zaktualizować rozmiaru pliku wymiany w konfiguracji"
         fi
         dphys-swapfile setup || echo_error $LINENO "Nie można skonfigurować pliku wymiany"
-        systemctl enable dphys-swapfile || echo_error $LINENO "Nie można włączyć usługi pliku wymiany"
+        systemctl start dphys-swapfile || echo_error $LINENO "Nie można włączyć usługi pliku wymiany"
         dphys-swapfile swapon || echo_error $LINENO "Nie można aktywować pliku wymiany"
     fi
 }
@@ -628,7 +634,6 @@ create_files() {
         echo_error $LINENO "83"
     fi
     systemctl daemon-reload
-    systemctl enable getty@tty1.service
     PROTOCOL=TCP
     HIDE_CURSOR=1
     MAXIMIZE=1
@@ -661,11 +666,11 @@ setup_autostart() {
     if [ ! -d "/home/pi/.mentor" ]; then
         echo_error $LINENO "Katalog .mentor nie istnieje"
     fi
-    if [ ! -f "/home/pi/.mentor/profile.sh" ]; then
-        echo_error $LINENO "Plik profile.sh nie istnieje"
+    if [ ! -f "/home/pi/.mentor/profile.txt" ]; then
+        echo_error $LINENO "Plik profile.txt nie istnieje"
     fi
-    if [ ! -r /home/pi/.mentor/profile.sh ]; then
-        chmod 644 /home/pi/.mentor/profile.sh || echo_error $LINENO "Nie można zmienić uprawnień pliku profile.sh"
+    if [ ! -r /home/pi/.mentor/profile.txt ]; then
+        chmod 644 /home/pi/.mentor/profile.txt || echo_error $LINENO "Nie można zmienić uprawnień pliku profile.txt"
     fi
     printf "job=%s%s --continue\n" "$job" "${args_string:+ }${args_string}" >> /home/pi/.profile || echo_error $LINENO "Nie można dodać linii job do .profile"
     if [ ! -f "/home/pi/.mentor/prepare4lab.run" ]; then
@@ -689,6 +694,7 @@ setup_autostart() {
     fi
     passwd -d pi || echo_error $LINENO "Nie można usunąć hasła użytkownika pi"
     systemctl set-default multi-user.target || echo_error $LINENO "Nie można ustawić domyślnego poziomu uruchamiania"
+    systemctl disable lightdm >/dev/null 2>&1 || true
 }
 test_network() {
     ip_address=$(hostname -I | awk '{print $1}') || echo_error $LINENO "Nie można uzyskać adresu IP: kod błędu $?"
