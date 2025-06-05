@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=0.7.2
+WERSJA=1.0.0 #!=
 SECONDS_START=$(date +%s)
 do_umount=0                          # Flag to track if we mounted a device
 from="USB"                       # Source location (block device or directory)
