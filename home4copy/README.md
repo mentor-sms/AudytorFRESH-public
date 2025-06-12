@@ -4,42 +4,93 @@ Temat: AudytorFRESH/installer4lab
 
 # installer4lab (1)
 
-1. rozpakuj *exe4installer.zip* > *exe4installer.exe*
-2. Otwiera sie za pierwszym razem dluzsza chwile (git clone), czekaj.
-3. Zminimalizuj.
+1. rozpakuj *exe4installer.zip* > uruchom *exe4installer.exe*
+2. Zminimalizuj.
 
-Pliki wewnetrzne: `installer4lab.exe\run`
+* Pliki wewnetrzne: `[katalog z installer4lab.exe]\run` (pliki inne niz ponizej zostaną zignorowane przez aplikację):
 
-Pliki uzytkownika: `%userprofile%\Mentor`
+`git_exe.txt` - polecenie w PATH, lub sciezka do `git.exe`
 
-`Mentor\root4rpi` - synchronizacja z `/` (root). Dowolnie modyfikuj ten katalog. Sciezki zabronione:
+`ssh_exe.txt` - polecenie w PATH, lub sciezka do `ssh.exe`
 
+`id_repo_private[.pub]` - klucz do repozytorium AudytorFRESH-private
+
+`id_repo_config[.pub]` - klucz do repozytorium AudytorFRESH-private
+
+`win_chown.bat` - skrypt przyznawania uprawnien dla plikow SSH na Windows (nie modyfikuj użycia!)
+
+`source4rpi/` - katalog na aplikacje i biblioteki, automatyczna instalacja projektow CMake
+
+* Pliki uzytkownika: `%userprofile%\Mentor`:
+
+Komentarze funkcyjne:
+```bash
+
+#!+ linia_zostanie_odkomentowana
+ta_linia_zostanie_zakomentowana #!-
+
+# przyklad: Mentor\etc\dhcpcd.conf
 ```
-home/pi/*
-etc/ssh/ssh_host_rsa_key
-etc/ssh/ssh_host_rsa_key.pub
-usr/local/bin/student4lab
-usr/lib/libmentor4lab*
-```
+UWAGA na nieopisane komentarze fukncyjne: ` #!=`, `#!F `, `#!K `, `#!L `, `#!F `
 
-`Mentor\home4copy` - synchronizacja z `/home/pi`. Dowolnie modyfikuj ten katalog. Dodatkowe pliki w kroku (2). Sciezki
-zabronione:
+- `Mentor\root4rpi` - Dowolnie modyfikuj ten katalog. Synchronizacja z `/` (root). `~` to `home/pi`.
 
-```
-copy4prepare.sh
-.profile
+`boot\cmdline.txt` - konfiguracja rozruchowa rpi, plik zostanie automatycznie uzupelniony o argument `root=` z pliku dotychczasowego
+
+`boot\config.txt` - glowny plik konfiguracyjny rpi
+
+`etc\systemd\journald.conf` - logi systemu
+
+`etc\logrotate.d\student4lab` - logi student4lab
+
+`etc\speech-dispatcher\{speechd.conf, clients\qt-speech.conf, modules\espeak-ng.conf}` - konfiguracja syntezy mowy
+
+`~\.config\pulse\daemon.conf` - konfiguracja PulseAudio
+
+`~\systemd\user\speech-dispather-qt.service` - rozruch syntezy mowy
+
+`etc\ssh\ssh_config` - konfiguracja klienta SSH (pulpit -> nauczyciel)
+
+`etc\ssh\sshd_config` - konfiguracja serwera SSH (nauczyciel -> pulpit)
+
+`~\.ssh\id_rsa[.pub]` - klucz SSH do komunikacji pulpitu z nauczycielem
+
+`etc\ssh\ssh_host_rsa_key[.pub]` - zawsze taki jak `id_rsa[.pub]`
+
+`~\.mentor\known_keys\*.pub` - generacja `/home/pi/.ssh/{known_hosts, authorized_keys}` (+ `id_rsa[.pub]`, `ssh4win\id_ed25519[.pub]`)
+
+`etc\dhcpcd.conf` - konfiguracja klienta DHCP
+
+`etc\wpa_supplicant\wpa_supplicant.conf` - konfiguracja WiFi
+
+`~\.mentor\eglfs.json` - konfiguracja EGLFS (alternatywa dla X11, nie suplementacja!)
+
+`~\.mentor\profile.txt` - kontynuacja `/etc/skel/.profile`, modyfikuj zamiast `/home/pi/.profile`
+
+`~\.mentor\student4lab.env` - eksport globalnych zmiennych systemowych
+
+`~\systemd\user\student4lab.service` - rozruch student4lab
+
+`Mentor\home4copy` - synchronizacja z `~` dla skryptu `copy4prepare.sh`.
+Modyfikuj dowolnie pliki znajdujace sie w tym katalogu, ale nowe dodawaj do `Mentor\root4rpi\~`!
+
+`home4copy\copy4prepare.sh` - skrypt kopiujacy `prepare4lab.sh` i przygotowujacy do instalacji
+`~\.mentor\prepare4lab.{sh, run}` - pliki installer4lab
+
+Pliki generowane automatycznie (zmiany uzytkownika zostana zignorowane!):
+```bash
+
 .ssh/known_hosts
 .ssh/authorized_keys
 ```
-
-`.mentor/known_keys/*.pub` - extra klucze SSH dla `known_hosts/authorized_keys`, dodaj tam
+`.mentor/known_keys/*.pub` - extra klucze SSH dla `~/.ssh/{known_hosts, authorized_keys}` (+ `id_rsa[.pub]`, + `id_ed25519[.pub]`)
 
 `.mentor/profile.txt`, `.mentor/prepare4lab.run` - zamiast `.profile`
 
 __jezeli usunales lub dodales pliki: Przeladuj__
 
-Nie zmieniaj nazw plikow *\*.lab.marker* w dialogach.
-Zapisz plik *nazwa.lab.marker* w miejsciu gdzie ma zostac utworzony katalog *nazwa*.
+Nie zmieniaj nazw plikow `*.lab.{marker, directory}` w dialogach.
+Zapisz plik `nazwa.lab.marker` w miejsciu gdzie ma zostac utworzony katalog `nazwa`.
 
 # SD
 
