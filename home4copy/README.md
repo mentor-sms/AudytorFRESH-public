@@ -24,6 +24,7 @@ Temat: AudytorFRESH/installer4lab
 * Pliki uzytkownika: `%userprofile%\Mentor`:
 
 Komentarze funkcyjne:
+
 ```bash
 
 #!+ linia_zostanie_odkomentowana
@@ -31,11 +32,13 @@ ta_linia_zostanie_zakomentowana #!-
 
 # przyklad: Mentor\etc\dhcpcd.conf
 ```
+
 UWAGA na nieopisane komentarze fukncyjne: ` #!=`, `#!F `, `#!K `, `#!L `, `#!F `
 
 - `Mentor\root4rpi` - Dowolnie modyfikuj ten katalog. Synchronizacja z `/` (root). `~` to `home/pi`.
 
-`boot\cmdline.txt` - konfiguracja rozruchowa rpi, plik zostanie automatycznie uzupelniony o argument `root=` z pliku dotychczasowego
+`boot\cmdline.txt` - konfiguracja rozruchowa rpi, plik zostanie automatycznie uzupelniony o argument `root=` z pliku
+dotychczasowego
 
 `boot\config.txt` - glowny plik konfiguracyjny rpi
 
@@ -57,7 +60,8 @@ UWAGA na nieopisane komentarze fukncyjne: ` #!=`, `#!F `, `#!K `, `#!L `, `#!F `
 
 `etc\ssh\ssh_host_rsa_key[.pub]` - zawsze taki jak `id_rsa[.pub]`
 
-`~\.mentor\known_keys\*.pub` - generacja `/home/pi/.ssh/{known_hosts, authorized_keys}` (+ `id_rsa[.pub]`, `ssh4win\id_ed25519[.pub]`)
+`~\.mentor\known_keys\*.pub` - generacja `/home/pi/.ssh/{known_hosts, authorized_keys}` (+ `id_rsa[.pub]`,
+`ssh4win\id_ed25519[.pub]`)
 
 `etc\dhcpcd.conf` - konfiguracja klienta DHCP
 
@@ -78,12 +82,15 @@ Modyfikuj dowolnie pliki znajdujace sie w tym katalogu, ale nowe dodawaj do `Men
 `~\.mentor\prepare4lab.{sh, run}` - pliki installer4lab
 
 Pliki generowane automatycznie (zmiany uzytkownika zostana zignorowane!):
+
 ```bash
 
 .ssh/known_hosts
 .ssh/authorized_keys
 ```
-`.mentor/known_keys/*.pub` - extra klucze SSH dla `~/.ssh/{known_hosts, authorized_keys}` (+ `id_rsa[.pub]`, + `id_ed25519[.pub]`)
+
+`.mentor/known_keys/*.pub` - extra klucze SSH dla `~/.ssh/{known_hosts, authorized_keys}` (+ `id_rsa[.pub]`, +
+`id_ed25519[.pub]`)
 
 `.mentor/profile.txt`, `.mentor/prepare4lab.run` - zamiast `.profile`
 
