@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=0.0.0-Vanilla #!=
+WERSJA=0.0.0-Vanilla #4lab>var
 SECONDS_START=$(date +%s)
 do_umount=0                          # Flag to track if we mounted a device
 from="USB"                       # Source location (block device or directory)

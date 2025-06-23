@@ -27,13 +27,13 @@ Komentarze funkcyjne:
 
 ```bash
 
-#!+ linia_zostanie_odkomentowana
-ta_linia_zostanie_zakomentowana #!-
+#4lab>on linia_zostanie_odkomentowana
+ta_linia_zostanie_zakomentowana #4lab>off
 
 # przyklad: Mentor\etc\dhcpcd.conf
 ```
 
-UWAGA na nieopisane komentarze fukncyjne: ` #!=`, `#!F `, `#!K `, `#!L `, `#!F `
+UWAGA na nieopisane komentarze fukncyjne: ` #4lab>var`, `#4lab>file `, `#4lab>sshkey `, `#4lab>list `, `#4lab>file `
 
 - `Mentor\root4rpi` - Dowolnie modyfikuj ten katalog. Synchronizacja z `/` (root). `~` to `home/pi`.
 
