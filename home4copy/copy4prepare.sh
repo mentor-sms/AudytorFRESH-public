@@ -504,7 +504,7 @@ verify_prepare_script() {
     fi
 
     # Check script version
-    wersja_in_script=$(grep -m 1 "^WERSJA=" "$run" | cut -d'=' -f2)
+    wersja_in_script=$(grep -m 1 "^WERSJA=" "$run" | cut -d'=' -f2 | sed 's/[[:space:]]*#.*$//' | sed 's/[[:space:]]*$//')
     if [ -z "$wersja_in_script" ]; then
         echo_info "Ostrzezenie: Nie mozna odczytac wersji ze skryptu" "WARN"
         echo_wait "Wersja skryptu nie znaleziona, kontynuowac?" 3
