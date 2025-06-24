@@ -24,7 +24,7 @@ debug=0
 show_help() {
     cat << EOF
 ===============================================================================
- copy4prepare.sh v$WERSJA - Mentor Lab Preparation Utility (Enhanced Path Detection)
+ copy4prepare.sh v[WERSJA] - Mentor Lab Preparation Utility
 ===============================================================================
  Usage: sudo $0 job [options]
  Job Type (required - first argument):
