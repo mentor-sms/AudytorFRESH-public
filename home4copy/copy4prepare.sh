@@ -1,26 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 WERSJA=1.0.0-Vanilla #4lab>var
-SECONDS_START=$(date +%s)
-do_umount=0                          # Flag to track if we mounted a device
-from="USB"                       # Source location (block device or directory)
-mntdir=/home/pi/mnt                          # Mount point for block devices
-target=/home/pi                      # Target directory for file operations
-home_dir=home4copy                   # Directory name on source containing files
-file=prepare4lab.sh                  # Script filename to run after copying
-quick=0                              # Flag to skip confirmation delays
-norun=0                              # Flag to skip running scripts
-nosync=0                             # Flag to skip rsync operations
-job="install"
-timeout=0                            # Wait time before starting operations
-run="/home/pi/.mentor/prepare4lab.sh" # Path to the script to run
-dry=0                                # Flag for simulation mode (no changes)
-brestore=0                           # Flag to restore from backups and exit
-bclear=0                             # Flag to clear backup files and exit
-nobackup=0                           # Flag to skip creating backup files
-user=1
-debug=0
-
 show_help() {
     cat << EOF
 ===============================================================================
@@ -30,7 +10,7 @@ show_help() {
  Job Type (required - first argument):
    prepare              Preparation job
    install              Installation job
-   setup                Setup job
+   setup                Setup jobyou
    bstatus              Show backup status and exit
  Main Options:
    --from <path>          Block device or directory (default: ${from})
@@ -58,7 +38,200 @@ show_help() {
 ===============================================================================
 EOF
 }
+SECONDS_START=$(date +%s)
+do_umount=0                          # Flag to track if we mounted a device
+from="USB"                       # Source location (block device or directory)
+mntdir=/home/pi/mnt                          # Mount point for block devices
+target=/home/pi                      # Target directory for file operations
+home_dir=home4copy                   # Directory name on source containing files
+file=prepare4lab.sh                  # Script filename to run after copying
+quick=0                              # Flag to skip confirmation delays
+norun=0                              # Flag to skip running scripts
+nosync=0                             # Flag to skip rsync operations
+job="install"
+timeout=0                            # Wait time before starting operations
+run="/home/pi/.mentor/prepare4lab.sh" # Path to the script to run
+dry=0                                # Flag for simulation mode (no changes)
+brestore=0                           # Flag to restore from backups and exit
+bclear=0                             # Flag to clear backup files and exit
+nobackup=0                           # Flag to skip creating backup files
+user=1
+debug=0
+last_rsync_test=1
+parse_arguments() {
+    # Parse command line arguments
+    if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+        show_help
+        exit 0
+    fi
 
+    # Determine job type
+    if [ $# -gt 0 ]; then
+        case "$1" in
+            prepare|install|setup|bstatus)
+                job="$1"
+                shift
+                ;;
+            *)
+                job="install"
+                ;;
+        esac
+    else
+        job="install"
+    fi
+
+    # Validate job type
+    case "$job" in
+        prepare|install|setup|bstatus)
+            ;;
+        *)
+            echo_error $LINENO "Invalid job type: '$job'. Must be one of: prepare, install, setup, bstatus"
+            ;;
+    esac
+
+    # Parse remaining arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --from)
+                shift
+                from="${1:-}"
+                if [ -z "$from" ]; then
+                    echo_error $LINENO "Missing argument for --from"
+                fi
+                ;;
+            --mnt)
+                shift
+                mntdir="${1:-}"
+                if [ -z "$mntdir" ]; then
+                    echo_error $LINENO "Missing argument for --mnt"
+                fi
+                ;;
+            --timeout)
+                shift
+                timeout="${1:-}"
+                if [ -z "$timeout" ]; then
+                    echo_error $LINENO "Missing argument for --timeout"
+                fi
+                ;;
+            --quick)
+                quick=1
+                ;;
+            --debug)
+                debug=1
+                ;;
+            --brestore)
+                brestore=1
+                ;;
+            --bclear)
+                bclear=1
+                ;;
+            --nobackup)
+                nobackup=1
+                ;;
+            --dry)
+                dry=1
+                ;;
+            *)
+                # Pass through other arguments to prepare4lab
+                ;;
+        esac
+        shift
+    done
+}
+
+main() {
+    # Show startup banner
+    echo_info "============================================================="
+    echo_info "   copy4prepare v$WERSJA - Narzedzie Przygotowania Laboratorium Mentor"
+    echo_info "============================================================="
+    echo_info "Data uruchomienia: $(date '+%Y-%m-%d %H:%M:%S')"
+    echo_info "Uzytkownik: $(whoami) | Host: $(hostname)"
+    echo_info "============================================================="
+
+    parse_arguments "$@"
+
+    # Handle backup operations first
+    handle_brestore
+    handle_bclear
+
+    # Show backup status if requested
+    if [ "$job" = "bstatus" ]; then
+        show_backup_status
+        exit 0
+    fi
+
+    # Check if running as root
+    if [ "$(id -u)" -ne 0 ]; then
+        echo_error $LINENO "This script must be run as root (use sudo)"
+    fi
+
+    # Wait timeout if specified
+    if [ "$timeout" -gt 0 ]; then
+        echo_info "Waiting $timeout seconds before starting..."
+        sleep "$timeout"
+    fi
+
+    # Initialize mount system
+    mnt_init
+
+    # Check if home_dir exists in source
+    if [ ! -d "$from/$home_dir" ]; then
+        echo_error $LINENO "Katalog zrodlowy $from/$home_dir nie istnieje. Sprawdz, czy urzadzenie jest prawidlowo podlaczone i czy sciezka jest poprawna."
+    fi
+
+    # Run rsync operation
+    if [ "$nosync" -eq 0 ]; then
+        run_rsync
+    else
+        echo_info "Skipping rsync operations (--nosync)"
+    fi
+
+    # Verify and run prepare script
+    if [ "$norun" -eq 0 ]; then
+        verify_prepare_script
+        # Build command line for prepare4lab
+        prepare_args="$job"
+        if [ "$quick" -eq 1 ]; then
+            prepare_args="$prepare_args --quick"
+        fi
+        if [ "$debug" -eq 1 ]; then
+            prepare_args="$prepare_args --debug"
+        fi
+        echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
+        if [ "$dry" -ne 1 ]; then
+            cd /home/pi || echo_error $LINENO "Nie udalo sie zmienic katalogu na /home/pi"
+            echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..." "DEBUG"
+            $run "$prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+            echo_info "Skrypt przygotowawczy zakonczony pomyslnie" "SUCCESS"
+        else
+            echo_info "Symulacja: Uruchomilbym: $run $prepare_args" "DEBUG"
+        fi
+    else
+        echo_info "Pomijam wykonanie skryptu przygotowawczego (--norun)"
+    fi
+
+    # Cleanup
+    un_un
+
+    # Print summary report
+    echo_info "============================================================="
+    echo_info "   PODSUMOWANIE WYKONANIA"
+    echo_info "============================================================="
+    echo_info "Skrypt: copy4prepare.sh v$WERSJA"
+    echo_info "Zadanie: $job"
+    echo_info "Zrodlo: $from"
+    echo_info "Cel: $target"
+    echo_info "Katalog domowy: $home_dir"
+    echo_info "Tryb szybki: $([ "$quick" -eq 1 ] && echo "tak" || echo "nie")"
+    echo_info "Tryb debugowania: $([ "$debug" -eq 1 ] && echo "tak" || echo "nie")"
+    echo_info "Tryb symulacji: $([ "$dry" -eq 1 ] && echo "tak" || echo "nie")"
+    echo_info "Czas rozpoczecia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
+    echo_info "Czas zakonczenia: $(date '+%H:%M:%S')"
+    echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
+    echo_info "============================================================="
+    echo_info "copy4prepare.sh zakonczony pomyslnie" "SUCCESS"
+    exit 0
+}
 echo_error() {
     local lineno="$1"
     local message="$2"
@@ -74,7 +247,6 @@ echo_error() {
     echo "Konczenie pracy skryptu. Kod bledu: 1" >&2
     exit 1
 }
-
 echo_info() {
     local msg="$1"
     local level="${2:-INFO}"
@@ -97,15 +269,6 @@ echo_info() {
             ;;
     esac
 }
-
-# Show startup banner
-echo_info "============================================================="
-echo_info "   copy4prepare v$WERSJA - Narzedzie Przygotowania Laboratorium Mentor"
-echo_info "============================================================="
-echo_info "Data uruchomienia: $(date '+%Y-%m-%d %H:%M:%S')"
-echo_info "Uzytkownik: $(whoami) | Host: $(hostname)"
-echo_info "============================================================="
-
 echo_stop() {
     local operation="$1"
     local additional_info="${2:-}"
@@ -133,7 +296,6 @@ echo_stop() {
         fi
     fi
 }
-
 echo_wait() {
     local message="$1"
     local wait_time="${2:-1}"
@@ -151,7 +313,6 @@ echo_wait() {
         echo "[CZEKAJ $current_time] $message"
     fi
 }
-
 is_file() {
     local path="$1"
     last_is_file=0
@@ -159,7 +320,6 @@ is_file() {
         last_is_file=1
     fi
 }
-
 is_directory() {
     local path="$1"
     last_is_directory=0
@@ -167,7 +327,6 @@ is_directory() {
         last_is_directory=1
     fi
 }
-
 is_block_device() {
     local path="$1"
     last_is_block_device=0
@@ -210,7 +369,6 @@ is_block_device() {
         fi
     fi
 }
-
 is_mounted() {
     local device="$1"
     local mountpoint="$2"
@@ -219,7 +377,6 @@ is_mounted() {
         last_is_mounted=1
     fi
 }
-
 set_from() {
     from="$1"
     echo_info "Sciezka zrodlowa ustawiona na: $from"
@@ -231,7 +388,6 @@ set_from() {
         echo_info "Uzywam sciezki katalogu" "DEBUG"
     fi
 }
-
 restore_from_backup() {
     local filepath="$1"
     local force_restore="${2:-0}"
@@ -272,7 +428,6 @@ restore_from_backup() {
         return 1
     fi
 }
-
 handle_brestore() {
     if [ "$brestore" -eq 1 ]; then
         echo_info "Przywracanie konfiguracji z plikow kopii zapasowych..."
@@ -309,7 +464,6 @@ handle_brestore() {
         exit 0
     fi
 }
-
 handle_bclear() {
     if [ "$bclear" -eq 1 ]; then
         echo_info "Clearing backup files..."
@@ -352,7 +506,6 @@ handle_bclear() {
         exit 0
     fi
 }
-
 show_backup_status() {
     echo_info "=== Backup Status Report ==="
     echo_info "Scanning entire filesystem for .lab.bak files..."
@@ -397,7 +550,6 @@ show_backup_status() {
     echo_info "Total backup size: $total_size bytes"
     echo_info "================="
 }
-
 create_backup() {
     local filepath="$1"
 
@@ -484,7 +636,6 @@ create_backup() {
 
     return 0
 }
-
 verify_prepare_script() {
     local wersja_in_script
     echo_info "Weryfikacja integralnosci skryptu przed uruchomieniem: $run"
@@ -534,7 +685,6 @@ verify_prepare_script() {
 
     echo_info "Weryfikacja skryptu zakończona pomyślnie" "SUCCESS"
 }
-
 handle_file() {
     local _file=$1
     local _sourcefile=$2
@@ -555,8 +705,6 @@ handle_file() {
         bash -n "$_file" || echo_error $LINENO "Błąd składni w skrypcie: $_file"
     fi
 }
-
-last_rsync_test=1
 rsync_line_test() {
     last_rsync_test=0
     local p1="$1"
@@ -585,7 +733,6 @@ rsync_line_test() {
         fi
     fi
 }
-
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
     local exclude_option
@@ -662,7 +809,6 @@ run_rsync() {
     fi
     echo_info "Operacja rsync zakończona" "SUCCESS"
 }
-
 un_un() {
     if [ "$do_umount" -eq 1 ]; then
         echo_wait "Odmontowywanie urzadzenia: $mntdir"
@@ -714,7 +860,6 @@ un_un() {
         echo_info "Brak potrzeby odmontowywania" "DEBUG"
     fi
 }
-
 mnt_mnt() {
     echo_info "Przygotowywanie punktu montowania $mntdir"
     if [ ! -d "$mntdir" ]; then
@@ -742,7 +887,6 @@ mnt_mnt() {
         fi
     fi
 }
-
 mnt_init() {
     echo_info "Inicjalizacja systemu montowania dla zrodla: $from"
     echo_info "Parametry: mntdir=$mntdir, target=$target, home_dir=$home_dir" "DEBUG"
@@ -805,145 +949,4 @@ mnt_init() {
     fi
 }
 
-# Parse command line arguments
-if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-    show_help
-    exit 0
-fi
-
-if [ $# -gt 0 ]; then
-    job="$1"
-    shift
-
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            --from)
-                shift
-                from="${1:-}"
-                if [ -z "$from" ]; then
-                    echo_error $LINENO "Missing argument for --from"
-                fi
-                ;;
-            --mnt)
-                shift
-                mntdir="${1:-}"
-                if [ -z "$mntdir" ]; then
-                    echo_error $LINENO "Missing argument for --mnt"
-                fi
-                ;;
-            --timeout)
-                shift
-                timeout="${1:-}"
-                if [ -z "$timeout" ]; then
-                    echo_error $LINENO "Missing argument for --timeout"
-                fi
-                ;;
-            --quick)
-                quick=1
-                ;;
-            --debug)
-                debug=1
-                ;;
-            --brestore)
-                brestore=1
-                ;;
-            --bclear)
-                bclear=1
-                ;;
-            --nobackup)
-                nobackup=1
-                ;;
-            --dry)
-                dry=1
-                ;;
-            *)
-                # Pass through other arguments to prepare4lab
-                ;;
-        esac
-        shift
-    done
-fi
-
-# Handle backup operations first
-handle_brestore
-handle_bclear
-
-# Show backup status if requested
-if [ "$job" = "bstatus" ]; then
-    show_backup_status
-    exit 0
-fi
-
-# Check if running as root
-if [ "$(id -u)" -ne 0 ]; then
-    echo_error $LINENO "This script must be run as root (use sudo)"
-fi
-
-# Wait timeout if specified
-if [ "$timeout" -gt 0 ]; then
-    echo_info "Waiting $timeout seconds before starting..."
-    sleep "$timeout"
-fi
-
-# Initialize mount system
-mnt_init
-
-# Check if home_dir exists in source
-if [ ! -d "$from/$home_dir" ]; then
-    echo_error $LINENO "Katalog zrodlowy $from/$home_dir nie istnieje. Sprawdz, czy urzadzenie jest prawidlowo podlaczone i czy sciezka jest poprawna."
-fi
-
-# Run rsync operation
-if [ "$nosync" -eq 0 ]; then
-    run_rsync
-else
-    echo_info "Skipping rsync operations (--nosync)"
-fi
-
-# Verify and run prepare script
-if [ "$norun" -eq 0 ]; then
-    verify_prepare_script
-
-    # Build command line for prepare4lab
-    prepare_args="$job"
-    if [ "$quick" -eq 1 ]; then
-        prepare_args="$prepare_args --quick"
-    fi
-    if [ "$debug" -eq 1 ]; then
-        prepare_args="$prepare_args --debug"
-    fi
-
-    echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
-    if [ "$dry" -ne 1 ]; then
-        cd /home/pi || echo_error $LINENO "Nie udalo sie zmienic katalogu na /home/pi"
-        echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..." "DEBUG"
-        $run "$prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
-        echo_info "Skrypt przygotowawczy zakonczony pomyslnie" "SUCCESS"
-    else
-        echo_info "Symulacja: Uruchomilbym: $run $prepare_args" "DEBUG"
-    fi
-else
-    echo_info "Pomijam wykonanie skryptu przygotowawczego (--norun)"
-fi
-
-# Cleanup
-un_un
-
-# Print summary report
-echo_info "============================================================="
-echo_info "   PODSUMOWANIE WYKONANIA"
-echo_info "============================================================="
-echo_info "Skrypt: copy4prepare.sh v$WERSJA"
-echo_info "Zadanie: $job"
-echo_info "Zrodlo: $from"
-echo_info "Cel: $target"
-echo_info "Katalog domowy: $home_dir"
-echo_info "Tryb szybki: $([ "$quick" -eq 1 ] && echo "tak" || echo "nie")"
-echo_info "Tryb debugowania: $([ "$debug" -eq 1 ] && echo "tak" || echo "nie")"
-echo_info "Tryb symulacji: $([ "$dry" -eq 1 ] && echo "tak" || echo "nie")"
-echo_info "Czas rozpoczecia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
-echo_info "Czas zakonczenia: $(date '+%H:%M:%S')"
-echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
-echo_info "============================================================="
-echo_info "copy4prepare.sh zakonczony pomyslnie" "SUCCESS"
-exit 0
+main "$@"
