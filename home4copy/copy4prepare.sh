@@ -64,7 +64,8 @@ parse_arguments() {
                 shift
                 ;;
             *)
-            				echo_error $LINENO "Invalid job type: '$1'. Must be one of: prepare, install, setup, bstatus"
+																job="install"
+																echo_info "Default job: $job"
                 ;;
         esac
     else
