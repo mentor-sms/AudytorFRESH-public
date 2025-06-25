@@ -54,7 +54,6 @@ dry=0                                # Flag for simulation mode (no changes)
 nobackup=0                           # Flag to skip creating backup files
 user=1
 debug=0
-last_rsync_test=1
 parse_arguments() {
     # Determine job type
     if [ $# -gt 0 ]; then
@@ -133,7 +132,7 @@ main() {
     echo_info "Uzytkownik: $(whoami) | Host: $(hostname)"
 
     parse_arguments "$@"
-				echo_stop "============================================================="
+				echo_wait "============================================================="
 
     # Show backup status if requested
     if [ "$job" = "help" ]; then
@@ -266,11 +265,11 @@ echo_stop() {
     if [ "$user" -eq 1 ]; then
         echo ""
         if [ "$quick" -eq 1 ]; then
-            echo "[STOP] $operation //[Enter] (7s)"
+            echo "[STOP] $operation //[Enter] (5s)"
             if [ -n "$additional_info" ]; then
                 echo "$additional_info"
             fi
-            read -t 7 -r || true
+            read -t 5 -r || true
         else
             echo "[STOP] $operation"
             if [ -n "$additional_info" ]; then
@@ -317,6 +316,7 @@ is_directory() {
         last_is_directory=1
     fi
 }
+last_is_block_device=0
 is_block_device() {
     local path="$1"
     last_is_block_device=0
@@ -672,22 +672,24 @@ handle_file() {
     if [ $last_is_file -ne 1 ]; then
         echo_error $LINENO "Plik źródłowy nie istnieje: $_sourcefile"
     fi
-    cmp -s "$_file" "$_sourcefile" || echo_info "Pliki różnią się po synchronizacji: $_file i $_sourcefile"
+    cmp -s "$_file" "$_sourcefile" || echo_stop "Pliki różnią się po synchronizacji: $_file i $_sourcefile"
     echo_info "Konwersja pliku $_file do formatu Unix"
-    dos2unix -f -k "$_file" 2>/dev/null || echo_info "Ostrzeżenie: Problem z konwersją dos2unix dla pliku $_file, kontynuuję" "WARN"
+    dos2unix -f -k "$_file" 2>/dev/null || echo_wait "Ostrzeżenie: Problem z konwersją dos2unix dla pliku $_file, kontynuuję" "WARN"
     if [[ "$_file" == *.sh ]]; then
         echo_info "Nadawanie uprawnień wykonywania dla $_file"
-        chmod +x "$_file" || echo_info "Ostrzeżenie: Nie udało się nadać uprawnień wykonywania dla $_file, kontynuuję" "WARN"
+        chmod +x "$_file" || echo_wait "Ostrzeżenie: Nie udało się nadać uprawnień wykonywania dla $_file, kontynuuję" "WARN"
         echo_info "Sprawdzanie składni skryptu bash $_file"
-        bash -n "$_file" || echo_error $LINENO "Błąd składni w skrypcie: $_file"
+        bash -n "$_file" || echo_stop "Błąd składni w skrypcie: $_file"
     fi
 }
+last_rsync_test=1
 rsync_line_test() {
     last_rsync_test=0
     local p1="$1"
     local p2="$2"
     if [ -z "$p1" ] || [ -z "$p2" ]; then
         echo_info "Puste parametry przekazane do rsync_line_test"
+        return  # Exit early for empty parameters
     elif [[ "$p1" == "sending" || "$p1" == "sent" || "$p1" == "total" || "$p1" == *"speedup"* ]]; then
         echo_info "Pomijanie linii statusu rsync: $p1" "DEBUG"
     else
@@ -701,15 +703,17 @@ rsync_line_test() {
             echo_info "Pomijanie linii budowania listy plików" "DEBUG"
         elif [[ "$p1" == *.lab.bak || "$p2" == *.lab.bak ]]; then
             echo_info "Pomijanie pliku kopii zapasowej: $p1" "DEBUG"
-        elif [[ "$p1" == *.fill || "$p2" == *.lab.bak ]]; then
+        elif [[ "$p1" == *.fill || "$p2" == *.fill ]]; then
             echo_info "Pomijanie pliku wypełniającego: $p1" "DEBUG"
-        elif [[ "$p1" == *.fix || "$p2" == *.lab.bak ]]; then
+        elif [[ "$p1" == *.fix || "$p2" == *.fix ]]; then
             echo_info "Pomijanie pliku naprawiającego: $p1" "DEBUG"
         else
             echo_wait "Przetwarzanie: $p1 $p2"
+            last_rsync_test=1  # Set flag to indicate file should be processed
         fi
     fi
 }
+
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
     local exclude_option
@@ -727,21 +731,43 @@ run_rsync() {
     rsync_cmd="$rcmd $exclude_option $cont"
     local dry_rsync_cmd
     dry_rsync_cmd="$rcmd --dry-run $dry_exclude_option $cont"
+
     echo_info "Wykonywanie suchego przebiegu, aby zidentyfikowac pliki do kopii zapasowej..."
     echo_info "SYMULACJA RSYNC: $from/$home_dir/ >> $target ($dry_exclude_option)"
     local dry_run_file
     dry_run_file=$(mktemp)
     $dry_rsync_cmd > "$dry_run_file" || echo_info "Ostrzezenie: Symulacja rsync nie powiodla sie, kontynuuje mimo to" "WARN"
-    echo_info "Analizowanie wynikow symulacji i tworzenie kopii zapasowych..."
+
+    # First rsync run - collect files that would be processed
+    echo_info "Pierwsza analiza rsync - zbieranie listy plikow do przetworzenia..."
+    local files_to_process=()
     while read -r line; do
         local first_part
         local second_part
         first_part="${line%% *}"
         second_part="${line#* }"
+
+        # Apply the same relevancy check as in the second run
         rsync_line_test "$first_part" "$second_part"
         if [ $last_rsync_test -eq 1 ]; then
-            local fpath
-            fpath="$target/$first_part"
+            files_to_process+=("$first_part")
+        fi
+    done < "$dry_run_file"
+
+    # Display collected files to user and ask for approval
+    if [ ${#files_to_process[@]} -gt 0 ]; then
+        echo_info "Znalezione pliki do przetworzenia:"
+        for file_path in "${files_to_process[@]}"; do
+            echo_info "  - $file_path"
+        done
+
+        echo_stop "Czy kontynuowac z przetwarzaniem ${#files_to_process[@]} plikow?" \
+            "Pliki zostana usuniete przed kopiowaniem, a nastepnie przetworzone."
+
+        # Create backups for all files that will be processed
+        echo_info "Tworzenie kopii zapasowych..."
+        for first_part in "${files_to_process[@]}"; do
+            local fpath="$target/$first_part"
             if [ "$dry" -ne 1 ]; then
                 create_backup "$fpath"
                 echo_info "Usuwanie pliku przed kopiowaniem: $fpath"
@@ -754,36 +780,30 @@ run_rsync() {
             else
                 echo_info "Symulacja: Usunięty zostałby plik $fpath" "DEBUG"
             fi
-        fi
-    done < "$dry_run_file"
+        done
+    else
+        echo_info "Brak plikow do przetworzenia"
+    fi
+
     rm -f "$dry_run_file"
+
+    # Second rsync run - actual synchronization without line-by-line processing
     echo_info "Rozpoczynanie wlasciwej operacji rsync..."
     echo_info "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     if [ "$dry" -ne 1 ]; then
-        local rsync_output_file
-        rsync_output_file=$(mktemp)
-        rm -f "$rsync_output_file" || true
         echo_info "Wykonywanie synchronizacji plikow..."
-        $rsync_cmd > "$rsync_output_file" || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki" "WARN"
+        $rsync_cmd || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki" "WARN"
+
+        # Process all collected files after rsync completion
         echo_info "Przetwarzanie skopiowanych plikow..."
-        while read -r line; do
-            local first_part
-            local second_part
-            first_part="${line%% *}"
-            second_part="${line#* }"
-            rsync_line_test "$first_part" "$second_part"
-            if [ $last_rsync_test -eq 1 ]; then
-                if [[ $first_part == "$second_part" ]] || [[ $second_part == *uptodate* ]]; then
-                    echo_info "Przetwarzanie pliku: $target/$first_part"
-                    handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
-                fi
-            fi
-        done < "$rsync_output_file"
-        echo_info "Usuwanie tymczasowego pliku wyjścia" "DEBUG"
-        rm -f "$rsync_output_file" || echo_info "Nie udało się usunąć pliku tymczasowego" "DEBUG"
+        for first_part in "${files_to_process[@]}"; do
+            echo_info "Przetwarzanie pliku: $target/$first_part"
+            handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
+        done
     else
         echo_info "Tryb symulacji: pomijanie właściwej operacji rsync"
     fi
+
     echo_info "Operacja rsync zakończona" "SUCCESS"
 }
 un_un() {
@@ -827,7 +847,6 @@ un_un() {
         if [ -d "$mntdir" ]; then
             echo_info "Usuwanie katalogu montowania: $mntdir"
             if ! rm -rf "$mntdir"; then
-                echo_info "Nie udalo sie usunac katalogu: $mntdir" "WARN"
                 echo_stop "Nie udalo sie usunac katalogu $mntdir, kontynuuje mimo to" "Katalog moze wymagac recznego usuniecia"
             else
                 echo_info "Katalog usuniety pomyslnie" "SUCCESS"
