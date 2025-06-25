@@ -61,15 +61,16 @@ parse_arguments() {
         case "$1" in
             prepare|install|setup|bstatus|bclear|brestore|help)
                 job="$1"
+        								echo_info "Job: $job"
                 shift
                 ;;
             *)
-																job="install"
+																job="help"
 																echo_info "Default job: $job"
                 ;;
         esac
     else
-        job="install"
+        job="help"
         echo_info "Default job: $job"
     fi
 
@@ -99,15 +100,19 @@ parse_arguments() {
                 ;;
             --quick)
                 quick=1
+                echo_info "quick"
                 ;;
             --debug)
                 debug=1
+                echo_info "debug"
                 ;;
             --nobackup)
                 nobackup=1
+                echo_info "nobackup"
                 ;;
             --dry)
                 dry=1
+                echo_info "dry"
                 ;;
             *)
                 # Pass through other arguments to prepare4lab
@@ -115,6 +120,9 @@ parse_arguments() {
         esac
         shift
     done
+				echo_info "from=$from"
+				echo_info "mnt=$mntdir"
+				echo_info "timeout=$timeout"
 }
 
 main() {
@@ -122,13 +130,10 @@ main() {
     echo_info "============================================================="
     echo_info "   copy4prepare v$WERSJA - Narzedzie Przygotowania Laboratorium Mentor"
     echo_info "============================================================="
-    echo_info "Data uruchomienia: $(date '+%Y-%m-%d %H:%M:%S')"
     echo_info "Uzytkownik: $(whoami) | Host: $(hostname)"
-    echo_info "============================================================="
 
     parse_arguments "$@"
-
-    # Handle backup operations first
+				echo_stop "============================================================="
 
     # Show backup status if requested
     if [ "$job" = "help" ]; then
