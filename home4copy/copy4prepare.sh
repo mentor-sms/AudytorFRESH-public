@@ -8,10 +8,13 @@ show_help() {
 ===============================================================================
  Usage: sudo $0 job [options]
  Job Type (required - first argument):
+   help                 Show this help message
    prepare              Preparation job
    install              Installation job
    setup                Setup jobyou
    bstatus              Show backup status and exit
+   brestore             Restore configuration from backups and exit
+   bclear               Clear backup files and exit
  Main Options:
    --from <path>          Block device or directory (default: ${from})
    --mnt <path>           Mount point for the device (default: ${mntdir})
@@ -26,11 +29,7 @@ show_help() {
    --remote               Via SSH
    --devel                When student4lab from sources
  Backup Operations:
-   --brestore             Restore configuration from backups and exit
-   --bclear               Clear backup files and exit
    --nobackup             Skip creating backup files
- Help:
-   --help                 Show this help message
  Use:
    sudo dos2unix /media/pi/audytor/home4copy/copy4prepare.sh
    sudo chmod +x /media/pi/audytor/home4copy/copy4prepare.sh
@@ -52,42 +51,26 @@ job="install"
 timeout=0                            # Wait time before starting operations
 run="/home/pi/.mentor/prepare4lab.sh" # Path to the script to run
 dry=0                                # Flag for simulation mode (no changes)
-brestore=0                           # Flag to restore from backups and exit
-bclear=0                             # Flag to clear backup files and exit
 nobackup=0                           # Flag to skip creating backup files
 user=1
 debug=0
 last_rsync_test=1
 parse_arguments() {
-    # Parse command line arguments
-    if [ $# -eq 0 ] || [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
-        show_help
-        exit 0
-    fi
-
     # Determine job type
     if [ $# -gt 0 ]; then
         case "$1" in
-            prepare|install|setup|bstatus)
+            prepare|install|setup|bstatus|bclear|brestore|help)
                 job="$1"
                 shift
                 ;;
             *)
-                job="install"
+            				echo_error $LINENO "Invalid job type: '$1'. Must be one of: prepare, install, setup, bstatus"
                 ;;
         esac
     else
         job="install"
+        echo_info "Default job: $job"
     fi
-
-    # Validate job type
-    case "$job" in
-        prepare|install|setup|bstatus)
-            ;;
-        *)
-            echo_error $LINENO "Invalid job type: '$job'. Must be one of: prepare, install, setup, bstatus"
-            ;;
-    esac
 
     # Parse remaining arguments
     while [ $# -gt 0 ]; do
@@ -119,12 +102,6 @@ parse_arguments() {
             --debug)
                 debug=1
                 ;;
-            --brestore)
-                brestore=1
-                ;;
-            --bclear)
-                bclear=1
-                ;;
             --nobackup)
                 nobackup=1
                 ;;
@@ -151,13 +128,20 @@ main() {
     parse_arguments "$@"
 
     # Handle backup operations first
-    handle_brestore
-    handle_bclear
 
     # Show backup status if requested
-    if [ "$job" = "bstatus" ]; then
-        show_backup_status
-        exit 0
+    if [ "$job" = "help" ]; then
+    	show_help
+    	exit 0
+    elif [ "$job" = "bstatus" ]; then
+     show_backup_status
+     exit 0
+    elif [ "$job" = "bstatus" ]; then
+    	handle_brestore
+     exit 0
+    elif [ "$job" = "bclear" ]; then
+    	handle_bclear
+     exit 0
     fi
 
     # Check if running as root
@@ -390,7 +374,6 @@ set_from() {
 }
 restore_from_backup() {
     local filepath="$1"
-    local force_restore="${2:-0}"
     local backup_path="${filepath}.lab.bak"
 
     if [ ! -f "$backup_path" ]; then
@@ -398,113 +381,101 @@ restore_from_backup() {
         return 1
     fi
 
-    if [ "$force_restore" -eq 1 ] || [ "$brestore" -eq 1 ]; then
-        echo_info "Przywracam $filepath z kopii zapasowej $backup_path"
+				echo_info "Przywracam $filepath z kopii zapasowej $backup_path"
 
-        # Verify backup integrity before restore
-        if [ ! -s "$backup_path" ]; then
-            echo_error $LINENO "Plik kopii zapasowej $backup_path jest pusty lub uszkodzony" "Weryfikacja kopii zapasowej"
-        fi
+				# Verify backup integrity before restore
+				if [ ! -s "$backup_path" ]; then
+								echo_stop "Plik kopii zapasowej $backup_path jest pusty lub uszkodzony, pomijam przywracanie"
+								return 1
+				fi
 
-        # Create a safety backup of current file if it exists and differs
-        if [ -f "$filepath" ] && ! cmp -s "$filepath" "$backup_path"; then
-            local safety_backup
-            safety_backup="${filepath}.before_restore.$(date +%s)"
-            echo_info "Tworzenie kopii bezpieczenstwa: $safety_backup"
-            cp "$filepath" "$safety_backup" || echo_info "Ostrzezenie: Nie udalo sie utworzyc kopii bezpieczenstwa" "WARN"
-        fi
+				# Create a safety backup of current file if it exists and differs
+				if [ -f "$filepath" ] && ! cmp -s "$filepath" "$backup_path"; then
+								local safety_backup
+								safety_backup="${filepath}.before_restore.$(date +%s)"
+								echo_info "Tworzenie kopii bezpieczenstwa: $safety_backup"
+								cp "$filepath" "$safety_backup" || echo_info "Ostrzezenie: Nie udalo sie utworzyc kopii bezpieczenstwa" "WARN"
+				fi
 
-        # Restore from backup using sudo mv -f
-        if [ "$dry" -ne 1 ]; then
-            sudo mv -f "$backup_path" "$filepath" || echo_error $LINENO "Nie udalo sie przywrocic $filepath z kopii zapasowej" "Przywracanie kopii zapasowej"
-            echo_info "Pomyslnie przywrocono $filepath z kopii zapasowej" "SUCCESS"
-        else
-            echo_info "Symulacja: Przywrocilbym $filepath z $backup_path" "DEBUG"
-        fi
+				# Restore from backup using sudo mv -f
+				if [ "$dry" -ne 1 ]; then
+								sudo mv -f "$backup_path" "$filepath" || echo_error $LINENO "Nie udalo sie przywrocic $filepath z kopii zapasowej" "Przywracanie kopii zapasowej"
+								echo_info "Pomyslnie przywrocono $filepath z kopii zapasowej" "SUCCESS"
+				else
+								echo_info "Symulacja: Przywrocilbym $filepath z $backup_path" "DEBUG"
+				fi
 
-        return 0
-    else
-        echo_info "Przywracanie nie zostalo zlecone dla $filepath"
-        return 1
-    fi
+				return 0
 }
 handle_brestore() {
-    if [ "$brestore" -eq 1 ]; then
-        echo_info "Przywracanie konfiguracji z plikow kopii zapasowych..."
-        echo_info "Skanowanie calego systemu plikow w poszukiwaniu plikow .lab.bak..."
+    echo_info "Przywracanie konfiguracji z plikow kopii zapasowych..."
+				echo_info "Skanowanie calego systemu plikow w poszukiwaniu plikow .lab.bak..."
 
-        local restore_count=0
-        local fail_count=0
+				local restore_count=0
+				local fail_count=0
 
-        # Find all .lab.bak files on entire filesystem and process them without losing variable changes
-        while IFS= read -r backup_file; do
-            local original_file="${backup_file%.lab.bak}"
+				# Find all .lab.bak files on entire filesystem and process them without losing variable changes
+				while IFS= read -r backup_file; do
+								local original_file="${backup_file%.lab.bak}"
 
-            echo_info "Znaleziono kopie zapasowa: $backup_file"
+								echo_info "Znaleziono kopie zapasowa: $backup_file"
 
-            if restore_from_backup "$original_file" 1; then
-                restore_count=$((restore_count + 1))
-                echo_info "✓ Przywrocono: $original_file"
-            else
-                fail_count=$((fail_count + 1))
-                echo_info "✗ Nie udalo sie przywrocic: $original_file"
-            fi
-        done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
+								if restore_from_backup "$original_file" 1; then
+												restore_count=$((restore_count + 1))
+												echo_info "✓ Przywrocono: $original_file"
+								else
+												fail_count=$((fail_count + 1))
+												echo_info "✗ Nie udalo sie przywrocic: $original_file"
+								fi
+				done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
 
-        echo_info "=== Podsumowanie przywracania ==="
-        echo_info "Pomyslnie przywrocono: $restore_count plikow"
-        echo_info "Nie udalo sie przywrocic: $fail_count plikow"
-        echo_info "==================================="
+				echo_info "=== Podsumowanie przywracania ==="
+				echo_info "Pomyslnie przywrocono: $restore_count plikow"
+				echo_info "Nie udalo sie przywrocic: $fail_count plikow"
+				echo_info "==================================="
 
-        if [ $restore_count -gt 0 ]; then
-            echo_info "Operacja przywracania zakonczona. Niektore uslugi moga wymagac ponownego uruchomienia."
-            echo_info "Rozwaz wykonanie: sudo systemctl restart ssh"
-        fi
-
-        exit 0
-    fi
+				if [ $restore_count -gt 0 ]; then
+								echo_info "Operacja przywracania zakonczona. Niektore uslugi moga wymagac ponownego uruchomienia."
+								echo_info "Rozwaz wykonanie: sudo systemctl restart ssh"
+				fi
 }
 handle_bclear() {
-    if [ "$bclear" -eq 1 ]; then
-        echo_info "Clearing backup files..."
-        echo_info "Scanning entire filesystem for .lab.bak files..."
+    echo_info "Clearing backup files..."
+				echo_info "Scanning entire filesystem for .lab.bak files..."
 
-        local clear_count=0
-        local fail_count=0
-        local total_size=0
+				local clear_count=0
+				local fail_count=0
+				local total_size=0
 
-        # Find all .lab.bak files on entire filesystem and process them without losing variable changes
-        while IFS= read -r backup_file; do
-            if [ -f "$backup_file" ]; then
-                local backup_size
-                backup_size=$(stat -c%s "$backup_file" 2>/dev/null || echo "0")
-                total_size=$((total_size + backup_size))
+				# Find all .lab.bak files on entire filesystem and process them without losing variable changes
+				while IFS= read -r backup_file; do
+								if [ -f "$backup_file" ]; then
+												local backup_size
+												backup_size=$(stat -c%s "$backup_file" 2>/dev/null || echo "0")
+												total_size=$((total_size + backup_size))
 
-                echo_info "Clearing: $backup_file (${backup_size} bytes)"
+												echo_info "Clearing: $backup_file (${backup_size} bytes)"
 
-                if [ "$dry" -ne 1 ]; then
-                    if rm -f "$backup_file"; then
-                        clear_count=$((clear_count + 1))
-                        echo_info "✓ Cleared: $backup_file"
-                    else
-                        fail_count=$((fail_count + 1))
-                        echo_info "✗ Failed to clear: $backup_file"
-                    fi
-                else
-                    clear_count=$((clear_count + 1))
-                    echo_info "dry: Would clear: $backup_file"
-                fi
-            fi
-        done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
+												if [ "$dry" -ne 1 ]; then
+																if rm -f "$backup_file"; then
+																				clear_count=$((clear_count + 1))
+																				echo_info "✓ Cleared: $backup_file"
+																else
+																				fail_count=$((fail_count + 1))
+																				echo_info "✗ Failed to clear: $backup_file"
+																fi
+												else
+																clear_count=$((clear_count + 1))
+																echo_info "dry: Would clear: $backup_file"
+												fi
+								fi
+				done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
 
-        echo_info "=== Clear Summary ==="
-        echo_info "Successfully cleared: $clear_count files"
-        echo_info "Failed to clear: $fail_count files"
-        echo_info "Total space freed: $total_size bytes"
-        echo_info "==================="
-
-        exit 0
-    fi
+				echo_info "=== Clear Summary ==="
+				echo_info "Successfully cleared: $clear_count files"
+				echo_info "Failed to clear: $fail_count files"
+				echo_info "Total space freed: $total_size bytes"
+				echo_info "==================="
 }
 show_backup_status() {
     echo_info "=== Backup Status Report ==="
