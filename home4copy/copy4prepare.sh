@@ -682,14 +682,11 @@ handle_file() {
         bash -n "$_file" || echo_stop "Błąd składni w skrypcie: $_file"
     fi
 }
-last_rsync_test=1
 rsync_line_test() {
-    last_rsync_test=0
     local p1="$1"
     local p2="$2"
     if [ -z "$p1" ] || [ -z "$p2" ]; then
         echo_info "Puste parametry przekazane do rsync_line_test"
-        return  # Exit early for empty parameters
     elif [[ "$p1" == "sending" || "$p1" == "sent" || "$p1" == "total" || "$p1" == *"speedup"* ]]; then
         echo_info "Pomijanie linii statusu rsync: $p1" "DEBUG"
     else
@@ -707,11 +704,14 @@ rsync_line_test() {
             echo_info "Pomijanie pliku wypełniającego: $p1" "DEBUG"
         elif [[ "$p1" == *.fix || "$p2" == *.fix ]]; then
             echo_info "Pomijanie pliku naprawiającego: $p1" "DEBUG"
-        else
+        elif [[ $p1 == "$p2" ]] || [[ $p2 == *uptodate* ]]; then
             echo_wait "Przetwarzanie: $p1 $p2"
-            last_rsync_test=1  # Set flag to indicate file should be processed
+            return 1  # Set flag to indicate file should be processed
+								else
+            echo_info "Pomijanie linii: $p1" "DEBUG"
         fi
     fi
+    return 0
 }
 
 run_rsync() {
@@ -721,19 +721,17 @@ run_rsync() {
     if [[ "$mntdir" == "$target/"* ]]; then
         exclude_option="$exclude_option --exclude=/${mntdir#"$target"/}"
     fi
-    local dry_exclude_option
-    dry_exclude_option="$exclude_option --exclude=/.source4rpi --exclude=/.mentor"
     local rcmd
-    rcmd="sudo -u pi rsync -avvc --relative"
+    rcmd="sudo -u pi rsync --relative -rtcvv"
     local cont
     cont="$from/$home_dir/./ $target"
     local rsync_cmd
-    rsync_cmd="$rcmd $exclude_option $cont"
+    rsync_cmd="$rcmd"v $exclude_option "$cont"
     local dry_rsync_cmd
-    dry_rsync_cmd="$rcmd --dry-run $dry_exclude_option $cont"
+    dry_rsync_cmd="$rcmd --dry-run $exclude_option $cont"
 
     echo_info "Wykonywanie suchego przebiegu, aby zidentyfikowac pliki do kopii zapasowej..."
-    echo_info "SYMULACJA RSYNC: $from/$home_dir/ >> $target ($dry_exclude_option)"
+    echo_info "SYMULACJA RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     local dry_run_file
     dry_run_file=$(mktemp)
     $dry_rsync_cmd > "$dry_run_file" || echo_info "Ostrzezenie: Symulacja rsync nie powiodla sie, kontynuuje mimo to" "WARN"
@@ -748,8 +746,8 @@ run_rsync() {
         second_part="${line#* }"
 
         # Apply the same relevancy check as in the second run
-        rsync_line_test "$first_part" "$second_part"
-        if [ $last_rsync_test -eq 1 ]; then
+        line_good=$(rsync_line_test "$first_part" "$second_part")
+        if [ "$line_good" -eq 1 ]; then
             files_to_process+=("$first_part")
         fi
     done < "$dry_run_file"
@@ -792,7 +790,8 @@ run_rsync() {
     echo_info "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
     if [ "$dry" -ne 1 ]; then
         echo_info "Wykonywanie synchronizacji plikow..."
-        $rsync_cmd || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki" "WARN"
+        rm -f /home/pi/rsync.lab.log || true
+        $rsync_cmd > "/home/pi/rsync.lab.log"  || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki" "WARN"
 
         # Process all collected files after rsync completion
         echo_info "Przetwarzanie skopiowanych plikow..."
