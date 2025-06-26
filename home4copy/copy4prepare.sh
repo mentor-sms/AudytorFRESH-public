@@ -55,27 +55,12 @@ nobackup=0                           # Flag to skip creating backup files
 user=1
 debug=0
 parse_arguments() {
-    # Determine job type
-    if [ $# -gt 0 ]; then
+    while [ $# -gt 0 ]; do
         case "$1" in
             prepare|install|setup|bstatus|bclear|brestore|help)
                 job="$1"
-        								echo_info "Job: $job"
-                shift
+                echo_info "Job: $job"
                 ;;
-            *)
-																job="help"
-																echo_info "Default job: $job"
-                ;;
-        esac
-    else
-        job="help"
-        echo_info "Default job: $job"
-    fi
-
-    # Parse remaining arguments
-    while [ $# -gt 0 ]; do
-        case "$1" in
             --from)
                 shift
                 from="${1:-}"
@@ -119,9 +104,16 @@ parse_arguments() {
         esac
         shift
     done
-				echo_info "from=$from"
-				echo_info "mnt=$mntdir"
-				echo_info "timeout=$timeout"
+
+    # Set default job if none was specified
+    if [ -z "$job" ]; then
+        job="help"
+        echo_info "Default job: $job"
+    fi
+
+    echo_info "from=$from"
+    echo_info "mnt=$mntdir"
+    echo_info "timeout=$timeout"
 }
 
 main() {
@@ -219,7 +211,21 @@ main() {
     echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
     echo_info "============================================================="
     echo_info "copy4prepare.sh zakonczony pomyslnie"
-    exit 0
+    echo_stop "RESTART SYSTEMU"
+    sync || true
+
+    # Simplified reboot command with proper output handling
+    if [ "$debug" -eq 1 ] || [ "$user" -eq 1 ]; then
+        # Debug mode - show output
+        shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
+    else
+        # Normal mode - suppress output
+        shutdown -r now >/dev/null 2>&1 || systemctl reboot >/dev/null 2>&1 || echo_error $LINENO "Ciche restartowanie systemu nieudane"
+    fi
+
+    # If we reach here, reboot failed
+    sleep 10
+    echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
 }
 echo_error() {
     local lineno="$1"
