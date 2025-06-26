@@ -119,7 +119,7 @@ Zapisz plik `nazwa.lab.marker` w miejsciu gdzie ma zostac utworzony katalog `naz
 
 # install4lab (2)
 
-1. Przygotuj czysty pendrive FAT32, opcjonalnie nazwij patrycje docelowa `prepare4lab`
+1. Przygotuj czysty pendrive FAT32, opcjonalnie nazwij patrycje docelowa np. `audytor`
 2. Konfiguruj SSH: TAK (pierwsze uruchomienie, nowy pulpit/instalacja w sieci, blad bezpieczenstwa), Dalej (Test).
 3. aaa.bbb.ccc.ddd:port - teacher4lab IP (port dowolny).
 4. Kopiuj student4lab zdalnie: NIE, student4lab zostanie zapisany na pendrive (przy aktualizacji: TAK, student4lab
@@ -134,6 +134,7 @@ Zapisz plik `nazwa.lab.marker` w miejsciu gdzie ma zostac utworzony katalog `naz
 Przygotowanie:
 
 ```bash
+
 sudo apt update
 sudo apt upgrade
 sudo apt full-upgrade -y
@@ -142,44 +143,48 @@ sudo apt clean
 reboot
 ```
 
-Pomoc:
+__copy4prepare__
+
+Bezposrednio z repozytorium AudytorFRESH-public:
 
 ```bash
-./copy4prepare.sh --help
-```
 
-__Instalacja 1x USB__:
-
-Przygotuj pendrive do podmiany z klawiatura zgodnie z instrukcja na ekranie:
-
-```bash
 cd ~
 curl -L -o copy4prepare.sh https://tinyurl.com/copy4prepare
 dos2unix -f -k copy4prepare.sh
 chmod +x copy4prepare.sh
 ```
 
-__Instalacja GUI__:
+Pomoc i sciezka do skryptu:
+```bash
+
+./copy4prepare.sh
+```
+
+__GUI__
 
 lub gdy usb juz zamontowano:
-
-`/dev/sda` -> `/media/pi/[...]`
-
-np. `--from /media/pi/prepare4lab`
-
-__Instalacja 2x USB__:
-
 ```bash
-sudo /media/pi/home4copy/copy4prepare.sh --timeout 0 [--from /media/pi/prepare4lab]
+
+lsblk
+```
+`/dev/sda` -> `/media/pi/audytor`
+
+Pomoc i sciezka do skryptu:
+```bash
+
+/media/pi/audytor/home4copy/copy4prepare.sh
 ```
 
-__Instalacja 1x USB__:
+__Instalacja__
 
 ```bash
-sudo /media/pi/home4copy/copy4prepare.sh
-```
 
-__Finalizacja__:
+sudo copy4prepare.sh [--timeout 0]
+```
+`timeout 0` tylko gdy klawiatura i pendrive podlaczone sa rownoczenie.
+
+__Finalizacja__
 
 Po komunikacje o ponownym uruchomieniu w sieci docelowej:
 

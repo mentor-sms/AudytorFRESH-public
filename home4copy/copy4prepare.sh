@@ -319,25 +319,28 @@ is_directory() {
         last_is_directory=1
     fi
 }
-last_is_block_device=0
 is_block_device() {
     local path="$1"
-    last_is_block_device=0
 
+    # Check if path is a mountpoint (mounted filesystem) - these should return false
+    if mountpoint -q "$path" 2>/dev/null; then
+        return 1  # false - it's a mountpoint, not a device
+    fi
+
+    # Now check if it's actually a block device file
     if [ -b "$path" ]; then
-        last_is_block_device=1
-        return
+        return 0  # true - it's a block device
     fi
 
     # Extract device name (e.g., sda1 -> sda)
     local device_name
     device_name=$(basename "$path")
     local base_device=${device_name%[0-9]*}  # Remove partition number
+
     # Check if it's a removable device
     local removable_file="/sys/block/$base_device/removable"
     if [ -f "$removable_file" ] && [ "$(cat "$removable_file")" = "1" ]; then
-        last_is_block_device=1
-        return
+        return 0  # true - removable device
     fi
 
     # Additional check: look for USB subsystem in device path
@@ -347,20 +350,17 @@ is_block_device() {
         local real_path
         real_path=$(readlink -f "$device_path")
         if [[ "$real_path" == *"/usb"* ]]; then
-            last_is_block_device=1
-            return
+            return 0  # true - USB device
         fi
     fi
 
-    # Check if device is in typical removable media mount points
-    if [[ "$path" == /media/* ]] || [[ "$path" == /mnt/* ]]; then
-        # Additional safety: check if it's not a system partition
-        if ! grep -q "^$path " /proc/mounts 2>/dev/null || \
-            ! grep -q " / \| /boot \| /home \| /var \| /usr " /proc/mounts 2>/dev/null; then
-            last_is_block_device=1
-            return
-        fi
+    # Check if it's a device path (not a mountpoint in /media or /mnt)
+    if [[ "$path" == /dev/* ]]; then
+        # It's in /dev, likely a device
+        return 0  # true - device path
     fi
+
+    return 1  # false - default to not a block device
 }
 is_mounted() {
     local device="$1"
