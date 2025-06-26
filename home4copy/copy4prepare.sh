@@ -723,7 +723,7 @@ run_rsync() {
     local cont
     cont="$from/$home_dir/./ $target"
     local rsync_cmd
-    rsync_cmd="$rcmd"v $exclude_option "$cont"
+    rsync_cmd="$rcmd $exclude_option $cont"
     local dry_rsync_cmd
     dry_rsync_cmd="$rcmd --dry-run $exclude_option $cont"
 
@@ -783,9 +783,9 @@ run_rsync() {
     rm -f "$dry_run_file"
 
     # Second rsync run - actual synchronization without line-by-line processing
-    echo_info "Rozpoczynanie wlasciwej operacji rsync..."
-    echo_info "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
-    echo_wait "$rsync_cmd"
+    echo_info ""
+    echo_info "rsync cmd: $rsync_cmd"
+    echo_stop "Rozpoczynanie wlasciwej operacji rsync..."
     if [ "$dry" -ne 1 ]; then
         echo_info "Wykonywanie synchronizacji plikow..."
         rm -f /home/pi/rsync.lab.log || true
