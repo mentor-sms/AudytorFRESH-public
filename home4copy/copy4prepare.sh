@@ -9,9 +9,9 @@ show_help() {
  Usage: sudo $0 job [options]
  Job Type (required - first argument):
    help                 Show this help message
-   prepare              Preparation job
+   prepare
    install              Installation job
-   setup                Setup jobyou
+   setup                
    bstatus              Show backup status and exit
    brestore             Restore configuration from backups and exit
    bclear               Clear backup files and exit
@@ -47,7 +47,7 @@ file=prepare4lab.sh                  # Script filename to run after copying
 quick=0                              # Flag to skip confirmation delays
 norun=0                              # Flag to skip running scripts
 nosync=0                             # Flag to skip rsync operations
-job="install"
+job="help"
 timeout=0                            # Wait time before starting operations
 run="/home/pi/.mentor/prepare4lab.sh" # Path to the script to run
 dry=0                                # Flag for simulation mode (no changes)
@@ -105,15 +105,10 @@ parse_arguments() {
         shift
     done
 
-    # Set default job if none was specified
-    if [ -z "$job" ]; then
-        job="help"
-        echo_info "Default job: $job"
-    fi
-
     echo_info "from=$from"
     echo_info "mnt=$mntdir"
     echo_info "timeout=$timeout"
+    echo_info "job: $job"
 }
 
 main() {
@@ -130,21 +125,26 @@ main() {
     if [ "$job" = "help" ]; then
     	show_help
     	exit 0
-    elif [ "$job" = "bstatus" ]; then
+				fi
+    if [ "$job" = "bstatus" ]; then
      show_backup_status
      exit 0
-    elif [ "$job" = "bstatus" ]; then
-    	handle_brestore
-     exit 0
-    elif [ "$job" = "bclear" ]; then
-    	handle_bclear
-     exit 0
-    fi
+				fi
 
     # Check if running as root
     if [ "$(id -u)" -ne 0 ]; then
         echo_error $LINENO "This script must be run as root (use sudo)"
     fi
+
+    if [ "$job" = "brestore" ]; then
+    	handle_brestore
+     exit 0
+   	fi
+    if [ "$job" = "bclear" ]; then
+    	handle_bclear
+     exit 0
+    fi
+
 
     # Wait timeout if specified
     if [ "$timeout" -gt 0 ]; then

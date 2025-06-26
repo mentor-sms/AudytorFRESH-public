@@ -180,7 +180,7 @@ __Instalacja__
 
 ```bash
 
-sudo copy4prepare.sh [--timeout 0]
+sudo copy4prepare.sh install [--timeout 0]
 ```
 `timeout 0` tylko gdy klawiatura i pendrive podlaczone sa rownoczenie.
 
