@@ -785,10 +785,11 @@ run_rsync() {
     # Second rsync run - actual synchronization without line-by-line processing
     echo_info "Rozpoczynanie wlasciwej operacji rsync..."
     echo_info "RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
+    echo_wait "$rsync_cmd"
     if [ "$dry" -ne 1 ]; then
         echo_info "Wykonywanie synchronizacji plikow..."
         rm -f /home/pi/rsync.lab.log || true
-        $rsync_cmd > "/home/pi/rsync.lab.log"  || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki"
+        $rsync_cmd || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki"
 
         # Process all collected files after rsync completion
         echo_info "Przetwarzanie skopiowanych plikow..."
