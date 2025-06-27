@@ -11,7 +11,7 @@ show_help() {
    help                 Show this help message
    prepare
    install              Installation job
-   setup                
+   setup
    bstatus              Show backup status and exit
    brestore             Restore configuration from backups and exit
    bclear               Clear backup files and exit
@@ -182,7 +182,7 @@ main() {
         if [ "$dry" -ne 1 ]; then
             cd /home/pi || echo_error $LINENO "Nie udalo sie zmienic katalogu na /home/pi"
             echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
-            $run "$prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+            "$run $prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
             echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
         else
             echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
@@ -932,8 +932,7 @@ mnt_init() {
         fi
     else
         # Original logic for non-USB sources
-        is_block_device "$from"
-        if [ $last_is_block_device -eq 1 ]; then
+        if is_block_device "$from"; then
             echo_info "$from is a block device, proceeding with mount"
             mnt_mnt "$from"
         else
