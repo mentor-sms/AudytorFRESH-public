@@ -182,7 +182,7 @@ main() {
         if [ "$dry" -ne 1 ]; then
             cd /home/pi || echo_error $LINENO "Nie udalo sie zmienic katalogu na /home/pi"
             echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
-            "$run $prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+            eval "$run $prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
             echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
         else
             echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
