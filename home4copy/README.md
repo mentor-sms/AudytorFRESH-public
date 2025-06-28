@@ -170,7 +170,7 @@ lsblk
 ```
 `/dev/sda` -> `/media/pi/audytor`
 
-Pomoc i sciezka do skryptu:
+Pomoc i sciezka do skryptu:~~~~
 ```bash
 
 /media/pi/audytor/home4copy/copy4prepare.sh
@@ -180,7 +180,7 @@ __Instalacja__
 
 ```bash
 
-sudo copy4prepare.sh install [--timeout 0]
+sudo copy4prepare.sh install [--timeout 0] | tee ~/copy4prepare.lab.log
 ```
 `timeout 0` tylko gdy klawiatura i pendrive podlaczone sa rownoczenie.
 

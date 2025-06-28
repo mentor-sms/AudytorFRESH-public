@@ -191,7 +191,9 @@ main() {
 				if [ "$dry" -ne 1 ]; then
 								cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
 								echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
-								eval "$run $prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+								mkdir -p "$target/.mentor"
+								# Run the script with tee to capture both stdout and stderr while showing output to user
+								eval "$run $prepare_args" 2>&1 | tee "$target/.mentor/prepare4lab.lab.log" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
 								echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
 				else
 								echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
