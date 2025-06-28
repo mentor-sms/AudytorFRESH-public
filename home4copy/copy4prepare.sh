@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=1.1.0-Vanilla #4lab>var
+WERSJA=1.2.0-Vanilla #4lab>var
 
 show_help() {
     cat << EOF
@@ -62,6 +62,9 @@ parse_arguments() {
                 if [ -z "$target_root" ]; then
                     echo_error $LINENO "Missing argument for --target"
                 fi
+																if [ "$target_root" != "/" ] && [ "${target_root%/}" = "$target_root" ]; then
+																				target_root="$target_root/"
+																fi
                 ;;
             --mnt)
                 shift
@@ -772,7 +775,7 @@ collect_rsync_files() {
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
     target="$target_root/home/$username"
-    run="$target.mentor/prepare4lab.sh"
+    run="$target".mentor/prepare4lab.sh
     local exclude_option
     exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.lab.bak"
     if [[ "$mntdir" == "$target"* ]]; then
