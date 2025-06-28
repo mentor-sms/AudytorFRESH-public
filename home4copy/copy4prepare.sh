@@ -9,16 +9,15 @@ show_help() {
 ===============================================================================
  Usage: sudo $0 job [options]
  Job Type (required - first argument):
-   help                 Show this help message
    install              Installation job
    bstatus              Show backup status and exit
    brestore             Restore configuration from backups and exit
    bclear               Clear backup files and exit
  Main Options:
+   --timeout <seconds>
  		--dry
    --from <path>
    --mnt <path>
-   --timeout <seconds>
    --target <path>
 
    --no-backup
