@@ -683,7 +683,7 @@ handle_file() {
     local _sourcefile=$2
     _file="${_file%"${_file##*[![:space:]]}"}"
     _sourcefile="${_sourcefile%"${_sourcefile##*[![:space:]]}"}"
-    echo_info "Przetwarzanie pliku: $_file"
+    echo_info "Przetwarzanie pliku (handle): $_file"
     is_file "$_sourcefile"
     if [ $last_is_file -ne 1 ]; then
         echo_error $LINENO "Plik źródłowy nie istnieje: $_sourcefile"
@@ -883,8 +883,8 @@ run_rsync() {
         # Process all collected files after rsync completion
         echo_info "Przetwarzanie skopiowanych plikow..."
         for first_part in "${files_to_process[@]}"; do
-            echo_info "Przetwarzanie pliku: $target$first_part"
-            handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
+            echo_info "Przetwarzanie pliku (rsync): $target$first_part"
+            handle_file "$target$first_part" "$from/$home_dir/$first_part" || true
         done
     else
         echo_info "Tryb symulacji: pomijanie właściwej operacji rsync"
