@@ -592,8 +592,7 @@ create_backup() {
         # Check if source file exists
         is_file "$filepath"
         if [ $last_is_file -ne 1 ]; then
-            echo_info "Plik źródłowy nie istnieje: $filepath, kopia zapasowa nie jest potrzebna"
-            return 0
+            echo_error "Plik źródłowy nie istnieje: $filepath"
         fi
 
         # Ensure backup directory exists
@@ -775,7 +774,7 @@ collect_rsync_files() {
 
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
-    target="$target_root"home/"$username"
+    target="$target_root"home/"$username"/
     run="$target".mentor/prepare4lab.sh
     local exclude_option
     exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.lab.bak"
@@ -818,7 +817,7 @@ run_rsync() {
                     echo_info "Plik istnieje, usuwanie: $fpath"
                     rm -rf "$fpath" || echo_info "Ostrzezenie: Nie udalo sie usunac pliku, proba kontynuacji"
                 else
-                    echo_info "Plik nie istnieje: $fpath"
+                    echo_error "Plik nie istnieje: $fpath"
                 fi
             else
                 echo_info "Symulacja: Usunięty zostałby plik $fpath"
