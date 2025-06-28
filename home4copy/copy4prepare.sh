@@ -42,6 +42,7 @@ timeout=0
 dry=0
 user=1
 debug=0
+nobackup=0
 parse_arguments() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -774,7 +775,7 @@ collect_rsync_files() {
 
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
-    target="$target_root/home/$username"
+    target="$target_root"home/"$username"
     run="$target".mentor/prepare4lab.sh
     local exclude_option
     exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.lab.bak"
