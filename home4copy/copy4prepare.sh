@@ -131,9 +131,7 @@ main() {
 				echo_info "============================================================="
     parse_arguments "$@"
 				echo_info "============================================================="
-				echo_wait ""
 
-    # Show backup status if requested
     if [ "$job" = "help" ]; then
     	show_help
     	exit 0
@@ -142,6 +140,7 @@ main() {
      show_backup_status
      exit 0
 				fi
+				echo_wait ""
 
     # Check if running as root
     if [ "$(id -u)" -ne 0 ]; then
@@ -446,7 +445,7 @@ handle_brestore() {
 												fail_count=$((fail_count + 1))
 												echo_info "✗ Nie udalo sie przywrocic: $original_file"
 								fi
-				done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
+				done < <(find "$target" -name "*.lab.bak" -type f 2>/dev/null)
 
 				echo_info "=== Podsumowanie przywracania ==="
 				echo_info "Pomyslnie przywrocono: $restore_count plikow"
@@ -772,10 +771,10 @@ collect_rsync_files() {
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
     target="$target_root/home/$username"
-    run="$target/.mentor/prepare4lab.sh"
+    run="$target.mentor/prepare4lab.sh"
     local exclude_option
     exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.lab.bak"
-    if [[ "$mntdir" == "$target/"* ]]; then
+    if [[ "$mntdir" == "$target"* ]]; then
         exclude_option="$exclude_option --exclude=/${mntdir#"$target"/}"
     fi
     local rcmd cont rsync_cmd dry_rsync_cmd
@@ -807,10 +806,9 @@ run_rsync() {
         # Create backups for all files that will be processed
         echo_info "Tworzenie kopii zapasowych..."
         for first_part in "${files_to_process[@]}"; do
-            local fpath="$target/$first_part"
+            local fpath="$target$first_part"
             if [ "$dry" -ne 1 ]; then
                 create_backup "$fpath"
-                echo_info "Usuwanie pliku przed kopiowaniem: $fpath"
                 if [ -e "$fpath" ]; then
                     echo_info "Plik istnieje, usuwanie: $fpath"
                     rm -rf "$fpath" || echo_info "Ostrzezenie: Nie udalo sie usunac pliku, proba kontynuacji"
@@ -881,7 +879,7 @@ run_rsync() {
         # Process all collected files after rsync completion
         echo_info "Przetwarzanie skopiowanych plikow..."
         for first_part in "${files_to_process[@]}"; do
-            echo_info "Przetwarzanie pliku: $target/$first_part"
+            echo_info "Przetwarzanie pliku: $target$first_part"
             handle_file "$target/$first_part" "$from/$home_dir/$first_part" || true
         done
     else
