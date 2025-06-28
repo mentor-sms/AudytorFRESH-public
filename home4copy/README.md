@@ -170,7 +170,7 @@ lsblk
 ```
 `/dev/sda` -> `/media/pi/audytor`
 
-Pomoc i sciezka do skryptu:~~~~
+Pomoc i sciezka do skryptu:
 ```bash
 
 /media/pi/audytor/home4copy/copy4prepare.sh
