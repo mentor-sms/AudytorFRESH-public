@@ -1,6 +1,7 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
 WERSJA=1.1.0-Vanilla #4lab>var
+
 show_help() {
     cat << EOF
 ===============================================================================
@@ -9,49 +10,37 @@ show_help() {
  Usage: sudo $0 job [options]
  Job Type (required - first argument):
    help                 Show this help message
-   prepare
    install              Installation job
-   setup
    bstatus              Show backup status and exit
    brestore             Restore configuration from backups and exit
    bclear               Clear backup files and exit
  Main Options:
-   --from <path>          Block device or directory (default: ${from})
-   --mnt <path>           Mount point for the device (default: ${mntdir})
-   --timeout <seconds>    Wait time before starting the process (default: ${timeout})
- Script Execution:
-   --quick                Skip confirmation delays (passed to prepare4lab)
-   --debug                Set debug verbosity level (passed to prepare4lab)
- prepare4lab-specific Options (passed through to prepare4lab.sh):
-   --continue             Don't start from scratch, for 'install'
-   --student [Nr] [IP]    For 'setup' job
-   --mic                  Dynamic mode
-   --remote               Via SSH
-   --devel                When student4lab from sources
- Backup Operations:
-   --nobackup             Skip creating backup files
- Use:
-   sudo dos2unix /media/pi/audytor/home4copy/copy4prepare.sh
-   sudo chmod +x /media/pi/audytor/home4copy/copy4prepare.sh
-   sudo /media/pi/audytor/home4copy/copy4prepare.sh install --devel --quick --timeout 0 --from /media/pi/audytor
+ 		--dry
+   --from <path>
+   --mnt <path>
+   --timeout <seconds>
+   --target <path>
+
+   --no-backup
+   --quick
+   --debug
+   --username
+ prepare4lab-specific Options (passed through):
+   --devel
+   --student [Nr] [IP]
+   --mic
 ===============================================================================
 EOF
 }
-SECONDS_START=$(date +%s)
-do_umount=0                          # Flag to track if we mounted a device
-from="USB"                       # Source location (block device or directory)
-mntdir=/home/pi/mnt                          # Mount point for block devices
-target=/home/pi                      # Target directory for file operations
-home_dir=home4copy                   # Directory name on source containing files
-file=prepare4lab.sh                  # Script filename to run after copying
-quick=0                              # Flag to skip confirmation delays
-norun=0                              # Flag to skip running scripts
-nosync=0                             # Flag to skip rsync operations
+
+from="USB"
+mntdir="/mnt/labusb"
+target_root="/"
+username="pi"
+quick=0
 job="help"
-timeout=0                            # Wait time before starting operations
-run="/home/pi/.mentor/prepare4lab.sh" # Path to the script to run
-dry=0                                # Flag for simulation mode (no changes)
-nobackup=0                           # Flag to skip creating backup files
+timeout=0
+dry=0
 user=1
 debug=0
 parse_arguments() {
@@ -68,10 +57,24 @@ parse_arguments() {
                     echo_error $LINENO "Missing argument for --from"
                 fi
                 ;;
+            --target)
+                shift
+                target_root="${1:-}"
+                if [ -z "$target_root" ]; then
+                    echo_error $LINENO "Missing argument for --target"
+                fi
+                ;;
             --mnt)
                 shift
                 mntdir="${1:-}"
                 if [ -z "$mntdir" ]; then
+                    echo_error $LINENO "Missing argument for --mnt"
+                fi
+                ;;
+            --username)
+                shift
+                username="${1:-}"
+                if [ -z "$username" ]; then
                     echo_error $LINENO "Missing argument for --mnt"
                 fi
                 ;;
@@ -86,13 +89,17 @@ parse_arguments() {
                 quick=1
                 echo_info "quick"
                 ;;
+            --no-backup)
+                nobackup=1
+                echo_wait "no backup!"
+                ;;
             --debug)
                 debug=1
                 echo_info "debug"
                 ;;
-            --nobackup)
-                nobackup=1
-                echo_info "nobackup"
+            --remote)
+                user=0
+                echo_info "installer4lab"
                 ;;
             --dry)
                 dry=1
@@ -111,15 +118,20 @@ parse_arguments() {
     echo_info "job: $job"
 }
 
+SECONDS_START=$(date +%s)
+do_umount=0
+home_dir=home4copy
+file=prepare4lab.sh
 main() {
     # Show startup banner
     echo_info "============================================================="
     echo_info "   copy4prepare v$WERSJA - Narzedzie Przygotowania Laboratorium Mentor"
     echo_info "============================================================="
     echo_info "Uzytkownik: $(whoami) | Host: $(hostname)"
-
+				echo_info "============================================================="
     parse_arguments "$@"
-				echo_wait "============================================================="
+				echo_info "============================================================="
+				echo_wait ""
 
     # Show backup status if requested
     if [ "$job" = "help" ]; then
@@ -145,10 +157,9 @@ main() {
      exit 0
     fi
 
-
     # Wait timeout if specified
     if [ "$timeout" -gt 0 ]; then
-        echo_info "Waiting $timeout seconds before starting..."
+        echo_info "Czekam $timeout sekund, podlacz pendrive z katalogiem home4copy..."
         sleep "$timeout"
     fi
 
@@ -161,35 +172,32 @@ main() {
     fi
 
     # Run rsync operation
-    if [ "$nosync" -eq 0 ]; then
-        run_rsync
-    else
-        echo_info "Skipping rsync operations (--nosync)"
-    fi
+				run_rsync
 
-    # Verify and run prepare script
-    if [ "$norun" -eq 0 ]; then
-        verify_prepare_script
-        # Build command line for prepare4lab
-        prepare_args="$job"
-        if [ "$quick" -eq 1 ]; then
-            prepare_args="$prepare_args --quick"
-        fi
-        if [ "$debug" -eq 1 ]; then
-            prepare_args="$prepare_args --debug"
-        fi
-        echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
-        if [ "$dry" -ne 1 ]; then
-            cd /home/pi || echo_error $LINENO "Nie udalo sie zmienic katalogu na /home/pi"
-            echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
-            eval "$run $prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
-            echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
-        else
-            echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
-        fi
-    else
-        echo_info "Pomijam wykonanie skryptu przygotowawczego (--norun)"
-    fi
+    verify_prepare_script
+				# Build command line for prepare4lab
+				prepare_args="$job"
+				if [ "$nobackup" -eq 1 ]; then
+								prepare_args="$prepare_args --no-backup"
+				fi
+				if [ "$quick" -eq 1 ]; then
+								prepare_args="$prepare_args --quick"
+				fi
+				if [ "$debug" -eq 1 ]; then
+								prepare_args="$prepare_args --debug"
+				fi
+				if [ "$username" -eq 1 ]; then
+								prepare_args="$prepare_args --username $username"
+				fi
+				echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
+				if [ "$dry" -ne 1 ]; then
+								cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
+								echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
+								eval "$run $prepare_args" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+								echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
+				else
+								echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
+				fi
 
     # Cleanup
     un_un
@@ -216,10 +224,12 @@ main() {
 
     # Simplified reboot command with proper output handling
     if [ "$debug" -eq 1 ] || [ "$user" -eq 1 ]; then
-        # Debug mode - show output
-        shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
+    				if [ "$quick" -eq 1 ]; then
+       					shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
+        else
+       					shutdown -r +1 || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
+       	fi
     else
-        # Normal mode - suppress output
         shutdown -r now >/dev/null 2>&1 || systemctl reboot >/dev/null 2>&1 || echo_error $LINENO "Ciche restartowanie systemu nieudane"
     fi
 
@@ -717,20 +727,61 @@ rsync_line_test() {
     return 0
 }
 
+format_file_list() {
+    local -n files_array=$1
+    local formatted_list=""
+
+    for file_path in "${files_array[@]}"; do
+        local parent_dir filename formatted_path
+        parent_dir=$(dirname "$file_path")
+        filename=$(basename "$file_path")
+
+        if [ "$parent_dir" = "." ]; then
+            formatted_path="$filename"
+        else
+            formatted_path="$parent_dir/$filename"
+        fi
+
+        if [ -z "$formatted_list" ]; then
+            formatted_list="$formatted_path"
+        else
+            formatted_list="$formatted_list, $formatted_path"
+        fi
+    done
+
+    echo "$formatted_list"
+}
+
+collect_rsync_files() {
+    local rsync_output_file="$1"
+    local -n result_array=$2
+
+    while read -r line; do
+        local first_part second_part
+        first_part="${line%% *}"
+        second_part="${line#* }"
+
+        if rsync_line_test "$first_part" "$second_part"; then
+            true
+        else
+            result_array+=("$first_part")
+        fi
+    done < "$rsync_output_file"
+}
+
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
+    target="$target_root/home/$username"
+    run="$target/.mentor/prepare4lab.sh"
     local exclude_option
     exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.lab.bak"
     if [[ "$mntdir" == "$target/"* ]]; then
         exclude_option="$exclude_option --exclude=/${mntdir#"$target"/}"
     fi
-    local rcmd
+    local rcmd cont rsync_cmd dry_rsync_cmd
     rcmd="sudo -u pi rsync --relative -rtcvv"
-    local cont
     cont="$from/$home_dir/./ $target"
-    local rsync_cmd
     rsync_cmd="$rcmd $exclude_option $cont"
-    local dry_rsync_cmd
     dry_rsync_cmd="$rcmd --dry-run $exclude_option $cont"
 
     echo_info "Wykonywanie suchego przebiegu, aby zidentyfikowac pliki do kopii zapasowej..."
@@ -742,25 +793,13 @@ run_rsync() {
     # First rsync run - collect files that would be processed
     echo_info "Pierwsza analiza rsync - zbieranie listy plikow do przetworzenia..."
     local files_to_process=()
-    while read -r line; do
-        local first_part
-        local second_part
-        first_part="${line%% *}"
-        second_part="${line#* }"
+    collect_rsync_files "$dry_run_file" files_to_process
 
-        if rsync_line_test "$first_part" "$second_part"; then
-            true
-        else
-            files_to_process+=("$first_part")
-        fi
-    done < "$dry_run_file"
-
-    # Display collected files to user and ask for approval
+    # Display first list
     if [ ${#files_to_process[@]} -gt 0 ]; then
-        echo_info "Znalezione pliki do przetworzenia:"
-        for file_path in "${files_to_process[@]}"; do
-            echo_info "  - $file_path"
-        done
+        local formatted_list
+        formatted_list=$(format_file_list files_to_process)
+        echo_info "Lista plikow z pierwszej analizy: $formatted_list"
 
         echo_stop "Czy kontynuowac z przetwarzaniem ${#files_to_process[@]} plikow?" \
             "Pliki zostana usuniete przed kopiowaniem, a nastepnie przetworzone."
@@ -788,14 +827,56 @@ run_rsync() {
 
     rm -f "$dry_run_file"
 
-    # Second rsync run - actual synchronization without line-by-line processing
+    # Second rsync run - actual synchronization
     echo_info ""
     echo_info "rsync cmd: $rsync_cmd"
     echo_stop "Rozpoczynanie wlasciwej operacji rsync..."
     if [ "$dry" -ne 1 ]; then
         echo_info "Wykonywanie synchronizacji plikow..."
-        rm -f /home/pi/rsync.lab.log || true
-        $rsync_cmd || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki"
+
+        # Capture second rsync output for comparison
+        local second_rsync_file
+        second_rsync_file=$(mktemp)
+        $rsync_cmd > "$second_rsync_file" || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki"
+
+        # Collect files from second rsync run
+        local actual_processed_files=()
+        collect_rsync_files "$second_rsync_file" actual_processed_files
+
+        # Display second list
+        if [ ${#actual_processed_files[@]} -gt 0 ]; then
+            local formatted_second_list
+            formatted_second_list=$(format_file_list actual_processed_files)
+            echo_info "Lista plikow rzeczywiscie przetworzonych: $formatted_second_list"
+        else
+            echo_info "Brak plikow rzeczywiscie przetworzonych"
+        fi
+
+        # Find files from first list that don't appear in second list
+        local missing_files=()
+        for first_file in "${files_to_process[@]}"; do
+            local found=0
+            for second_file in "${actual_processed_files[@]}"; do
+                if [ "$first_file" = "$second_file" ]; then
+                    found=1
+                    break
+                fi
+            done
+            if [ $found -eq 0 ]; then
+                missing_files+=("$first_file")
+            fi
+        done
+
+        # Display missing files
+        if [ ${#missing_files[@]} -gt 0 ]; then
+            local formatted_missing_list
+            formatted_missing_list=$(format_file_list missing_files)
+            echo_info "Pliki z pierwszej listy nieobecne w drugiej: $formatted_missing_list"
+        else
+            echo_info "Wszystkie pliki z pierwszej listy zostaly przetworzone"
+        fi
+
+        rm -f "$second_rsync_file"
 
         # Process all collected files after rsync completion
         echo_info "Przetwarzanie skopiowanych plikow..."
