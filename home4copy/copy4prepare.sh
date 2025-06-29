@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=1.2.0-Vanilla #4lab>var
+WERSJA=1.0.0-Vanilla #4lab>var
 
 show_help() {
     cat << EOF
@@ -815,8 +815,6 @@ run_rsync() {
                 if [ -e "$fpath" ]; then
                     echo_info "Plik istnieje, usuwanie: $fpath"
                     rm -rf "$fpath" || echo_info "Ostrzezenie: Nie udalo sie usunac pliku, proba kontynuacji"
-                else
-                    echo_error "Plik nie istnieje: $fpath"
                 fi
             else
                 echo_info "Symulacja: Usunięty zostałby plik $fpath"
