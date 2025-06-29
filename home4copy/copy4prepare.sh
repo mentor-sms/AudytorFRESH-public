@@ -429,79 +429,45 @@ restore_from_backup() {
 
 				return 0
 }
+
 handle_brestore() {
     echo_info "Przywracanie konfiguracji z plikow kopii zapasowych..."
-				echo_info "Skanowanie calego systemu plikow w poszukiwaniu plikow .lab.bak..."
+    echo_info "Skanowanie systemu plikow w $target w poszukiwaniu plikow .lab.bak..."
 
-				local restore_count=0
-				local fail_count=0
+    local restore_count=0
+    local fail_count=0
 
-				# Find all .lab.bak files on entire filesystem and process them without losing variable changes
-				while IFS= read -r backup_file; do
-								local original_file="${backup_file%.lab.bak}"
+    # Use $target for consistency with the script's design
+    # Remove the extra parameter '1' from the function call
+    while IFS= read -r backup_file; do
+        local original_file="${backup_file%.lab.bak}"
 
-								echo_info "Znaleziono kopie zapasowa: $backup_file"
+        echo_info "Znaleziono kopie zapasowa: $backup_file"
 
-								if restore_from_backup "$original_file" 1; then
-												restore_count=$((restore_count + 1))
-												echo_info "✓ Przywrocono: $original_file"
-								else
-												fail_count=$((fail_count + 1))
-												echo_info "✗ Nie udalo sie przywrocic: $original_file"
-								fi
-				done < <(find "$target" -name "*.lab.bak" -type f 2>/dev/null)
+        # Remove the extra parameter - restore_from_backup only takes filepath
+        if restore_from_backup "$original_file"; then
+            restore_count=$((restore_count + 1))
+            echo_info "✓ Przywrocono: $original_file"
+        else
+            fail_count=$((fail_count + 1))
+            echo_info "✗ Nie udalo sie przywrocic: $original_file"
+        fi
+    done < <(find "$target" -name "*.lab.bak" -type f 2>/dev/null)
 
-				echo_info "=== Podsumowanie przywracania ==="
-				echo_info "Pomyslnie przywrocono: $restore_count plikow"
-				echo_info "Nie udalo sie przywrocic: $fail_count plikow"
-				echo_info "==================================="
+    echo_info "=== Podsumowanie przywracania ==="
+    echo_info "Pomyslnie przywrocono: $restore_count plikow"
+    echo_info "Nie udalo sie przywrocic: $fail_count plikow"
+    echo_info "==================================="
 
-				if [ $restore_count -gt 0 ]; then
-								echo_info "Operacja przywracania zakonczona. Niektore uslugi moga wymagac ponownego uruchomienia."
-								echo_info "Rozwaz wykonanie: sudo systemctl restart ssh"
-				fi
+    if [ $restore_count -gt 0 ]; then
+        echo_info "Operacja przywracania zakonczona. Niektore uslugi moga wymagac ponownego uruchomienia."
+        echo_info "Rozwaz wykonanie: sudo systemctl restart ssh"
+    fi
 }
-handle_bclear() {
-    echo_info "Clearing backup files..."
-				echo_info "Scanning entire filesystem for .lab.bak files..."
 
-				local clear_count=0
-				local fail_count=0
-				local total_size=0
-
-				# Find all .lab.bak files on entire filesystem and process them without losing variable changes
-				while IFS= read -r backup_file; do
-								if [ -f "$backup_file" ]; then
-												local backup_size
-												backup_size=$(stat -c%s "$backup_file" 2>/dev/null || echo "0")
-												total_size=$((total_size + backup_size))
-
-												echo_info "Clearing: $backup_file (${backup_size} bytes)"
-
-												if [ "$dry" -ne 1 ]; then
-																if rm -f "$backup_file"; then
-																				clear_count=$((clear_count + 1))
-																				echo_info "✓ Cleared: $backup_file"
-																else
-																				fail_count=$((fail_count + 1))
-																				echo_info "✗ Failed to clear: $backup_file"
-																fi
-												else
-																clear_count=$((clear_count + 1))
-																echo_info "dry: Would clear: $backup_file"
-												fi
-								fi
-				done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
-
-				echo_info "=== Clear Summary ==="
-				echo_info "Successfully cleared: $clear_count files"
-				echo_info "Failed to clear: $fail_count files"
-				echo_info "Total space freed: $total_size bytes"
-				echo_info "==================="
-}
 show_backup_status() {
     echo_info "=== Backup Status Report ==="
-    echo_info "Scanning entire filesystem for .lab.bak files..."
+    echo_info "Skanowanie systemu plikow w $target w poszukiwaniu plikow .lab.bak..."
     echo_info ""
 
     local backup_count=0
@@ -536,13 +502,53 @@ show_backup_status() {
             backup_count=$((backup_count + 1))
             total_size=$((total_size + backup_size))
         fi
-    done < <(find / -name "*.lab.bak" -type f 2>/dev/null)
+    done < <(find "$target" -name "*.lab.bak" -type f 2>/dev/null)
 
     echo_info "=== Summary ==="
     echo_info "Total backups found: $backup_count"
     echo_info "Total backup size: $total_size bytes"
     echo_info "================="
 }
+
+handle_bclear() {
+    echo_info "Clearing backup files..."
+    echo_info "Skanowanie systemu plikow w $target w poszukiwaniu plikow .lab.bak..."
+
+    local clear_count=0
+    local fail_count=0
+    local total_size=0
+
+    # Find all .lab.bak files in target filesystem and process them without losing variable changes
+    while IFS= read -r backup_file; do
+        if [ -f "$backup_file" ]; then
+            local backup_size
+            backup_size=$(stat -c%s "$backup_file" 2>/dev/null || echo "0")
+            total_size=$((total_size + backup_size))
+
+            echo_info "Clearing: $backup_file (${backup_size} bytes)"
+
+            if [ "$dry" -ne 1 ]; then
+                if rm -f "$backup_file"; then
+                    clear_count=$((clear_count + 1))
+                    echo_info "✓ Cleared: $backup_file"
+                else
+                    fail_count=$((fail_count + 1))
+                    echo_info "✗ Failed to clear: $backup_file"
+                fi
+            else
+                clear_count=$((clear_count + 1))
+                echo_info "dry: Would clear: $backup_file"
+            fi
+        fi
+    done < <(find "$target" -name "*.lab.bak" -type f 2>/dev/null)
+
+    echo_info "=== Clear Summary ==="
+    echo_info "Successfully cleared: $clear_count files"
+    echo_info "Failed to clear: $fail_count files"
+    echo_info "Total space freed: $total_size bytes"
+    echo_info "==================="
+}
+
 create_backup() {
     local filepath="$1"
 
