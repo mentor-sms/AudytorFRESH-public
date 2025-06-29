@@ -232,14 +232,13 @@ main() {
        					shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
         else
        					shutdown -r +1 || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
+												sleep 60
        	fi
     else
         shutdown -r now >/dev/null 2>&1 || systemctl reboot >/dev/null 2>&1 || echo_error $LINENO "Ciche restartowanie systemu nieudane"
     fi
-
-    # If we reach here, reboot failed
-    sleep 10
-    echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
+				sleep 3
+				echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
 }
 echo_error() {
     local lineno="$1"
@@ -845,15 +844,6 @@ run_rsync() {
         local actual_processed_files=()
         collect_rsync_files "$second_rsync_file" actual_processed_files
 
-        # Display second list
-        if [ ${#actual_processed_files[@]} -gt 0 ]; then
-            local formatted_second_list
-            formatted_second_list=$(format_file_list actual_processed_files)
-            echo_info "Lista plikow rzeczywiscie przetworzonych: $formatted_second_list"
-        else
-            echo_info "Brak plikow rzeczywiscie przetworzonych"
-        fi
-
         # Find files from first list that don't appear in second list
         local missing_files=()
         for first_file in "${files_to_process[@]}"; do
@@ -873,10 +863,43 @@ run_rsync() {
         if [ ${#missing_files[@]} -gt 0 ]; then
             local formatted_missing_list
             formatted_missing_list=$(format_file_list missing_files)
-            echo_info "Pliki z pierwszej listy nieobecne w drugiej: $formatted_missing_list"
+            echo_error "Pliki nieudane: $formatted_missing_list"
         else
             echo_info "Wszystkie pliki z pierwszej listy zostaly przetworzone"
         fi
+
+								if [ ${#actual_processed_files[@]} -gt 0 ]; then
+												local formatted_second_list
+												formatted_second_list=$(format_file_list actual_processed_files)
+												echo_stop "Lista plikow rzeczywiscie przetworzonych: $formatted_second_list"
+
+												# Find files that are in actual_processed_files but not in the first list
+												# (assuming the first list is stored in a variable like 'expected_files' or similar)
+												local additional_files=()
+												for file in "${actual_processed_files[@]}"; do
+																local found=0
+																for expected_file in "${files_to_process[@]}"; do  # Replace 'expected_files' with your first list variable name
+																				if [[ "$file" == "$expected_file" ]]; then
+																								found=1
+																								break
+																				fi
+																done
+																if [ $found -eq 0 ]; then
+																				additional_files+=("$file")
+																fi
+												done
+
+												# Display additional files if any
+												if [ ${#additional_files[@]} -gt 0 ]; then
+																local formatted_additional_list
+																formatted_additional_list=$(format_file_list additional_files)
+																echo_info "Dodatkowe pliki przetworzone (nie byly na pierwszej liscie): $formatted_additional_list"
+												else
+																echo_info "Brak dodatkowych plikow - wszystkie przetworzone pliki byly oczekiwane"
+												fi
+								else
+												echo_info "Brak plikow rzeczywiscie przetworzonych"
+								fi
 
         rm -f "$second_rsync_file"
 
