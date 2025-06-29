@@ -591,7 +591,7 @@ create_backup() {
         # Check if source file exists
         is_file "$filepath"
         if [ $last_is_file -ne 1 ]; then
-            echo_error "Plik źródłowy nie istnieje: $filepath"
+            echo_info "Plik źródłowy nie istnieje, its ok: $filepath"
         fi
 
         # Ensure backup directory exists
