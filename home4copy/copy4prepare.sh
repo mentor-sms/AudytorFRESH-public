@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=1.0.0-Vanilla #4lab>var
+WERSJA=2.0.0-Vanilla #4lab>var
 
 show_help() {
     cat << EOF
