@@ -806,23 +806,6 @@ format_file_list() {
     echo "$formatted_list"
 }
 
-collect_rsync_files() {
-    local rsync_output_file="$1"
-    local -n result_array=$2
-
-    while read -r line; do
-        local first_part second_part
-        first_part="${line%% *}"
-        second_part="${line#* }"
-
-        if rsync_line_test "$first_part" "$second_part"; then
-            true
-        else
-            result_array+=("$first_part")
-        fi
-    done < "$rsync_output_file"
-}
-
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
     target="$target_root"home/"$username"/
@@ -840,23 +823,44 @@ run_rsync() {
 
     echo_info "Wykonywanie suchego przebiegu, aby zidentyfikowac pliki do kopii zapasowej..."
     echo_info "SYMULACJA RSYNC: $from/$home_dir/ >> $target ($exclude_option)"
-    local dry_run_file
-    dry_run_file=$(mktemp)
-    $dry_rsync_cmd > "$dry_run_file" || echo_info "Ostrzezenie: Symulacja rsync nie powiodla sie, kontynuuje mimo to"
 
-    # First rsync run - collect files that would be processed
-    echo_info "Pierwsza analiza rsync - zbieranie listy plikow do przetworzenia..."
+    # Array to collect files from dry run
     local files_to_process=()
-    collect_rsync_files "$dry_run_file" files_to_process
 
-    # Display first list
+    # Run dry-run and process output line by line in real-time
+    echo_info "Pierwsza analiza rsync - zbieranie listy plikow do przetworzenia..."
+    local dry_run_exit_code=0
+    while IFS= read -r line; do
+        echo "$line"  # Show live output
+        local first_part second_part
+        first_part="${line%% *}"
+        second_part="${line#* }"
+
+        if rsync_line_test "$first_part" "$second_part"; then
+            true
+        else
+            files_to_process+=("$first_part")
+        fi
+    done < <($dry_rsync_cmd 2>&1; echo "RSYNC_EXIT_CODE:$?" >&2) 2> >(
+        while IFS= read -r error_line; do
+            if [[ "$error_line" == RSYNC_EXIT_CODE:* ]]; then
+                dry_run_exit_code="${error_line#RSYNC_EXIT_CODE:}"
+            else
+                echo "$error_line" >&2
+            fi
+        done
+    )
+
+    if [ "$dry_run_exit_code" -ne 0 ]; then
+        echo_error $LINENO "Symulacja rsync nie powiodla sie (kod: $dry_run_exit_code)" "Dry-run rsync failed"
+    fi
+
+    # Display first list with question
     if [ ${#files_to_process[@]} -gt 0 ]; then
         local formatted_list
         formatted_list=$(format_file_list files_to_process)
-        echo_info "Lista plikow z pierwszej analizy: $formatted_list"
-
-        echo_stop "Czy kontynuowac z przetwarzaniem ${#files_to_process[@]} plikow?" \
-            "Pliki zostana usuniete przed kopiowaniem, a nastepnie przetworzone."
+        echo_stop "Lista plikow z pierwszej analizy: $formatted_list" \
+            "Czy kontynuowac z przetwarzaniem ${#files_to_process[@]} plikow? Pliki zostana skopiowane i przetworzone."
 
         # Create backups for all files that will be processed
         echo_info "Tworzenie kopii zapasowych..."
@@ -864,35 +868,52 @@ run_rsync() {
             local fpath="$target$first_part"
             if [ "$dry" -ne 1 ]; then
                 create_backup "$fpath"
-                if [ -e "$fpath" ]; then
-                    echo_info "Plik istnieje, usuwanie: $fpath"
-                    rm -rf "$fpath" || echo_info "Ostrzezenie: Nie udalo sie usunac pliku, proba kontynuacji"
-                fi
             else
-                echo_info "Symulacja: Usunięty zostałby plik $fpath"
+                echo_info "Symulacja: Utworzylbym kopie zapasowa pliku $fpath"
             fi
         done
     else
         echo_info "Brak plikow do przetworzenia"
     fi
 
-    rm -f "$dry_run_file"
-
     # Second rsync run - actual synchronization
     echo_info ""
     echo_info "rsync cmd: $rsync_cmd"
-    echo_stop "Rozpoczynanie wlasciwej operacji rsync..."
+    echo_stop "Rozpoczynanie wlasciwej operacji rsync..." \
+        "Czy kontynuowac z wykonaniem synchronizacji?"
+
     if [ "$dry" -ne 1 ]; then
         echo_info "Wykonywanie synchronizacji plikow..."
 
-        # Capture second rsync output for comparison
-        local second_rsync_file
-        second_rsync_file=$(mktemp)
-        $rsync_cmd > "$second_rsync_file" || echo_info "Ostrzezenie: Operacja rsync zakonczona z bledami, sprawdzam wyniki"
-
-        # Collect files from second rsync run
+        # Array to collect files from actual run
         local actual_processed_files=()
-        collect_rsync_files "$second_rsync_file" actual_processed_files
+
+        # Run actual rsync and process output line by line in real-time
+        local rsync_exit_code=0
+        while IFS= read -r line; do
+            echo "$line"  # Show live output
+            local first_part second_part
+            first_part="${line%% *}"
+            second_part="${line#* }"
+
+            if rsync_line_test "$first_part" "$second_part"; then
+                true
+            else
+                actual_processed_files+=("$first_part")
+            fi
+        done < <($rsync_cmd 2>&1; echo "RSYNC_EXIT_CODE:$?" >&2) 2> >(
+            while IFS= read -r error_line; do
+                if [[ "$error_line" == RSYNC_EXIT_CODE:* ]]; then
+                    rsync_exit_code="${error_line#RSYNC_EXIT_CODE:}"
+                else
+                    echo "$error_line" >&2
+                fi
+            done
+        )
+
+        if [ "$rsync_exit_code" -ne 0 ]; then
+            echo_error $LINENO "Operacja rsync zakonczona z bledami (kod: $rsync_exit_code)" "Rsync execution failed"
+        fi
 
         # Find files from first list that don't appear in second list
         local missing_files=()
@@ -909,55 +930,58 @@ run_rsync() {
             fi
         done
 
-        # Display missing files
+        # Display missing files - this is a critical error
         if [ ${#missing_files[@]} -gt 0 ]; then
             local formatted_missing_list
             formatted_missing_list=$(format_file_list missing_files)
-            echo_error "Pliki nieudane: $formatted_missing_list"
+            echo_error $LINENO "Pliki nieudane: $formatted_missing_list" "Critical files were not processed by rsync"
         else
             echo_info "Wszystkie pliki z pierwszej listy zostaly przetworzone"
         fi
 
-								if [ ${#actual_processed_files[@]} -gt 0 ]; then
-												local formatted_second_list
-												formatted_second_list=$(format_file_list actual_processed_files)
-												echo_stop "Lista plikow rzeczywiscie przetworzonych: $formatted_second_list"
+        if [ ${#actual_processed_files[@]} -gt 0 ]; then
+            local formatted_second_list
+            formatted_second_list=$(format_file_list actual_processed_files)
+            echo_stop "Lista plikow rzeczywiscie przetworzonych: $formatted_second_list" \
+                "Czy kontynuowac z przetwarzaniem ${#actual_processed_files[@]} plikow?"
 
-												# Find files that are in actual_processed_files but not in the first list
-												# (assuming the first list is stored in a variable like 'expected_files' or similar)
-												local additional_files=()
-												for file in "${actual_processed_files[@]}"; do
-																local found=0
-																for expected_file in "${files_to_process[@]}"; do  # Replace 'expected_files' with your first list variable name
-																				if [[ "$file" == "$expected_file" ]]; then
-																								found=1
-																								break
-																				fi
-																done
-																if [ $found -eq 0 ]; then
-																				additional_files+=("$file")
-																fi
-												done
+            # Find files that are in actual_processed_files but not in the first list
+            local additional_files=()
+            for file in "${actual_processed_files[@]}"; do
+                local found=0
+                for expected_file in "${files_to_process[@]}"; do
+                    if [[ "$file" == "$expected_file" ]]; then
+                        found=1
+                        break
+                    fi
+                done
+                if [ $found -eq 0 ]; then
+                    additional_files+=("$file")
+                fi
+            done
 
-												# Display additional files if any
-												if [ ${#additional_files[@]} -gt 0 ]; then
-																local formatted_additional_list
-																formatted_additional_list=$(format_file_list additional_files)
-																echo_info "Dodatkowe pliki przetworzone (nie byly na pierwszej liscie): $formatted_additional_list"
-												else
-																echo_info "Brak dodatkowych plikow - wszystkie przetworzone pliki byly oczekiwane"
-												fi
-								else
-												echo_info "Brak plikow rzeczywiscie przetworzonych"
-								fi
-
-        rm -f "$second_rsync_file"
+            # Display additional files - this could indicate unexpected behavior
+            if [ ${#additional_files[@]} -gt 0 ]; then
+                local formatted_additional_list
+                formatted_additional_list=$(format_file_list additional_files)
+                echo_error $LINENO "Nieoczekiwane dodatkowe pliki przetworzone: $formatted_additional_list" "Rsync processed unexpected files not in dry-run"
+            else
+                echo_info "Brak dodatkowych plikow - wszystkie przetworzone pliki byly oczekiwane"
+            fi
+        else
+            # If we expected files but none were processed, this is an error
+            if [ ${#files_to_process[@]} -gt 0 ]; then
+                echo_error $LINENO "Brak plikow rzeczywiscie przetworzonych mimo oczekiwanych ${#files_to_process[@]} plikow" "Rsync failed to process any expected files"
+            else
+                echo_info "Brak plikow rzeczywiscie przetworzonych (zgodnie z oczekiwaniami)"
+            fi
+        fi
 
         # Process all collected files after rsync completion
         echo_info "Przetwarzanie skopiowanych plikow..."
         for first_part in "${files_to_process[@]}"; do
             echo_info "Przetwarzanie pliku (rsync): $target$first_part"
-            handle_file "$target$first_part" "$from/$home_dir/$first_part" || true
+            handle_file "$target$first_part" "$from/$home_dir/$first_part" || echo_error $LINENO "Nie udalo sie przetworzyc pliku: $target$first_part" "File processing failed"
         done
     else
         echo_info "Tryb symulacji: pomijanie właściwej operacji rsync"
