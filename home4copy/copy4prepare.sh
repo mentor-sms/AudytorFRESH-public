@@ -108,6 +108,7 @@ parse_arguments() {
             --remote)
                 user=0
                 keyboard=0
+                export DEBIAN_FRONTEND=noninteractive
                 echo_info "installer4lab"
                 ;;
             --devel)
