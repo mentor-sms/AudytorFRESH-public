@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=2.0.0-Vanilla #4lab>var
+WERSJA=1-Vanilla #4lab>var
 
 show_help() {
     cat << EOF
@@ -41,6 +41,7 @@ job="help"
 timeout=0
 dry=0
 user=1
+keyboard=$user
 debug=0
 nobackup=0
 devel=0
@@ -106,6 +107,7 @@ parse_arguments() {
                 ;;
             --remote)
                 user=0
+                keyboard=0
                 echo_info "installer4lab"
                 ;;
             --devel)
@@ -178,17 +180,36 @@ main() {
 
     if [ "$job" = "brestore" ]; then
     	handle_brestore
-     exit 0
+     	exit 0
    	fi
     if [ "$job" = "bclear" ]; then
     	handle_bclear
-     exit 0
+     	exit 0
     fi
+
+    apt update || true
+    apt upgrade || true
+    apt full-upgrade || true
+
+    #4lab>on echo_info "Instalowanie wymaganych pakietow"
+		#4lab>on $aptcmd install \
+				#4lab>list deps4rpi.txt
+		#4lab>on if [ "$devel" -eq 1 ]; then
+				#4lab>on wait_apt
+				#4lab>on echo_info "Instalowanie pakietow dla trybu deweloperskiego"
+				#4lab>on $aptcmd install \
+						#4lab>list deps4devel.txt
+		#4lab>on fi
+		echo_stop "copy4prepare.sh w wersji Vanilla: instalacja pakietow zostanie wykonana zdalnie"
+
+    apt autoremove || true
+    apt clean || true
 
     # Wait timeout if specified
     if [ "$timeout" -gt 0 ]; then
         echo_info "Czekam $timeout sekund, podlacz pendrive z katalogiem home4copy..."
         sleep "$timeout"
+        keyboard=0
     fi
 
     # Initialize mount system
@@ -200,7 +221,14 @@ main() {
     fi
 
     # Run rsync operation
-				run_rsync
+		run_rsync
+
+    # Cleanup
+    un_un
+    if [ "$timeout" -gt 0 ]; then
+    		keyboard=$user
+    		echo_stop "Odlacz pendrive, podlacz klawiature."
+    fi
 
     verify_prepare_script
     # Build command line for prepare4lab
@@ -263,9 +291,6 @@ main() {
     fi
     set +o pipefail
 
-    # Cleanup
-    un_un
-
     # Print summary report
     echo_info "============================================================="
     echo_info "   PODSUMOWANIE WYKONANIA"
@@ -287,12 +312,12 @@ main() {
     sync || true
 
     # Simplified reboot command with proper output handling
-    if [ "$debug" -eq 1 ] || [ "$user" -eq 1 ]; then
+    if [ "$debug" -eq 1 ] || [ "$keyboard" -eq 1 ]; then
     				if [ "$quick" -eq 1 ]; then
        					shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
         else
-       					shutdown -r +1 || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
-												sleep 60
+       					shutdown -r +1 || systemctl reboot || echo_error $LINENO "Restart systemu nieudany"
+								exit 0
        	fi
     else
         shutdown -r now >/dev/null 2>&1 || systemctl reboot >/dev/null 2>&1 || echo_error $LINENO "Ciche restartowanie systemu nieudane"
@@ -341,7 +366,7 @@ echo_stop() {
     local operation="$1"
     local additional_info="${2:-}"
     sync
-    if [ "$user" -eq 1 ]; then
+    if [ "$keyboard" -eq 1 ]; then
         echo ""
         if [ "$quick" -eq 1 ]; then
             echo "[STOP] $operation //[Enter] (5s)"
@@ -367,11 +392,11 @@ echo_stop() {
 echo_wait() {
     local message="$1"
 
-    if [ "$user" -eq 1 ]; then
+    if [ "$keyboard" -eq 1 ]; then
         echo ""
     fi
 
-    if [[ "$user" -eq 1 || "$debug" -eq 1 ]] && [ "$quick" -eq 0 ]; then
+    if [[ "$keyboard" -eq 1 || "$debug" -eq 1 ]] && [ "$quick" -eq 0 ]; then
         echo "$message"
         read -t 4 -r || true
     else
