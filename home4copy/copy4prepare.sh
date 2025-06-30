@@ -518,32 +518,29 @@ restore_from_backup() {
 handle_brestore() {
     echo_info "Przywracanie konfiguracji z plikow kopii zapasowych..."
     echo_info "Skanowanie systemu plikow w $target w poszukiwaniu plikow .lab.bak..."
-
     local restore_count=0
     local fail_count=0
-
     # Use $target for consistency with the script's design
     # Remove the extra parameter '1' from the function call
     while IFS= read -r backup_file; do
-        local original_file="${backup_file%.lab.bak}"
-
-        echo_info "Znaleziono kopie zapasowa: $backup_file"
-
-        # Remove the extra parameter - restore_from_backup only takes filepath
-        if restore_from_backup "$original_file"; then
-            restore_count=$((restore_count + 1))
-            echo_info "✓ Przywrocono: $original_file"
-        else
-            fail_count=$((fail_count + 1))
-            echo_info "✗ Nie udalo sie przywrocic: $original_file"
+        # Add the same file existence check as in show_backup_status
+        if [ -f "$backup_file" ]; then
+            local original_file="${backup_file%.lab.bak}"
+            echo_info "Znaleziono kopie zapasowa: $backup_file"
+            # Remove the extra parameter - restore_from_backup only takes filepath
+            if restore_from_backup "$original_file"; then
+                restore_count=$((restore_count + 1))
+                echo_info "✓ Przywrocono: $original_file"
+            else
+                fail_count=$((fail_count + 1))
+                echo_info "✗ Nie udalo sie przywrocic: $original_file"
+            fi
         fi
     done < <(find "$target" -name "*.lab.bak" -type f 2>/dev/null)
-
     echo_info "=== Podsumowanie przywracania ==="
     echo_info "Pomyslnie przywrocono: $restore_count plikow"
     echo_info "Nie udalo sie przywrocic: $fail_count plikow"
     echo_info "==================================="
-
     if [ $restore_count -gt 0 ]; then
         echo_info "Operacja przywracania zakonczona. Niektore uslugi moga wymagac ponownego uruchomienia."
         echo_info "Rozwaz wykonanie: sudo systemctl restart ssh"
