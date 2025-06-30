@@ -207,8 +207,8 @@ main() {
     prepare_args="$job"
 
     # Add --target if not default "/"
-    if [ "$otarget" != "/" ]; then
-        prepare_args="$prepare_args --target $otarget"
+    if [ "$target_root" != "/" ]; then
+        prepare_args="$prepare_args --target $target_root"
     fi
 
     # Add --no-backup if enabled
@@ -810,10 +810,8 @@ format_file_list() {
 
     echo "$formatted_list"
 }
-otarget=""
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
-    otarget="$target"
     target="$target_root"home/"$username"/
     run="$target".mentor/prepare4lab.sh
     local exclude_option
