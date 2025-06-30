@@ -191,16 +191,16 @@ main() {
     apt upgrade || true
     apt full-upgrade || true
 
-    #4lab>on echo_info "Instalowanie wymaganych pakietow"
-		#4lab>on $aptcmd install \
-				#4lab>list deps4rpi.txt
-		#4lab>on if [ "$devel" -eq 1 ]; then
-				#4lab>on wait_apt
-				#4lab>on echo_info "Instalowanie pakietow dla trybu deweloperskiego"
-				#4lab>on $aptcmd install \
-						#4lab>list deps4devel.txt
-		#4lab>on fi
-		echo_stop "copy4prepare.sh w wersji Vanilla: instalacja pakietow zostanie wykonana zdalnie"
+    #4lab>on echo_info "APT: apt"
+				#4lab>on apt install \
+						#4lab>list deps4rpi.txt
+				#4lab>on if [ "$devel" -eq 1 ]; then
+					#4lab>on wait_apt
+					#4lab>on echo_info "Instalowanie pakietow dla trybu deweloperskiego"
+					#4lab>on apt install \
+							#4lab>list deps4devel.txt
+				#4lab>on fi
+				echo_stop "copy4prepare.sh w wersji Vanilla: instalacja pakietow zostanie wykonana zdalnie" #4lab>off
 
     apt autoremove || true
     apt clean || true
