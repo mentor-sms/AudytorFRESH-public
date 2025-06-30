@@ -566,8 +566,6 @@ create_backup() {
 
     # Prepare backup path and directory
     local backup_path="${filepath}.lab.bak"
-    local backup_dir
-    backup_dir="$(dirname "$backup_path")"
 
     echo_info "Przygotowanie kopii zapasowej: $filepath"
 
@@ -599,14 +597,6 @@ create_backup() {
         if [ $last_is_file -ne 1 ]; then
             echo_info "Plik źródłowy nie istnieje, its ok: $filepath"
             return 0
-        fi
-
-        # Ensure backup directory exists
-        if [ ! -d "$backup_dir" ]; then
-            echo_info "Tworzenie katalogu kopii zapasowej: $backup_dir"
-            if ! sudo -u pi mkdir -p "$backup_dir"; then
-                echo_error $LINENO "Nie udało się utworzyć katalogu kopii zapasowej: $backup_dir" "Tworzenie kopii zapasowej"
-            fi
         fi
 
         # Create the actual backup
@@ -974,7 +964,7 @@ mnt_mnt() {
     echo_info "Przygotowywanie punktu montowania $mntdir"
     if [ ! -d "$mntdir" ]; then
         echo_info "Tworzenie katalogu montowania $mntdir"
-        sudo -u pi mkdir -p "$mntdir" || echo_error $LINENO "Nie udało się utworzyć katalogu montowania $mntdir"
+        mkdir -p "$mntdir" || echo_error $LINENO "Nie udało się utworzyć katalogu montowania $mntdir"
     fi
     is_mounted "$from" "$mntdir"
     if [ $last_is_mounted -eq 1 ]; then
