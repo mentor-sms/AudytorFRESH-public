@@ -207,8 +207,8 @@ main() {
     prepare_args="$job"
 
     # Add --target if not default "/"
-    if [ "$target" != "/" ]; then
-        prepare_args="$prepare_args --target $target"
+    if [ "$otarget" != "/" ]; then
+        prepare_args="$prepare_args --target $otarget"
     fi
 
     # Add --no-backup if enabled
@@ -246,17 +246,22 @@ main() {
         prepare_args="$prepare_args --mic"
     fi
 
+    set -o pipefail
     echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
     if [ "$dry" -ne 1 ]; then
         cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
         echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
         mkdir -p "$target/.mentor"
         # Run the script with tee to capture both stdout and stderr while showing output to user
-        eval "$run $prepare_args" 2>&1 | tee "$target/.mentor/prepare4lab.lab.log" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+        eval "$run $prepare_args" 2>&1 | tee "$target/.mentor/prepare4lab.lab.log"
+        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+            echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+        fi
         echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
     else
         echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
     fi
+    set +o pipefail
 
     # Cleanup
     un_un
@@ -805,9 +810,10 @@ format_file_list() {
 
     echo "$formatted_list"
 }
-
+otarget=""
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
+    otarget="$target"
     target="$target_root"home/"$username"/
     run="$target".mentor/prepare4lab.sh
     local exclude_option
