@@ -43,6 +43,10 @@ dry=0
 user=1
 debug=0
 nobackup=0
+devel=0
+student_nr=0
+student_ip="0.0.0.0"
+mic=0
 parse_arguments() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -78,7 +82,7 @@ parse_arguments() {
                 shift
                 username="${1:-}"
                 if [ -z "$username" ]; then
-                    echo_error $LINENO "Missing argument for --mnt"
+                    echo_error $LINENO "Missing argument for --username"
                 fi
                 ;;
             --timeout)
@@ -104,9 +108,32 @@ parse_arguments() {
                 user=0
                 echo_info "installer4lab"
                 ;;
+            --devel)
+                devel=1
+                echo_info "installer4lab"
+                ;;
             --dry)
                 dry=1
                 echo_info "dry"
+                ;;
+            --mic)
+                mic=1
+                echo_info "dynamiczny mikrofon"
+                ;;
+            --student)
+                shift
+                student_nr="${1:-}"
+                if [ -z "$student_nr" ]; then
+                    echo_error $LINENO "Missing argument for --student (student number)"
+                fi
+                shift
+                student_ip="${1:-}"
+                if [ -z "$student_ip" ]; then
+                    echo_error $LINENO "Missing argument for --student (student IP)"
+                fi
+                echo "$student_nr" | grep -Eq '^[0-9]+$' || echo_error $LINENO "Numer studenta musi byc liczba calkowita"
+                echo "$student_ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || echo_error $LINENO "Adres IP studenta ma nieprawidlowy format"
+                echo_info "student configuration: nr=$student_nr, ip=$student_ip"
                 ;;
             *)
                 # Pass through other arguments to prepare4lab
@@ -118,7 +145,6 @@ parse_arguments() {
     echo_info "from=$from"
     echo_info "mnt=$mntdir"
     echo_info "timeout=$timeout"
-    echo_info "job: $job"
 }
 
 SECONDS_START=$(date +%s)
@@ -177,31 +203,60 @@ main() {
 				run_rsync
 
     verify_prepare_script
-				# Build command line for prepare4lab
-				prepare_args="$job"
-				if [ "$nobackup" -eq 1 ]; then
-								prepare_args="$prepare_args --no-backup"
-				fi
-				if [ "$quick" -eq 1 ]; then
-								prepare_args="$prepare_args --quick"
-				fi
-				if [ "$debug" -eq 1 ]; then
-								prepare_args="$prepare_args --debug"
-				fi
-				if [ "$username" -eq 1 ]; then
-								prepare_args="$prepare_args --username $username"
-				fi
-				echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
-				if [ "$dry" -ne 1 ]; then
-								cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
-								echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
-								mkdir -p "$target/.mentor"
-								# Run the script with tee to capture both stdout and stderr while showing output to user
-								eval "$run $prepare_args" 2>&1 | tee "$target/.mentor/prepare4lab.lab.log" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
-								echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
-				else
-								echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
-				fi
+    # Build command line for prepare4lab
+    prepare_args="$job"
+
+    # Add --target if not default "/"
+    if [ "$target" != "/" ]; then
+        prepare_args="$prepare_args --target $target"
+    fi
+
+    # Add --no-backup if enabled
+    if [ "$nobackup" -eq 1 ]; then
+        prepare_args="$prepare_args --no-backup"
+    fi
+
+    # Add --quick if enabled
+    if [ "$quick" -eq 1 ]; then
+        prepare_args="$prepare_args --quick"
+    fi
+
+    # Add --debug if enabled
+    if [ "$debug" -eq 1 ]; then
+        prepare_args="$prepare_args --debug"
+    fi
+
+    # Add --username if not default "pi"
+    if [ "$username" != "pi" ]; then
+        prepare_args="$prepare_args --username $username"
+    fi
+
+    # Add --devel if enabled
+    if [ "$devel" -eq 1 ]; then
+        prepare_args="$prepare_args --devel"
+    fi
+
+    # Add --student if student_nr > 0
+    if [ "$student_nr" -gt 0 ]; then
+        prepare_args="$prepare_args --student $student_nr $student_ip"
+    fi
+
+    # Add --mic if enabled
+    if [ "$mic" -eq 1 ]; then
+        prepare_args="$prepare_args --mic"
+    fi
+
+    echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
+    if [ "$dry" -ne 1 ]; then
+        cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
+        echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
+        mkdir -p "$target/.mentor"
+        # Run the script with tee to capture both stdout and stderr while showing output to user
+        eval "$run $prepare_args" 2>&1 | tee "$target/.mentor/prepare4lab.lab.log" || echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+        echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
+    else
+        echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
+    fi
 
     # Cleanup
     un_un
