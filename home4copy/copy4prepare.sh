@@ -553,7 +553,7 @@ update_itself() {
     fi
 
     echo_info "Script update completed successfully"
-    echo_info "Backup saved as: $backup_script"
+    rm $backup_script || true
     echo_info "New version is now ready to use"
 }
 is_file() {
