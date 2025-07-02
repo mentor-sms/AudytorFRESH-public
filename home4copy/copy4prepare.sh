@@ -51,7 +51,7 @@ mic=0
 parse_arguments() {
     while [ $# -gt 0 ]; do
         case "$1" in
-            prepare|install|setup|bstatus|bclear|brestore|help)
+            prepare|install|setup|bstatus|bclear|brestore|help|clean|update)
                 job="$1"
                 echo_info "Job: $job"
                 ;;
@@ -170,6 +170,14 @@ main() {
 				fi
     if [ "$job" = "bstatus" ]; then
      show_backup_status
+     exit 0
+				fi
+    if [ "$job" = "clean" ]; then
+     clean_home
+     exit 0
+				fi
+    if [ "$job" = "update" ]; then
+     update_itself
      exit 0
 				fi
 				echo_wait ""
@@ -404,6 +412,149 @@ echo_wait() {
     else
         echo "$message"
     fi
+}
+clean_home() {
+				local pihome="$target_root"home/"$username"
+    echo_info "Cleaning home directory: $pihome"
+
+    # Remove .mentor directory
+    if [ -d "$pihome/.mentor" ]; then
+        echo_info "Removing .mentor directory"
+        if [ "$dry" -ne 1 ]; then
+            rm -rf "$pihome/.mentor" || echo_error $LINENO "Failed to remove .mentor directory"
+        else
+            echo_info "Dry run: Would remove $pihome/.mentor"
+        fi
+    else
+        echo_info ".mentor directory does not exist"
+    fi
+
+    # Remove files with ".lab" in the name
+    echo_info "Searching for files with '.lab' in the name"
+    if [ "$dry" -ne 1 ]; then
+        find "$pihome" -type f -name "*lab*" -print0 | while IFS= read -r -d '' file; do
+            echo_info "Removing file: $file"
+            rm -f "$file" || echo_info "Warning: Could not remove $file"
+        done
+    else
+        find "$pihome" -type f -name "*lab*" -print | while IFS= read -r file; do
+            echo_info "Dry run: Would remove $file"
+        done
+    fi
+
+    # Remove .prepare4lab.step file
+    if [ -f "$pihome/.prepare4lab.step" ]; then
+        echo_info "Removing .prepare4lab.step file"
+        if [ "$dry" -ne 1 ]; then
+            rm -f "$pihome/.prepare4lab.step" || echo_error $LINENO "Failed to remove .prepare4lab.step file"
+        else
+            echo_info "Dry run: Would remove $pihome/.prepare4lab.step"
+        fi
+    else
+        echo_info ".prepare4lab.step file does not exist"
+    fi
+
+    # Remove .source4rpi directory
+    if [ -d "$pihome/.source4rpi" ]; then
+        echo_info "Removing .source4rpi directory"
+        if [ "$dry" -ne 1 ]; then
+            rm -rf "$pihome/.source4rpi" || echo_error $LINENO "Failed to remove .source4rpi directory"
+        else
+            echo_info "Dry run: Would remove $pihome/.source4rpi"
+        fi
+    else
+        echo_info ".source4rpi directory does not exist"
+    fi
+
+    # Remove README.md file
+    if [ -f "$pihome/README.md" ]; then
+        echo_info "Removing README.md file"
+        if [ "$dry" -ne 1 ]; then
+            rm -f "$pihome/README.md" || echo_error $LINENO "Failed to remove README.md file"
+        else
+            echo_info "Dry run: Would remove $pihome/README.md"
+        fi
+    else
+        echo_info "README.md file does not exist"
+    fi
+
+    echo_info "Home directory cleanup completed"
+}
+
+update_itself() {
+    echo_info "Updating copy4prepare.sh script"
+
+    # Get the full path to the current script
+    local script_path
+    script_path=$(readlink -f "$0") || echo_error $LINENO "Failed to determine script path"
+    local temp_script="/tmp/copy4prepare_new.sh"
+    local backup_script
+    backup_script="${script_path}.old.$(date +%s)"
+
+    echo_info "Current script: $script_path"
+    echo_info "Temporary download location: $temp_script"
+    echo_info "Backup location: $backup_script"
+
+    # Download the new version
+    echo_info "Downloading new version from https://tinyurl.com/copy4prepare"
+    if [ "$dry" -ne 1 ]; then
+        if ! curl -L -o "$temp_script" "https://tinyurl.com/copy4prepare"; then
+            echo_error $LINENO "Failed to download new version of the script"
+        fi
+    else
+        echo_info "Dry run: Would download https://tinyurl.com/copy4prepare to $temp_script"
+        echo_info "Dry run: Script update simulation completed"
+        return 0
+    fi
+
+    # Verify the download
+    if [ ! -f "$temp_script" ] || [ ! -s "$temp_script" ]; then
+        echo_error $LINENO "Downloaded script is empty or does not exist"
+    fi
+
+    # Check if downloaded file looks like a shell script
+    if ! head -n 1 "$temp_script" | grep -q "^#!/"; then
+        echo_error $LINENO "Downloaded file does not appear to be a shell script"
+    fi
+
+    echo_info "Download successful, processing new script"
+
+    # Convert line endings (dos2unix)
+    if command -v dos2unix >/dev/null 2>&1; then
+        echo_info "Converting line endings with dos2unix"
+        dos2unix "$temp_script" || echo_info "Warning: dos2unix failed, continuing anyway"
+    else
+        echo_info "dos2unix not available, converting manually"
+        # Manual dos2unix conversion
+        sed -i 's/\r$//' "$temp_script" || echo_info "Warning: manual line ending conversion failed"
+    fi
+
+    # Make executable
+    echo_info "Setting executable permissions"
+    chmod +x "$temp_script" || echo_error $LINENO "Failed to set executable permissions on new script"
+
+    # Create backup of current script
+    echo_info "Creating backup of current script"
+    cp "$script_path" "$backup_script" || echo_error $LINENO "Failed to create backup of current script"
+
+    # Replace current script with new version
+    echo_info "Replacing current script with new version"
+    if ! mv "$temp_script" "$script_path"; then
+        # Attempt to restore backup
+        if ! mv "$backup_script" "$script_path"; then
+            echo_error $LINENO "CRITICAL: Failed to restore backup! Script may be corrupted!"
+        fi
+        echo_error $LINENO "Script replacement failed"
+    fi
+
+    # Verify the replacement
+    if [ ! -f "$script_path" ] || [ ! -x "$script_path" ]; then
+        echo_error $LINENO "Script replacement verification failed"
+    fi
+
+    echo_info "Script update completed successfully"
+    echo_info "Backup saved as: $backup_script"
+    echo_info "New version is now ready to use"
 }
 is_file() {
     local path="$1"
