@@ -156,6 +156,7 @@ chmod +x copy4prepare.sh
 ```
 
 Pomoc i sciezka do skryptu:
+
 ```bash
 
 ./copy4prepare.sh
@@ -164,13 +165,16 @@ Pomoc i sciezka do skryptu:
 __GUI__
 
 lub gdy usb juz zamontowano:
+
 ```bash
 
 lsblk
 ```
+
 `/dev/sda` -> `/media/pi/audytor`
 
 Pomoc i sciezka do skryptu:
+
 ```bash
 
 /media/pi/audytor/home4copy/copy4prepare.sh
@@ -182,6 +186,7 @@ __Instalacja__
 
 sudo copy4prepare.sh install [--timeout 0] | tee ~/copy4prepare.lab.log
 ```
+
 `timeout 0` tylko gdy klawiatura i pendrive podlaczone sa rownoczenie.
 
 __Finalizacja__
