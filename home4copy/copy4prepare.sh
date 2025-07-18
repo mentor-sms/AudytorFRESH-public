@@ -196,6 +196,8 @@ main() {
      	exit 0
     fi
 
+
+
     apt update || true
     apt upgrade || true
     apt full-upgrade || true
