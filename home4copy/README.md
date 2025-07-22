@@ -21,21 +21,19 @@ Temat: AudytorFRESH/installer4lab
 
 `source4rpi/` - katalog na aplikacje i biblioteki, automatyczna instalacja projektow CMake
 
-* Pliki uzytkownika: `%userprofile%\Mentor`:
-
-Komentarze funkcyjne:
+* Pliki uzytkownika: `%userprofile%\.mentor`:
 
 ```bash
 
-#4lab>on linia_zostanie_odkomentowana
-ta_linia_zostanie_zakomentowana #4lab>off
+#4lab>on ta linia zostanie odkomentowana #4lab>swap "zostanie" "zostala"
+ta linia zostanie zakomentowana #4lab>swap "zostala" "zostanie" #4lab>off
 
-# przyklad: Mentor\etc\dhcpcd.conf
+# przyklad: .mentor\etc\dhcpcd.conf
 ```
 
-UWAGA na nieopisane komentarze fukncyjne: ` #4lab>var`, `#4lab>file `, `#4lab>sshkey `, `#4lab>list `, `#4lab>file `
+UWAGA na nieopisane komentarze fukncyjne: `#4lab>var`, `#4lab>file`, `#4lab>sshkey`, `#4lab>list`, `#4lab>file`
 
-- `Mentor\root4rpi` - Dowolnie modyfikuj ten katalog. Synchronizacja z `/` (root). `~` to `home/pi`.
+- `.mentor\root4rpi` - Dowolnie modyfikuj ten katalog. Synchronizacja z `/` (root). `~` to `home/pi`.
 
 `boot\cmdline.txt` - konfiguracja rozruchowa rpi, plik zostanie automatycznie uzupelniony o argument `root=` z pliku
 dotychczasowego
@@ -75,8 +73,8 @@ dotychczasowego
 
 `~\systemd\user\student4lab.service` - rozruch student4lab
 
-`Mentor\home4copy` - synchronizacja z `~` dla skryptu `copy4prepare.sh`.
-Modyfikuj dowolnie pliki znajdujace sie w tym katalogu, ale nowe dodawaj do `Mentor\root4rpi\~`!
+`.mentor\home4copy` - synchronizacja z `~` dla skryptu `copy4prepare.sh`.
+Modyfikuj dowolnie pliki znajdujace sie w tym katalogu, ale nowe dodawaj do `.mentor\root4rpi\~`!
 
 `home4copy\copy4prepare.sh` - skrypt kopiujacy `prepare4lab.sh` i przygotowujacy do instalacji
 `~\.mentor\prepare4lab.{sh, run}` - pliki installer4lab
@@ -123,8 +121,8 @@ Zapisz plik `nazwa.lab.marker` w miejsciu gdzie ma zostac utworzony katalog `naz
 2. Konfiguruj SSH: TAK (pierwsze uruchomienie, nowy pulpit/instalacja w sieci, blad bezpieczenstwa), Dalej (Test).
 3. aaa.bbb.ccc.ddd:port - teacher4lab IP (port dowolny).
 4. Kopiuj student4lab zdalnie: NIE, student4lab zostanie zapisany na pendrive (przy aktualizacji: TAK, student4lab
-			zostanie zapisany do `Mentor\home4copy`).
-5. Generuj skrypt instalacji, wybierz __katalog glowny__ pendrive (przy aktualizacji: katalog `%userprofile%\Mentor`).
+			zostanie zapisany do `.mentor\home4copy`).
+5. Generuj skrypt instalacji, wybierz __katalog glowny__ pendrive (przy aktualizacji: katalog `%userprofile%\.mentor`).
 6. Opcjonalnie zedytuj `USB\home4copy` > `/home/pi` (dla kroku: RPI).
 7. Bezpiecznie usun urzadzenie.
 
@@ -201,7 +199,7 @@ poweroff
 
 1. Sklonuj SD na karty dla pozostalych pulpitow.
 2. Skonfiguruj ostatecznie siec.
-3. Wlacz pulpity. Uruchomia sie ponownie kilka razy, konczac konfiguracje. Uwazaj na komunikat o
+3. Wlacz pulpity. Uruchomia sie ponownie kilka razy, konczac konfi~~~~guracje. Uwazaj na komunikat o
 4. Oczekuj komunikatu "Mentor wita!" na kazdym z pulpitow. Jezeli tak nie jest - cos poszlo nie tak.
 			Pulpit pozornie zakonczy prace na minute przed ostatnim z ponownych uruchomien. Nie przeszkadzaj mu wtedy!
 
