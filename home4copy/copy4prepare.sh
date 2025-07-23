@@ -286,22 +286,35 @@ main() {
         prepare_args="$prepare_args --mic"
     fi
 
-    set -o pipefail
-    echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
-    if [ "$dry" -ne 1 ]; then
-        cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
-        echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
-        mkdir -p "$target/.mentor"
-        # Run the script with tee to capture both stdout and stderr while showing output to user
-        eval "$run $prepare_args" 2>&1 | tee "$target/.mentor/prepare4lab.lab.log"
-        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
-            echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
-        fi
-        echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
-    else
-        echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
-    fi
-    set +o pipefail
+				set -o pipefail
+				echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
+				if [ "$dry" -ne 1 ]; then
+								cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
+								echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
+								mkdir -p "$target/.mentor"
+
+								# Log start with timestamp
+								echo "[$(date '+%Y-%m-%d %H:%M:%S')] Executing: $run $prepare_args" | tee "$target/.mentor/prepare4lab.lab.log" || true
+
+								# Run the script with stdbuf for real-time output and interactive capability
+								eval "stdbuf -i0 -o0 -e0 $run $prepare_args" 2>&1 | tee -a "$target/.mentor/prepare4lab.lab.log"
+
+								# Capture exit code
+								exit_code=${PIPESTATUS[0]}
+								echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh exit code: $exit_code" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+
+								# Log completion status
+								if [ $exit_code -eq 0 ]; then
+												echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh completed successfully" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+												echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
+								else
+												echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh failed with exit code: $exit_code" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+												echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+								fi
+				else
+								echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
+				fi
+				set +o pipefail
 
     # Print summary report
     echo_info "============================================================="
