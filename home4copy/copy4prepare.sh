@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=1-Vanilla #4lab>var
+WERSJA=1.0.0 #4lab>var
 
 show_help() {
     cat << EOF
@@ -212,7 +212,7 @@ main() {
 							#4lab>list deps4devel.txt
 				#4lab>on fi
 				#4lab>on echo_stop "Jezeli jakies pakiety zostaly zainstalowany albo zaktualizowane, zaleca sie 'reboot' i ponowne uruchomienie skryptu!"
-				echo_stop "copy4prepare.sh w wersji Vanilla: instalacja pakietow zostanie wykonana zdalnie" #4lab>off
+				echo_stop "copy4prepare.sh w wersji 1.0.0: instalacja pakietow zostanie wykonana zdalnie" #4lab>off
 
     apt autoremove || true
     apt clean || true
