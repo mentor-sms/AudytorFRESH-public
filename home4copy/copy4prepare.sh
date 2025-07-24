@@ -197,25 +197,42 @@ main() {
     fi
 
 
-
-    apt update || true
-    apt upgrade || true
-    apt full-upgrade || true
-
-    #4lab>on echo_info "APT: apt"
-				#4lab>on apt install \
-						#4lab>list deps4rpi.txt
+				if [ "$quick" -eq 1 ]; then
+								apt update || true
+								apt upgrade -y || true
+								apt full-upgrade -y || true
+				else
+								apt update || true
+								apt upgrade || true
+								apt full-upgrade || true
+				fi
+				#4lab>on echo_info "APT: apt"
+				#4lab>on if [ "$quick" -eq 1 ]; then
+				#4lab>on     apt install -y \
+				#4lab>on         #4lab>list deps4rpi.txt
+				#4lab>on else
+				#4lab>on     apt install \
+				#4lab>on         #4lab>list deps4rpi.txt
+				#4lab>on fi
 				#4lab>on if [ "$devel" -eq 1 ]; then
-					#4lab>on wait_apt
-					#4lab>on echo_info "Instalowanie pakietow dla trybu deweloperskiego"
-					#4lab>on apt install \
-							#4lab>list deps4devel.txt
+								#4lab>on wait_apt
+								#4lab>on echo_info "Instalowanie pakietow dla trybu deweloperskiego"
+								#4lab>on if [ "$quick" -eq 1 ]; then
+								#4lab>on     apt install -y \
+								#4lab>on         #4lab>list deps4devel.txt
+								#4lab>on else
+								#4lab>on     apt install \
+								#4lab>on         #4lab>list deps4devel.txt
+								#4lab>on fi
 				#4lab>on fi
 				#4lab>on echo_stop "Jezeli jakies pakiety zostaly zainstalowany albo zaktualizowane, zaleca sie 'reboot' i ponowne uruchomienie skryptu!"
 				echo_stop "copy4prepare.sh w wersji 1.0.0: instalacja pakietow zostanie wykonana zdalnie" #4lab>off
-
-    apt autoremove || true
-    apt clean || true
+				if [ "$quick" -eq 1 ]; then
+								apt autoremove -y || true
+				else
+								apt autoremove || true
+				fi
+				apt clean || true
 
     # Wait timeout if specified
     if [ "$timeout" -gt 0 ]; then
