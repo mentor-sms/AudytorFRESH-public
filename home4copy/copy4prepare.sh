@@ -24,8 +24,9 @@ show_help() {
    --quick
    --debug
    --username
- prepare4lab-specific Options (passed through):
+   --target-lan
    --devel
+ prepare4lab-specific Options (passed through):
    --student [Nr] [IP]
    --mic
 ===============================================================================
@@ -48,6 +49,7 @@ devel=0
 student_nr=0
 student_ip="0.0.0.0"
 mic=0
+target_lan=0
 parse_arguments() {
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -85,6 +87,10 @@ parse_arguments() {
                 if [ -z "$username" ]; then
                     echo_error $LINENO "Missing argument for --username"
                 fi
+                ;;
+            --target-lan)
+																target_lan=1
+                echo_info "auto-reboot, no full-upgrade"
                 ;;
             --timeout)
                 shift
@@ -196,15 +202,20 @@ main() {
      	exit 0
     fi
 
-
 				if [ "$quick" -eq 1 ]; then
 								apt update || true
-								apt upgrade -y || true
-								apt full-upgrade -y || true
+								if [ "$target_lan" -eq 1 ]; then
+												apt upgrade -y || true
+								else
+												apt full-upgrade -y || true
+								fi
 				else
 								apt update || true
-								apt upgrade || true
-								apt full-upgrade || true
+								if [ "$target_lan" -eq 1 ]; then
+												apt upgrade || true
+								else
+												apt full-upgrade || true
+								fi
 				fi
 				#4lab>on echo_info "APT: apt"
 				#4lab>on if [ "$quick" -eq 1 ]; then
@@ -302,6 +313,11 @@ main() {
     if [ "$mic" -eq 1 ]; then
         prepare_args="$prepare_args --mic"
     fi
+
+    # Add --target-lan if enabled
+    if [ "$target_lan" -eq 1 ]; then
+        prepare_args="$prepare_args --target-lan"
+				fi
 
 				set -o pipefail
 				echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
