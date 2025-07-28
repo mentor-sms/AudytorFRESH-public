@@ -15,7 +15,7 @@ show_help() {
    bclear               Clear backup files and exit
  Main Options:
    --timeout <seconds>
- 		--dry
+   --dry
    --from <path>
    --mnt <path>
    --target <path>
@@ -70,9 +70,9 @@ parse_arguments() {
                 if [ -z "$target_root" ]; then
                     echo_error $LINENO "Missing argument for --target"
                 fi
-																if [ "$target_root" != "/" ] && [ "${target_root%/}" = "$target_root" ]; then
-																				target_root="$target_root/"
-																fi
+                if [ "$target_root" != "/" ] && [ "${target_root%/}" = "$target_root" ]; then
+                                               target_root="$target_root/"
+                                                                fi
                 ;;
             --mnt)
                 shift
@@ -89,7 +89,7 @@ parse_arguments() {
                 fi
                 ;;
             --target-lan)
-																target_lan=1
+                                                                target_lan=1
                 echo_info "auto-reboot, no full-upgrade"
                 ;;
             --timeout)
@@ -166,27 +166,27 @@ main() {
     echo_info "   copy4prepare v$WERSJA - Narzedzie Przygotowania Laboratorium Mentor"
     echo_info "============================================================="
     echo_info "Uzytkownik: $(whoami) | Host: $(hostname)"
-				echo_info "============================================================="
+                echo_info "============================================================="
     parse_arguments "$@"
-				echo_info "============================================================="
+                echo_info "============================================================="
 
     if [ "$job" = "help" ]; then
-    	show_help
-    	exit 0
-				fi
+        show_help
+        exit 0
+                fi
     if [ "$job" = "bstatus" ]; then
      show_backup_status
      exit 0
-				fi
+                fi
     if [ "$job" = "clean" ]; then
      clean_home
      exit 0
-				fi
+                fi
     if [ "$job" = "update" ]; then
      update_itself
      exit 0
-				fi
-				echo_wait ""
+                fi
+                echo_wait ""
 
     # Check if running as root
     if [ "$(id -u)" -ne 0 ]; then
@@ -194,56 +194,56 @@ main() {
     fi
 
     if [ "$job" = "brestore" ]; then
-    	handle_brestore
-     	exit 0
-   	fi
+        handle_brestore
+         exit 0
+       fi
     if [ "$job" = "bclear" ]; then
-    	handle_bclear
-     	exit 0
+        handle_bclear
+         exit 0
     fi
 
-				if [ "$quick" -eq 1 ]; then
-								apt update || true
-								if [ "$target_lan" -eq 1 ]; then
-												apt upgrade -y || true
-								else
-												apt full-upgrade -y || true
-								fi
-				else
-								apt update || true
-								if [ "$target_lan" -eq 1 ]; then
-												apt upgrade || true
-								else
-												apt full-upgrade || true
-								fi
-				fi
-				#4lab>on echo_info "APT: apt"
-				#4lab>on if [ "$quick" -eq 1 ]; then
-				#4lab>on     apt install -y \
-				#4lab>on         #4lab>list deps4rpi.txt
-				#4lab>on else
-				#4lab>on     apt install \
-				#4lab>on         #4lab>list deps4rpi.txt
-				#4lab>on fi
-				#4lab>on if [ "$devel" -eq 1 ]; then
-								#4lab>on wait_apt
-								#4lab>on echo_info "Instalowanie pakietow dla trybu deweloperskiego"
-								#4lab>on if [ "$quick" -eq 1 ]; then
-								#4lab>on     apt install -y \
-								#4lab>on         #4lab>list deps4devel.txt
-								#4lab>on else
-								#4lab>on     apt install \
-								#4lab>on         #4lab>list deps4devel.txt
-								#4lab>on fi
-				#4lab>on fi
-				#4lab>on echo_stop "Jezeli jakies pakiety zostaly zainstalowany albo zaktualizowane, zaleca sie 'reboot' i ponowne uruchomienie skryptu!"
-				echo_stop "copy4prepare.sh w wersji 1.0.0: instalacja pakietow zostanie wykonana zdalnie" #4lab>off
-				if [ "$quick" -eq 1 ]; then
-								apt autoremove -y || true
-				else
-								apt autoremove || true
-				fi
-				apt clean || true
+                if [ "$quick" -eq 1 ]; then
+                                apt update || true
+                                if [ "$target_lan" -eq 1 ]; then
+                                                apt upgrade -y || true
+                                else
+                                                apt full-upgrade -y || true
+                                fi
+                else
+                                apt update || true
+                                if [ "$target_lan" -eq 1 ]; then
+                                                apt upgrade || true
+                                else
+                                                apt full-upgrade || true
+                                fi
+                fi
+                #4lab>on echo_info "APT: apt"
+                #4lab>on if [ "$quick" -eq 1 ]; then
+                #4lab>on     apt install -y \
+                #4lab>on         #4lab>list deps4rpi.txt
+                #4lab>on else
+                #4lab>on     apt install \
+                #4lab>on         #4lab>list deps4rpi.txt
+                #4lab>on fi
+                #4lab>on if [ "$devel" -eq 1 ]; then
+                                #4lab>on wait_apt
+                                #4lab>on echo_info "Instalowanie pakietow dla trybu deweloperskiego"
+                                #4lab>on if [ "$quick" -eq 1 ]; then
+                                #4lab>on     apt install -y \
+                                #4lab>on         #4lab>list deps4devel.txt
+                                #4lab>on else
+                                #4lab>on     apt install \
+                                #4lab>on         #4lab>list deps4devel.txt
+                                #4lab>on fi
+                #4lab>on fi
+                #4lab>on echo_stop "Jezeli jakies pakiety zostaly zainstalowany albo zaktualizowane, zaleca sie 'reboot' i ponowne uruchomienie skryptu!"
+                echo_stop "copy4prepare.sh w wersji 1.0.0: instalacja pakietow zostanie wykonana zdalnie" #4lab>off
+                if [ "$quick" -eq 1 ]; then
+                                apt autoremove -y || true
+                else
+                                apt autoremove || true
+                fi
+                apt clean || true
 
     # Wait timeout if specified
     if [ "$timeout" -gt 0 ]; then
@@ -261,13 +261,13 @@ main() {
     fi
 
     # Run rsync operation
-		run_rsync
+        run_rsync
 
     # Cleanup
     un_un
     if [ "$timeout" -gt 0 ]; then
-    		keyboard=$user
-    		echo_stop "Odlacz pendrive, podlacz klawiature."
+            keyboard=$user
+            echo_stop "Odlacz pendrive, podlacz klawiature."
     fi
 
     verify_prepare_script
@@ -317,37 +317,37 @@ main() {
     # Add --target-lan if enabled
     if [ "$target_lan" -eq 1 ]; then
         prepare_args="$prepare_args --target-lan"
-				fi
+                fi
 
-				set -o pipefail
-				echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
-				if [ "$dry" -ne 1 ]; then
-								cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
-								echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
-								mkdir -p "$target/.mentor"
+                set -o pipefail
+                echo_info "Uruchamianie skryptu przygotowawczego: $run $prepare_args"
+                if [ "$dry" -ne 1 ]; then
+                                cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
+                                echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
+                                mkdir -p "$target/.mentor"
 
-								# Log start with timestamp
-								echo "[$(date '+%Y-%m-%d %H:%M:%S')] Executing: $run $prepare_args" | tee "$target/.mentor/prepare4lab.lab.log" || true
+                                # Log start with timestamp
+                                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Executing: $run $prepare_args" | tee "$target/.mentor/prepare4lab.lab.log" || true
 
-								# Run the script with stdbuf for real-time output and interactive capability
-								eval "stdbuf -i0 -o0 -e0 $run $prepare_args" 2>&1 | tee -a "$target/.mentor/prepare4lab.lab.log"
+                                # Run the script with stdbuf for real-time output and interactive capability
+                                eval "stdbuf -i0 -o0 -e0 $run $prepare_args" 2>&1 | tee -a "$target/.mentor/prepare4lab.lab.log"
 
-								# Capture exit code
-								exit_code=${PIPESTATUS[0]}
-								echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh exit code: $exit_code" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+                                # Capture exit code
+                                exit_code=${PIPESTATUS[0]}
+                                echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh exit code: $exit_code" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
 
-								# Log completion status
-								if [ $exit_code -eq 0 ]; then
-												echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh completed successfully" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
-												echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
-								else
-												echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh failed with exit code: $exit_code" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
-												echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
-								fi
-				else
-								echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
-				fi
-				set +o pipefail
+                                # Log completion status
+                                if [ $exit_code -eq 0 ]; then
+                                                echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh completed successfully" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+                                                echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
+                                else
+                                                echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh failed with exit code: $exit_code" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+                                                echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
+                                fi
+                else
+                                echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
+                fi
+                set +o pipefail
 
     # Print summary report
     echo_info "============================================================="
@@ -371,17 +371,17 @@ main() {
 
     # Simplified reboot command with proper output handling
     if [ "$debug" -eq 1 ] || [ "$keyboard" -eq 1 ]; then
-    				if [ "$quick" -eq 1 ]; then
-       					shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
+                    if [ "$quick" -eq 1 ]; then
+                           shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
         else
-       					shutdown -r +1 || systemctl reboot || echo_error $LINENO "Restart systemu nieudany"
-								exit 0
-       	fi
+                           shutdown -r +1 || systemctl reboot || echo_error $LINENO "Restart systemu nieudany"
+                                exit 0
+           fi
     else
         shutdown -r now >/dev/null 2>&1 || systemctl reboot >/dev/null 2>&1 || echo_error $LINENO "Ciche restartowanie systemu nieudane"
     fi
-				sleep 3
-				echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
+                sleep 3
+                echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
 }
 echo_error() {
     local lineno="$1"
@@ -462,7 +462,7 @@ echo_wait() {
     fi
 }
 clean_home() {
-				local pihome="$target_root"home/"$username"
+                local pihome="$target_root"home/"$username"
     echo_info "Cleaning home directory: $pihome"
 
     # Remove .mentor directory
@@ -689,31 +689,31 @@ restore_from_backup() {
         return 1
     fi
 
-				echo_info "Przywracam $filepath z kopii zapasowej $backup_path"
+                echo_info "Przywracam $filepath z kopii zapasowej $backup_path"
 
-				# Verify backup integrity before restore
-				if [ ! -s "$backup_path" ]; then
-								echo_stop "Plik kopii zapasowej $backup_path jest pusty lub uszkodzony, pomijam przywracanie"
-								return 1
-				fi
+                # Verify backup integrity before restore
+                if [ ! -s "$backup_path" ]; then
+                                echo_stop "Plik kopii zapasowej $backup_path jest pusty lub uszkodzony, pomijam przywracanie"
+                                return 1
+                fi
 
-				# Create a safety backup of current file if it exists and differs
-				if [ -f "$filepath" ] && ! cmp -s "$filepath" "$backup_path"; then
-								local safety_backup
-								safety_backup="${filepath}.before_restore.$(date +%s)"
-								echo_info "Tworzenie kopii bezpieczenstwa: $safety_backup"
-								cp "$filepath" "$safety_backup" || echo_info "Ostrzezenie: Nie udalo sie utworzyc kopii bezpieczenstwa"
-				fi
+                # Create a safety backup of current file if it exists and differs
+                if [ -f "$filepath" ] && ! cmp -s "$filepath" "$backup_path"; then
+                                local safety_backup
+                                safety_backup="${filepath}.before_restore.$(date +%s)"
+                                echo_info "Tworzenie kopii bezpieczenstwa: $safety_backup"
+                                cp "$filepath" "$safety_backup" || echo_info "Ostrzezenie: Nie udalo sie utworzyc kopii bezpieczenstwa"
+                fi
 
-				# Restore from backup using sudo mv -f
-				if [ "$dry" -ne 1 ]; then
-								sudo mv -f "$backup_path" "$filepath" || echo_error $LINENO "Nie udalo sie przywrocic $filepath z kopii zapasowej" "Przywracanie kopii zapasowej"
-								echo_info "Pomyslnie przywrocono $filepath z kopii zapasowej"
-				else
-								echo_info "Symulacja: Przywrocilbym $filepath z $backup_path"
-				fi
+                # Restore from backup using sudo mv -f
+                if [ "$dry" -ne 1 ]; then
+                                sudo mv -f "$backup_path" "$filepath" || echo_error $LINENO "Nie udalo sie przywrocic $filepath z kopii zapasowej" "Przywracanie kopii zapasowej"
+                                echo_info "Pomyslnie przywrocono $filepath z kopii zapasowej"
+                else
+                                echo_info "Symulacja: Przywrocilbym $filepath z $backup_path"
+                fi
 
-				return 0
+                return 0
 }
 
 handle_brestore() {
@@ -1002,7 +1002,7 @@ rsync_line_test() {
         elif [[ $p1 == "$p2" ]] || [[ $p2 == *uptodate* ]]; then
             echo_wait "Przetwarzanie: $p1 $p2"
             return 1  # Set flag to indicate file should be processed
-								else
+                                else
             echo_info "Pomijanie linii: $p1"
         fi
     fi

@@ -101,13 +101,13 @@ Zapisz plik `nazwa.lab.marker` w miejsciu gdzie ma zostac utworzony katalog `naz
 
 1. https://downloads.raspberrypi.org/imager/imager_latest.exe
 2. Storage: SD card,
-			Device: Raspberry Pi 4,
-			OS: Raspberry Pi OS (64-bit, wersja Recommended),
-			Next.
+   Device: Raspberry Pi 4,
+   OS: Raspberry Pi OS (64-bit, wersja Recommended),
+   Next.
 3. Dialog: Edit settings. Konfiguracja w katalogu SEEME:
-			GENERAL. Set username: `pi`, password: dowolne, Configure wireless LAN: NIE, Set locale settings: Europe/Warsaw.
-			SERVICES. Enable SSH: TAK, Allow public-key authentication only: TAK, Set authorized key for 'pi': zawartosc
-			`id_maniek.pub`.
+   GENERAL. Set username: `pi`, password: dowolne, Configure wireless LAN: NIE, Set locale settings: Europe/Warsaw.
+   SERVICES. Enable SSH: TAK, Allow public-key authentication only: TAK, Set authorized key for 'pi': zawartosc
+   `id_maniek.pub`.
 4. OPTIONS. Eject media when finished: YES (nie modyfikuj bootfs).
 5. SAVE.
 6. Dialog: YES, YES.
@@ -121,7 +121,7 @@ Zapisz plik `nazwa.lab.marker` w miejsciu gdzie ma zostac utworzony katalog `naz
 2. Konfiguruj SSH: TAK (pierwsze uruchomienie, nowy pulpit/instalacja w sieci, blad bezpieczenstwa), Dalej (Test).
 3. aaa.bbb.ccc.ddd:port - teacher4lab IP (port dowolny).
 4. Kopiuj student4lab zdalnie: NIE, student4lab zostanie zapisany na pendrive (przy aktualizacji: TAK, student4lab
-			zostanie zapisany do `.mentor\home4copy`).
+   zostanie zapisany do `.mentor\home4copy`).
 5. Generuj skrypt instalacji, wybierz __katalog glowny__ pendrive (przy aktualizacji: katalog `%userprofile%\.mentor`).
 6. Opcjonalnie zedytuj `USB\home4copy` > `/home/pi` (dla kroku: RPI).
 7. Bezpiecznie usun urzadzenie.
@@ -202,13 +202,13 @@ poweroff
 2. Skonfiguruj ostatecznie siec.
 3. Wlacz pulpity. Uruchomia sie ponownie kilka razy, konczac konfi~~~~guracje. Uwazaj na komunikat o
 4. Oczekuj komunikatu "Mentor wita!" na kazdym z pulpitow. Jezeli tak nie jest - cos poszlo nie tak.
-			Pulpit pozornie zakonczy prace na minute przed ostatnim z ponownych uruchomien. Nie przeszkadzaj mu wtedy!
+   Pulpit pozornie zakonczy prace na minute przed ostatnim z ponownych uruchomien. Nie przeszkadzaj mu wtedy!
 
 # install4lab (3)
 
 1. Szukaj pulpitow: TAK, Konfiguruj backdoor SSH: NIE.
 2. aaa.bbb.ccc.xxx-yyy - aaa.bbb.ccc prefix IP pulpitow + zakres koncowek (wyswietlone na RPI, xxx-xxx dla jednego
-			pulpitu, __bezpiecznie 2-254__).
+   pulpitu, __bezpiecznie 2-254__).
 3. Ilosc pulpitow: zostanie nadpisane przez Test.
 4. Test.
 5. Ok? Dalej.
