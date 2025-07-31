@@ -366,22 +366,23 @@ main() {
     echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
     echo_info "============================================================="
     echo_info "copy4prepare.sh zakonczony pomyslnie"
-    echo_stop "RESTART SYSTEMU"
+    echo_stop "RESTART SYSTEMU za minute"
     sync || true
 
     # Simplified reboot command with proper output handling
     if [ "$debug" -eq 1 ] || [ "$keyboard" -eq 1 ]; then
-                    if [ "$quick" -eq 1 ]; then
-                           shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
+        if [ "$quick" -eq 1 ]; then
+            shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
+            exit 0
         else
-                           shutdown -r +1 || systemctl reboot || echo_error $LINENO "Restart systemu nieudany"
-                                exit 0
-           fi
+            shutdown -r +1 || systemctl reboot || echo_error $LINENO "Restart systemu nieudany"
+       fi
     else
         shutdown -r now >/dev/null 2>&1 || systemctl reboot >/dev/null 2>&1 || echo_error $LINENO "Ciche restartowanie systemu nieudane"
+        exit 0
     fi
-                sleep 3
-                echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
+    sleep 90
+    echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
 }
 echo_error() {
     local lineno="$1"
