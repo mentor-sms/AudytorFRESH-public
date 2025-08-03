@@ -52,4 +52,4 @@ Host mentor-rpi-*
 
     ControlMaster yes
     ControlPersist 1m
-    ControlPath //./pipe/ssh_mux_%h
+    ControlPath  "\\\\.\\pipe\\ssh_mux_%h_%p_%r"
