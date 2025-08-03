@@ -50,6 +50,6 @@ Host mentor-rpi-*
     User pi
     IdentityFile ~/.ssh/id_ed25519
 
-    ControlMaster yes
-    ControlPersist 1m
-    ControlPath \\\\\\\\.\\\\pipe\\\\ssh_mux_%h_%p_%r
+    #ControlMaster yes
+    #ControlPersist 1m
+    #ControlPath ~/.ssh/rpi-%r@%h:%p.sock
