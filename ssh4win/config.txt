@@ -1,0 +1,55 @@
+Host mentor-*
+    Port 22
+    Protocol 2
+
+    PreferredAuthentications publickey
+    PubkeyAuthentication yes
+    LogLevel INFO
+
+    PasswordAuthentication no
+    ChallengeResponseAuthentication no
+    GSSAPIAuthentication no
+    HostbasedAuthentication no
+
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    ConnectTimeout 10
+
+    ForwardAgent no
+
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts
+    HashKnownHosts no
+
+    IdentitiesOnly yes
+    BatchMode yes
+
+    Compression no
+    ForwardX11 no
+
+    TCPKeepAlive no
+
+    Ciphers aes256-gcm@openssh.com,chacha20-poly1305@openssh.com,aes256-ctr,aes192-ctr,aes128-ctr
+    MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com,hmac-sha2-256,hmac-sha2-512
+    KexAlgorithms curve25519-sha256@libssh.org,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521
+
+    ForwardAgent yes
+
+# GitHub configurations
+Host mentor-github-*
+    HostName github.com
+    User git
+
+Host mentor-github-private
+    IdentityFile ~/.ssh/id_repo_private
+
+Host mentor-github-config
+    IdentityFile ~/.ssh/id_repo_config
+
+Host mentor-rpi-*
+    User pi
+    IdentityFile ~/.ssh/id_ed25519
+
+    ControlMaster yes
+    ControlPersist 1m
+    ControlPath //./pipe/ssh_mux_%h
