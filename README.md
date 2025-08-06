@@ -19,7 +19,7 @@ Temat: AudytorFRESH/installer4lab
 
 `win_chown.bat` - skrypt przyznawania uprawnien dla plikow SSH na Windows (nie modyfikuj użycia!)
 
-`.source4rpi/` - katalog na aplikacje i biblioteki, automatyczna instalacja projektow CMake
+`source4rpi/` - katalog na aplikacje i biblioteki, automatyczna instalacja projektow CMake
 
 * Pliki uzytkownika: `%userprofile%\.mentor`:
 
