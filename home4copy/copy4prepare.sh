@@ -503,16 +503,16 @@ clean_home() {
         echo_info ".prepare4lab.step file does not exist"
     fi
 
-    # Remove source4rpi directory
-    if [ -d "$pihome/source4rpi" ]; then
-        echo_info "Removing source4rpi directory"
+    # Remove .source4rpi directory
+    if [ -d "$pihome/.source4rpi" ]; then
+        echo_info "Removing .source4rpi directory"
         if [ "$dry" -ne 1 ]; then
-            rm -rf "$pihome/source4rpi" || echo_error $LINENO "Failed to remove source4rpi directory"
+            rm -rf "$pihome/.source4rpi" || echo_error $LINENO "Failed to remove .source4rpi directory"
         else
-            echo_info "Dry run: Would remove $pihome/source4rpi"
+            echo_info "Dry run: Would remove $pihome/.source4rpi"
         fi
     else
-        echo_info "source4rpi directory does not exist"
+        echo_info ".source4rpi directory does not exist"
     fi
 
     # Remove README.md file
@@ -843,7 +843,7 @@ create_backup() {
     fi
 
     # Check for excluded paths
-    if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/source4rpi"* ]]; then
+    if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
         echo_info "Pomijanie tworzenia kopii zapasowej dla: $filepath (ścieżka wykluczona)"
         return 0
     fi
