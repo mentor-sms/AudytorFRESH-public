@@ -49,8 +49,8 @@ pro         # Qt project files
 pri         # Qt project include files
 ts          # Qt translation source files
 qm          # Qt compiled translation files
-cmake       # CMake files
 cmake.in    # CMake template files
+cmake       # CMake files
 pc.in       # pkg-config template files
 makefile    # Makefiles
 Makefile    # Makefiles (capitalized)
@@ -214,3 +214,4 @@ raw         # Raw disk images
 
 # Special Purpose Files
 pub         # Public key files
+run
