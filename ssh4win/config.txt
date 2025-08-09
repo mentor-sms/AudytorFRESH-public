@@ -4,7 +4,6 @@ Host mentor-*
     Protocol 2
     LogLevel INFO
 
-    # Auth
     PreferredAuthentications publickey
     PubkeyAuthentication yes
     StrictHostKeyChecking accept-new
@@ -29,13 +28,16 @@ Host mentor-*
     Tunnel no
     RequestTTY no
     GatewayPorts no
-    ForwardAgent no
+    #SendEnv LANG LC_*
 
     # TCP
     TCPKeepAlive no
-    LocalForward no
-    RemoteForward no
-    DynamicForward no
+    #LocalForward
+    #RemoteForward
+    #DynamicForward
+
+    # SFTP?
+    ForwardAgent no
 
     # Paths
     UserKnownHostsFile ~/.ssh/known_hosts
