@@ -1,5 +1,2 @@
-# Handle all text files - UTF-8 without BOM, LF line endings
 * text=auto eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
-
-# Explicitly set shell scripts to LF with UTF-8 encoding
 *.bat text eol=crlf
