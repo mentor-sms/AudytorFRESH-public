@@ -11,7 +11,7 @@ Temat: AudytorFRESH/installer4lab
 
 `git_exe.txt` - polecenie w PATH, lub sciezka do `git.exe`
 
-`ssh_exe.txt` - polecenie w PATH, lub sciezka do `ssh.exe`
+`ssh_exe.txt` - polecenie w PATH, lub sciezka do `Apps.exe`
 
 `id_repo_private[.pub]` - klucz do repozytorium AudytorFRESH-private
 

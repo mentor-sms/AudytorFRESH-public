@@ -1,2 +1,3 @@
 * text=auto eol=lf encoding=UTF-8 working-tree-encoding=UTF-8
 *.bat text eol=crlf
+id_* -text
