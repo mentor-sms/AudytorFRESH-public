@@ -115,11 +115,11 @@ parse_arguments() {
                 user=0
                 keyboard=0
                 export DEBIAN_FRONTEND=noninteractive
-                echo_info "installer4lab"
+                echo_info "setup4rpi"
                 ;;
             --devel)
                 devel=1
-                echo_info "installer4lab"
+                echo_info "setup4rpi"
                 ;;
             --dry)
                 dry=1

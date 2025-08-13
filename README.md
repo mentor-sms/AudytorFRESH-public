@@ -1,13 +1,13 @@
 # AudytorFRESH-public
 
-Temat: AudytorFRESH/installer4lab
+Temat: AudytorFRESH/setup4rpi
 
-# installer4lab (1)
+# setup4rpi (1)
 
 1. rozpakuj *exe4installer.zip* > uruchom *exe4installer.exe*
 2. Zminimalizuj.
 
-* Pliki wewnetrzne: `[katalog z installer4lab.exe]\run` (pliki inne niz ponizej zostaną zignorowane przez aplikację):
+* Pliki wewnetrzne: `[katalog z setup4rpi.exe]\run` (pliki inne niz ponizej zostaną zignorowane przez aplikację):
 
 `git_exe.txt` - polecenie w PATH, lub sciezka do `git.exe`
 
@@ -77,7 +77,7 @@ dotychczasowego
 Modyfikuj dowolnie pliki znajdujace sie w tym katalogu, ale nowe dodawaj do `.mentor\root4rpi\~`!
 
 `home4copy\copy4prepare.sh` - skrypt kopiujacy `prepare4lab.sh` i przygotowujacy do instalacji
-`~\.mentor\prepare4lab.{sh, run}` - pliki installer4lab
+`~\.mentor\prepare4lab.{sh, run}` - pliki setup4rpi
 
 Pliki generowane automatycznie (zmiany uzytkownika zostana zignorowane!):
 
