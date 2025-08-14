@@ -254,6 +254,7 @@ echo "  10 - Błąd podwyższenia uprawnień"
 echo "  11 - Błąd weryfikacji dostępu"
 echo.
 
+echo "OKFIN"
 exit 0
 
 :run_elevated
