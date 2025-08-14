@@ -156,6 +156,61 @@ parse_arguments() {
     echo_info "timeout=$timeout"
 }
 
+debian_upgrade() {
+    APT_GET=${APT_GET:-"apt-get -q"}
+    APT_Y=""
+    APT_DPKG_OPTS=""
+    APT_UPDATE_OPTS="--allow-releaseinfo-change"
+
+    if [ "${quick:-0}" -eq 1 ]; then
+        APT_Y="-y"
+        APT_DPKG_OPTS="-o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew"
+    fi
+
+    # Use separate apt commands:
+    # - aptcmd_update: for "update" only (no dpkg opts)
+    # - aptcmd_pkg: for install/upgrade/full-upgrade (with dpkg opts)
+    aptcmd_update="$APT_GET $APT_Y"
+    aptcmd_pkg="$APT_GET $APT_Y $APT_DPKG_OPTS"
+
+    #4lab>on echo_info "APT: aktualizacja listy pakietow"
+    #4lab>on wait_apt
+    echo_info "disabled: $aptcmd_update $APT_UPDATE_OPTS update"
+    $aptcmd_update $APT_UPDATE_OPTS update || echo_stop "Nie można zaktualizować listy pakietów"
+    #4lab>on wait_apt
+
+    if [ "${target_lan:-0}" -eq 1 ]; then
+        echo_info "Wykonywanie aktualizacji systemu (upgrade)"
+        echo_info "disabled: $aptcmd_pkg upgrade"
+    #4lab>on     $aptcmd_pkg upgrade || echo_stop "Aktualizacja systemu nie powiodla sie"
+    else
+        echo_info "Wykonywanie pełnej aktualizacji systemu (full-upgrade)"
+        echo_info "disabled: $aptcmd_pkg full-upgrade"
+    #4lab>on     $aptcmd_pkg full-upgrade || echo_stop "Pelna aktualizacja systemu nie powiodla sie"
+    fi
+
+    #4lab>on wait_apt
+    echo_info "Instalowanie wymaganych pakietow"
+    #4lab>on $aptcmd_pkg install \
+    #4lab>on     #4lab>list deps4rpi.txt
+    echo_info "disabled: $aptcmd_pkg install"
+
+    #4lab>on if [ "${devel:-0}" -eq 1 ]; then
+    #4lab>on     wait_apt
+        echo_info "Instalowanie pakietow dla trybu deweloperskiego"
+    #4lab>on     $aptcmd_pkg install \
+    #4lab>on         #4lab>list deps4devel.txt
+        echo_info "disabled: $aptcmd_pkg install"
+    #4lab>on fi
+
+    #4lab>on wait_apt
+    echo_info "Usuwanie niepotrzebnych pakietow"
+    $APT_GET $APT_Y autoremove || echo_stop "Usuwanie niepotrzebnych pakietow nie powiodlo sie"
+    #4lab>on wait_apt
+    echo_info "Czyszczenie pamieci podrecznej pakietow"
+    $APT_GET clean || echo_stop "Czyszczenie pamieci podrecznej pakietow nie powiodlo sie"
+}
+
 SECONDS_START=$(date +%s)
 do_umount=0
 home_dir=home4copy
@@ -202,48 +257,7 @@ main() {
          exit 0
     fi
 
-                if [ "$quick" -eq 1 ]; then
-                                apt update || true
-                                if [ "$target_lan" -eq 1 ]; then
-                                                apt upgrade -y || true
-                                else
-                                                apt full-upgrade -y || true
-                                fi
-                else
-                                apt update || true
-                                if [ "$target_lan" -eq 1 ]; then
-                                                apt upgrade || true
-                                else
-                                                apt full-upgrade || true
-                                fi
-                fi
-                #4lab>on echo_info "APT: apt"
-                #4lab>on if [ "$quick" -eq 1 ]; then
-                #4lab>on     apt install -y \
-                #4lab>on         #4lab>list deps4rpi.txt
-                #4lab>on else
-                #4lab>on     apt install \
-                #4lab>on         #4lab>list deps4rpi.txt
-                #4lab>on fi
-                #4lab>on if [ "$devel" -eq 1 ]; then
-                                #4lab>on wait_apt
-                                #4lab>on echo_info "Instalowanie pakietow dla trybu deweloperskiego"
-                                #4lab>on if [ "$quick" -eq 1 ]; then
-                                #4lab>on     apt install -y \
-                                #4lab>on         #4lab>list deps4devel.txt
-                                #4lab>on else
-                                #4lab>on     apt install \
-                                #4lab>on         #4lab>list deps4devel.txt
-                                #4lab>on fi
-                #4lab>on fi
-                #4lab>on echo_stop "Jezeli jakies pakiety zostaly zainstalowany albo zaktualizowane, zaleca sie 'reboot' i ponowne uruchomienie skryptu!"
-                echo_stop "copy4prepare.sh w wersji 1.0.0: instalacja pakietow zostanie wykonana zdalnie" #4lab>off
-                if [ "$quick" -eq 1 ]; then
-                                apt autoremove -y || true
-                else
-                                apt autoremove || true
-                fi
-                apt clean || true
+    debian_upgrade
 
     # Wait timeout if specified
     if [ "$timeout" -gt 0 ]; then
