@@ -214,7 +214,7 @@ debian_upgrade() {
 SECONDS_START=$(date +%s)
 do_umount=0
 home_dir=home4copy
-file=prepare4lab.sh
+preparecztery=prepare4lab.sh
 main() {
     # Show startup banner
     echo_info "============================================================="
@@ -951,7 +951,7 @@ verify_prepare_script() {
         if [ "$wersja_in_script" != "$WERSJA" ]; then
             echo_info "UWAGA: Wykryto niezgodnosc wersji!"
             echo_info "  Wersja copy4prepare.sh: $WERSJA"
-            echo_info "  Wersja $file: $wersja_in_script"
+            echo_info "  Wersja $preparecztery: $wersja_in_script"
             echo_stop "Niezgodnosc wersji" "Uruchomienie skryptu z inna wersja moze powodowac problemy"
         else
             echo_info "Weryfikacja wersji udana: Oba skrypty w wersji $WERSJA"
