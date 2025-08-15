@@ -58,7 +58,7 @@ Host mentor-github-private
 Host mentor-github-config
     IdentityFile ~/.ssh/id_repo_config
 
-Host mentor-rpi-*
+Host mentor-rpi*
     User pi
     IdentityFile ~/.ssh/id_ed25519
 
