@@ -529,18 +529,6 @@ clean_home() {
         echo_info ".source4rpi directory does not exist"
     fi
 
-    # Remove README.md file
-    if [ -f "$pihome/README.md" ]; then
-        echo_info "Removing README.md file"
-        if [ "$dry" -ne 1 ]; then
-            rm -f "$pihome/README.md" || echo_error $LINENO "Failed to remove README.md file"
-        else
-            echo_info "Dry run: Would remove $pihome/README.md"
-        fi
-    else
-        echo_info "README.md file does not exist"
-    fi
-
     echo_info "Home directory cleanup completed"
 }
 
