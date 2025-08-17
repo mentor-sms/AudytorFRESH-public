@@ -162,7 +162,7 @@ debian_upgrade() {
     aptcmd_update="$APT_GET $APT_Y"
     aptcmd_pkg="$APT_GET $APT_Y $APT_DPKG_OPTS"
     #4lab>on echo_info "APT: aktualizacja listy pakietow"
-    #4lab>on wait_apt
+    wait_apt
     echo_info "disabled: $aptcmd_update $APT_UPDATE_OPTS update"
     $aptcmd_update $APT_UPDATE_OPTS update || echo_stop "Nie można zaktualizować listy pakietów"
     #4lab>on wait_apt
@@ -193,6 +193,42 @@ debian_upgrade() {
     #4lab>on wait_apt
     echo_info "Czyszczenie pamieci podrecznej pakietow"
     $APT_GET clean || echo_stop "Czyszczenie pamieci podrecznej pakietow nie powiodlo sie"
+}
+wait_apt() {
+    local max_wait
+    max_wait=30
+    if [ "$quick" -eq 1 ]; then
+        max_wait=10
+    fi
+    local start_time
+    start_time=$(date +%s)
+    local current_time
+    local elapsed_time
+
+    while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+        current_time=$(date +%s)
+        elapsed_time=$((current_time - start_time))
+        if [ $((elapsed_time % 10)) -eq 0 ]; then
+            echo_info "Oczekiwanie na zwolnienie blokady APT (${elapsed_time}s)"
+            fuser -v /var/lib/dpkg/lock-frontend 2>/dev/null || echo_error $LINENO "Nie mozna sprawdzic procesu blokujacego menedzer pakietow"
+        fi
+        if [ "$elapsed_time" -gt "$max_wait" ]; then
+            pid=$(fuser /var/lib/dpkg/lock-frontend 2>/dev/null)
+            if [ -n "$pid" ]; then
+                if ! ps -p "$pid" > /dev/null 2>&1; then
+                    rm -f /var/lib/dpkg/lock-frontend || echo_info "Nie mozna usunac blokady menedzera pakietow: $?"
+                    rm -f /var/lib/dpkg/lock || echo_info "Nie mozna usunac blokady dpkg: $?"
+                    dpkg --configure -a || echo_info "Nie mozna skonfigurowac pakietow: $?"
+                    break
+                else
+                    echo_error $LINENO "Menedzer pakietow nadal zablokowany przez proces $pid"
+                fi
+            else
+                echo_error $LINENO "Menedzer pakietow zablokowany przez nieznany proces"
+            fi
+        fi
+        sleep 1
+    done
 }
 SECONDS_START=$(date +%s)
 do_umount=0
