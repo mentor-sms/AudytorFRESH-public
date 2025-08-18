@@ -336,29 +336,29 @@ main() {
                                 echo_info "Symulacja: Uruchomilbym: $run $prepare_args"
                 fi
                 set +o pipefail
-    echo_info "============================================================="
-    echo_info "   PODSUMOWANIE WYKONANIA"
-    echo_info "============================================================="
-    echo_info "Skrypt: copy4prepare.sh v$WERSJA"
-    echo_info "Zadanie: $job"
-    echo_info "Zrodlo: $from"
-    echo_info "Cel: $target"
-    echo_info "Katalog domowy: $home_dir"
-    echo_info "Tryb szybki: $([ "$quick" -eq 1 ] && echo "tak" || echo "nie")"
-    echo_info "Tryb debugowania: $([ "$debug" -eq 1 ] && echo "tak" || echo "nie")"
-    echo_info "Tryb symulacji: $([ "$dry" -eq 1 ] && echo "tak" || echo "nie")"
-    echo_info "Czas rozpoczecia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
-    echo_info "Czas zakonczenia: $(date '+%H:%M:%S')"
-    echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
-    echo_info "============================================================="
-    echo_info "copy4prepare.sh zakonczony pomyslnie"
-    echo_stop "RESTART SYSTEMU za minute"
     sync || true
     if [ "$debug" -eq 1 ] || [ "$keyboard" -eq 1 ]; then
         if [ "$quick" -eq 1 ]; then
             shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
             exit 0
         else
+            echo_info "============================================================="
+            echo_info "   PODSUMOWANIE WYKONANIA"
+            echo_info "============================================================="
+            echo_info "Skrypt: copy4prepare.sh v$WERSJA"
+            echo_info "Zadanie: $job"
+            echo_info "Zrodlo: $from"
+            echo_info "Cel: $target"
+            echo_info "Katalog domowy: $home_dir"
+            echo_info "Tryb szybki: $([ "$quick" -eq 1 ] && echo "tak" || echo "nie")"
+            echo_info "Tryb debugowania: $([ "$debug" -eq 1 ] && echo "tak" || echo "nie")"
+            echo_info "Tryb symulacji: $([ "$dry" -eq 1 ] && echo "tak" || echo "nie")"
+            echo_info "Czas rozpoczecia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
+            echo_info "Czas zakonczenia: $(date '+%H:%M:%S')"
+            echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
+            echo_info "============================================================="
+            echo_info "copy4prepare.sh zakonczony pomyslnie"
+            echo_stop "RESTART SYSTEMU za minute"
             shutdown -r +1 || systemctl reboot || echo_error $LINENO "Restart systemu nieudany"
        fi
     else
@@ -445,7 +445,7 @@ echo_wait() {
     fi
 }
 clean_home() {
-                local pihome="$target_root"home/"$username"
+    local pihome="$target_root"home/"$username"
     echo_info "Cleaning home directory: $pihome"
     if [ -d "$pihome/.mentor" ]; then
         echo_info "Removing .mentor directory"
