@@ -25,13 +25,13 @@ Temat: AudytorFRESH/setup4rpi
 
 ```bash
 
-#4lab>on ta linia zostanie odkomentowana #4lab>swap "zostanie" "zostala"
-ta linia zostanie zakomentowana #4lab>swap "zostala" "zostanie" #4lab>off
+4lab>on ta linia zostanie odkomentowana 4lab>swap "zostanie" "zostala"
+ta linia zostanie zakomentowana 4lab>swap "zostala" "zostanie" 4lab>off
 
 # przyklad: .mentor\etc\dhcpcd.conf
 ```
 
-UWAGA na nieopisane komentarze fukncyjne: `#4lab>var`, `#4lab>file`, `#4lab>sshkey`, `#4lab>list`, `#4lab>file`
+UWAGA na nieopisane komentarze fukncyjne: 4lab>var, 4lab>file`, 4lab>sshkey, 4lab>list, 4lab>~~~~file
 
 - `.mentor\root4rpi` - Dowolnie modyfikuj ten katalog. Synchronizacja z `/` (root). `~` to `home/pi`.
 

@@ -215,3 +215,4 @@ raw         # Raw disk images
 # Special Purpose Files
 pub         # Public key files
 run
+inf
