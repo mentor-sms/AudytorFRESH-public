@@ -1,5 +1,4 @@
 @echo off
-setlocal
 setlocal enabledelayedexpansion
 if /i "%~1"=="-elevated" (
     set "IS_ELEVATED=1"
@@ -14,17 +13,12 @@ if /i "%~1"=="-elevated" (
 ::=============================================================================
 
 :: Sprawdź uprawnienia administratora
-net session >nul 2>&1
+fltmc >nul 2>&1
 if %errorlevel% neq 0 (
     echo UWAGA: Ten skrypt wymaga uprawnień administratora.
     echo Próba uruchomienia z podwyższonymi uprawnieniami...
     call :run_elevated %*
     exit /b
-)
-
-:: Sprawdź początkowy kod błędu
-if %errorlevel% neq 0 (
-    call :end_with_error 1 "Błąd inicjalizacji"
 )
 
 :: Walidacja identyfikatora
@@ -57,11 +51,6 @@ if "%~1"=="" (
     call :end_with_error 4 "Nie podano ścieżek do plików" usage
 )
 
-:: Sprawdź czy wszystko jest w porządku przed rozpoczęciem
-if %errorlevel% neq 0 (
-    call :end_with_error 5 "Błąd przed rozpoczęciem przetwarzania"
-)
-
 :process_files
 (
     :: Sprawdź błędy przed przetwarzaniem pliku
@@ -72,7 +61,7 @@ if %errorlevel% neq 0 (
     :: Pobierz ścieżkę do pliku i sprawdź czy nie jest pusta
     set "file_path=%~1"
     if "!file_path!"=="" goto :happy_end
-    echo "[repo_keys] Przetwarzanie pliku: !file_path!"
+    echo [repo_keys] Przetwarzanie pliku: !file_path!
 
     :: Sprawdź czy plik istnieje
     if not exist "!file_path!" (
@@ -82,40 +71,49 @@ if %errorlevel% neq 0 (
     echo Tryb: !mode!
 
     :: Pokaż aktualne uprawnienia
-    call :run_cmd "!file_path!" silent
+    call :run_cmd "!file_path!"
 
     :: Zresetuj uprawnienia
-    echo "Resetowanie uprawnień..."
+    echo Resetowanie uprawnień...
     call :run_cmd "!file_path!" /reset
+    if !errorlevel! neq 0 call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
 
     :: Ustaw uprawnienia w zależności od trybu
     if "!mode!"=="default" (
         echo Ustawiono domyślne uprawnienia.
     ) else (
         if "!mode!"=="private" (
-            echo "Ustawianie prywatnych uprawnień dla użytkownika %USERNAME%..."
-            call :run_cmd "!file_path!" /grant %USERNAME%:F
-            call :run_cmd "!file_path!" /setowner %USERNAME%
-            call :run_cmd "!file_path!" /inheritance:r /c /grant:r %USERNAME%:F
+            echo Ustawianie prywatnych uprawnień dla bieżącego użytkownika...
+            call :ensure_current_user_sid
+            call :run_cmd "!file_path!" /grant *!CURRENT_USER_SID!:F
+            if !errorlevel! neq 0 call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
+            call :run_cmd "!file_path!" /setowner *!CURRENT_USER_SID!
+            if !errorlevel! neq 0 call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
+            call :run_cmd "!file_path!" /inheritance:r /c /grant:r *!CURRENT_USER_SID!:F
+            if !errorlevel! neq 0 call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
         ) else (
-            echo "Ustawianie uprawnień administratora..."
+            echo Ustawianie uprawnień administratora...
             call :run_cmd "!file_path!" /grant *S-1-5-32-544:F
+            if !errorlevel! neq 0 call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
             call :run_cmd "!file_path!" /setowner *S-1-5-32-544
+            if !errorlevel! neq 0 call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
             if "!mode!"=="root_private" (
-                echo "Ustawianie prywatnych uprawnień administratora..."
+                echo Ustawianie prywatnych uprawnień administratora...
                 call :run_cmd "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F
+                if !errorlevel! neq 0 call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
             ) else (
                 if "!mode!"=="root_public" (
-                    echo "Ustawianie publicznych uprawnień administratora..."
+                    echo Ustawianie publicznych uprawnień administratora...
                     call :run_cmd "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
+                    if !errorlevel! neq 0 call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
                 )
             )
         )
     )
 
     :: Pokaż wynikowe uprawnienia
-    echo "Końcowe uprawnienia:"
-    call :run_cmd "!file_path!" silent
+    echo Koncowe uprawnienia:
+    call :run_cmd "!file_path!"
 
     :: Sprawdź czy operacja się powiodła
     if !errorlevel! neq 0 (
@@ -123,40 +121,28 @@ if %errorlevel% neq 0 (
     )
 
     :: Sprawdź czy plik jest dostępny po zmianie uprawnień
-    echo "Weryfikacja dostępu do pliku..."
+    echo Weryfikacja dostępu do pliku...
     if exist "!file_path!" (
         dir "!file_path!" >nul 2>&1
         if !errorlevel! neq 0 (
-            echo "OSTRZEŻENIE: Plik istnieje, ale może mieć problemy z dostępem."
+            echo OSTRZEZENIE: Plik istnieje, ale moze miec problemy z dostepem.
         ) else (
-            echo "Dostęp do pliku zweryfikowany pomyślnie."
+            echo Dostep do pliku zweryfikowany pomyslnie.
         )
     ) else (
-        call :end_with_error 11 "Plik przestał istnieć po zmianie uprawnień: !file_path!"
+        call :end_with_error 11 "Plik przestal istniec po zmianie uprawnien: !file_path!"
     )
-
-    echo "Pomyślnie przetworzono plik: !file_path!"
+    echo Pomyślnie przetworzono plik: !file_path!
 ) >> "%log_file%" 2>&1
 shift
 goto :process_files
 
 :run_cmd
 set "ic_path=%~1"
-set "args="
-set "silent="
-if /i "%~2"=="silent" (
-    set "silent=1"
-) else (
-    set "args=%~2 %~3 %~4 %~5 %~6 %~7 %~8 %~9"
-)
-if defined silent (
-    echo "Wykonywanie: icacls "%ic_path%""
-) else (
-    echo "Wykonywanie: icacls "%ic_path%" %args%"
-    @echo on
-)
+shift
+set "args=%*"
+echo Wykonywanie: icacls "%ic_path%" %args%
 icacls "%ic_path%" %args%
-@echo off
 if %errorlevel% neq 0 (
     call :end_with_error 9 "Błąd wykonania polecenia icacls dla %ic_path% %args%"
 )
@@ -176,20 +162,20 @@ echo BŁĄD %1: %2
 echo ====================================================================
 echo.
 if "%~3"=="usage" (
-    echo "Nieprawidłowe parametry: %*"
+    echo Nieprawidłowe parametry: %*
     echo.
-    echo "Użycie: %~nx0 [id] [mode] [ścieżki_do_plików, ...]"
-    echo "Dostępne tryby: default, private, root_private, root_public"
+    echo Użycie: %~nx0 [id] [mode] [ścieżki_do_plików, ...]
+    echo Dostępne tryby: default, private, root_private, root_public
     echo.
-    echo "Opis trybów:"
-    echo "  default      - domyślne uprawnienia systemowe"
-    echo "  private      - uprawnienia tylko dla bieżącego użytkownika"
-    echo "  root_private - uprawnienia tylko dla administratora i systemu"
-    echo "  root_public  - uprawnienia dla administratora z dostępem do odczytu dla innych"
+    echo Opis trybów:
+    echo   default      - domyślne uprawnienia systemowe
+    echo   private      - uprawnienia tylko dla bieżącego użytkownika
+    echo   root_private - uprawnienia tylko dla administratora i systemu
+    echo   root_public  - uprawnienia dla administratora z dostępem do odczytu dla innych
     echo.
-    echo "Przykład:"
-    echo "  %~nx0 123 private C:\ścieżka\do\pliku.txt"
-    echo "  %~nx0 456 root_public "C:\ścieżka ze spacjami\*""
+    echo Przykład:
+    echo   %~nx0 123 private C:\sciezka\do\pliku.txt
+    echo   %~nx0 456 root_public "C:\sciezka ze spacjami\*"
     echo.
 )
 exit /b %1
@@ -197,63 +183,71 @@ exit /b %1
 :happy_end
 echo.
 echo ====================================================================
-echo "Zakończono przetwarzanie wszystkich plików pomyślnie."
+echo Zakończono przetwarzanie wszystkich plików pomyślnie.
 echo ====================================================================
 echo.
 if defined log_file (
-    echo "Podsumowanie operacji:"
-    echo " - Identyfikator: %id%"
-    echo " - Tryb uprawnień: %mode%"
-    echo " - Plik dziennika: %log_file%"
+    echo Podsumowanie operacji:
+    echo  - Identyfikator: %id%
+    echo  - Tryb uprawnień: %mode%
+    echo  - Plik dziennika: %log_file%
     echo.
-    echo "Aby zobaczyć szczegółowy dziennik, otwórz plik:"
-    echo "%log_file%"
+    echo Aby zobaczyć szczegółowy dziennik, otwórz plik:
+    echo %log_file%
 )
 exit /b 0
 
 :help
 echo.
 echo ====================================================================
-echo "repo_keys.bat - Narzędzie do zarządzania uprawnieniami plików"
+echo repo_keys.bat - Narzędzie do zarządzania uprawnieniami plików
 echo ====================================================================
 echo.
-echo "Użycie: %~nx0 [id] [mode] [ścieżki_do_plików, ...]"
+echo Użycie: %~nx0 [id] [mode] [ścieżki_do_plików, ...]
 echo.
-echo "Parametry:"
-echo "  [id]         - Identyfikator numeryczny operacji (używany w nazwie pliku dziennika)"
-echo "  [mode]       - Tryb uprawnień do zastosowania"
-echo "  [ścieżki]    - Jedna lub więcej ścieżek do plików do przetworzenia"
+echo Parametry:
+echo   [id]         - Identyfikator numeryczny operacji (używany w nazwie pliku dziennika)
+echo   [mode]       - Tryb uprawnień do zastosowania
+echo   [ścieżki]    - Jedna lub więcej ścieżek do plików do przetworzenia
 echo.
-echo "Dostępne tryby:"
-echo "  default      - Przywraca domyślne uprawnienia systemowe"
-echo "  private      - Nadaje pełne uprawnienia tylko bieżącemu użytkownikowi"
-echo "  root_private - Nadaje uprawnienia tylko administratorowi i systemowi"
-echo "  root_public  - Nadaje uprawnienia administratorowi oraz odczyt dla innych"
+echo Dostępne tryby:
+echo   default      - Przywraca domyślne uprawnienia systemowe
+echo   private      - Nadaje pełne uprawnienia tylko bieżącemu użytkownikowi
+echo   root_private - Nadaje uprawnienia tylko administratorowi i systemowi
+echo   root_public  - Nadaje uprawnienia administratorowi oraz odczyt dla innych
 echo.
-echo "Przykłady:"
-echo "  %~nx0 123 private "C:\Repozytorium\tajny.txt""
-echo "  %~nx0 456 root_public "C:\Dane\publiczne\*""
+echo Przykłady:
+echo   %~nx0 123 private "C:\Repozytorium\tajny.txt"
+echo   %~nx0 456 root_public "C:\Dane\publiczne\*"
 echo.
-echo "Kody błędów:"
-echo "  1 - Błąd inicjalizacji"
-echo "  2 - Nieprawidłowy identyfikator"
-echo "  3 - Nieprawidłowy tryb"
-echo "  4 - Brak ścieżek do plików"
-echo "  5-8 - Błędy przetwarzania"
-echo "  9 - Błąd wykonania polecenia icacls"
-echo "  10 - Błąd podwyższenia uprawnień"
-echo "  11 - Błąd weryfikacji dostępu"
+echo Kody błędów:
+echo   1 - Błąd inicjalizacji
+echo   2 - Nieprawidłowy identyfikator
+echo   3 - Nieprawidłowy tryb
+echo   4 - Brak ścieżek do plików
+echo   5-8 - Błędy przetwarzania
+echo   9 - Błąd wykonania polecenia icacls
+echo   10 - Błąd podwyższenia uprawnień
+echo   11 - Błąd weryfikacji dostępu
 echo.
-echo "OKFIN"
+echo OKFIN
 exit /b 0
 
 :run_elevated
 @echo on
-echo "Uruchamianie z uprawnieniami administratora..."
-PowerShell -Command "Start-Process -Verb RunAs -FilePath '%~f0' -ArgumentList '-elevated %*' -Wait"
+echo Uruchamianie z uprawnieniami administratora...
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -Verb RunAs -FilePath '%~f0' -ArgumentList '-elevated %*' -Wait"
 @echo off
 if %errorlevel% neq 0 (
     call :end_with_error 10 "Błąd podczas próby uruchomienia z uprawnieniami administratora"
 )
-echo "OKFIN"
+echo OKFIN
+exit /b 0
+
+:ensure_current_user_sid
+if defined CURRENT_USER_SID exit /b 0
+for /f "tokens=2" %%A in ('whoami /user ^| findstr /R "S-1-"') do set "CURRENT_USER_SID=%%A"
+if not defined CURRENT_USER_SID (
+    call :end_with_error 9 "Nie udało się uzyskać SID bieżącego użytkownika"
+)
 exit /b 0
