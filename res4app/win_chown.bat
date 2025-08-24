@@ -268,4 +268,5 @@ PowerShell -Command "Start-Process cmd -ArgumentList '/c %~dpnx0 re' -Verb RunAs
 if %errorlevel% neq 0 (
     call :end_with_error 10 "Błąd podczas próby uruchomienia z uprawnieniami administratora"
 )
+echo "OKFIN"
 exit /b 0
