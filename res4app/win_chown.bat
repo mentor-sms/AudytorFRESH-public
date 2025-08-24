@@ -100,107 +100,111 @@ shift
 shift
 for %%I in (%*) do (
     set "file_path=%%~I"
-    if "!file_path!"=="" (
-        if defined IS_ELEVATED (echo 6: Błąd przed przetwarzaniem pliku >> "%log_file%") else (echo 6: Błąd przed przetwarzaniem pliku >&2)
-        exit /b 6
-    )
-    if defined IS_ELEVATED (echo [win_chown] Przetwarzanie pliku: !file_path! >> "%log_file%") else (echo [win_chown] Przetwarzanie pliku: !file_path!)
-    if not exist "!file_path!" (
-        if defined IS_ELEVATED (echo 7: Nie znaleziono pliku: !file_path! >> "%log_file%") else (echo 7: Nie znaleziono pliku: !file_path! >&2)
-        exit /b 7
-    )
-    if defined IS_ELEVATED (echo Tryb: %mode% >> "%log_file%") else (echo Tryb: %mode%)
-    if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!")
-    icacls "!file_path!"
-    if !errorlevel! neq 0 (
-        if defined IS_ELEVATED (echo 9: Błąd wykonania polecenia icacls dla !file_path! >> "%log_file%") else (echo 9: Błąd wykonania polecenia icacls dla !file_path! >&2)
-        exit /b 9
-    )
-    if defined IS_ELEVATED (echo Resetowanie uprawnień... >> "%log_file%") else (echo Resetowanie uprawnień...)
-    if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /reset >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /reset)
-    icacls "!file_path!" /reset
-    if !errorlevel! neq 0 (
-        if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
-        exit /b 8
-    )
-    if /i "%mode%"=="default" (
-        if defined IS_ELEVATED (echo Ustawiono domyślne uprawnienia. >> "%log_file%") else (echo Ustawiono domyślne uprawnienia.)
+    if /i "!file_path!"=="-elevated" (
+        if defined IS_ELEVATED (echo [win_chown] Pomijanie parametru kontrolnego: !file_path! >> "%log_file%") else (echo [win_chown] Pomijanie parametru kontrolnego: !file_path!)
     ) else (
-        if /i "%mode%"=="private" (
-            if defined IS_ELEVATED (echo Ustawianie prywatnych uprawnień dla bieżącego użytkownika... >> "%log_file%") else (echo Ustawianie prywatnych uprawnień dla bieżącego użytkownika...)
-            if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /grant *!CURRENT_USER_SID!:F >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /grant *!CURRENT_USER_SID!:F)
-            icacls "!file_path!" /grant *!CURRENT_USER_SID!:F
-            if !errorlevel! neq 0 (
-                if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
-                exit /b 8
-            )
-            if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /setowner *!CURRENT_USER_SID! >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /setowner *!CURRENT_USER_SID!)
-            icacls "!file_path!" /setowner *!CURRENT_USER_SID!
-            if !errorlevel! neq 0 (
-                if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
-                exit /b 8
-            )
-            if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r *!CURRENT_USER_SID!:F >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r *!CURRENT_USER_SID!:F)
-            icacls "!file_path!" /inheritance:r /c /grant:r *!CURRENT_USER_SID!:F
-            if !errorlevel! neq 0 (
-                if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
-                exit /b 8
-            )
+        if "!file_path!"=="" (
+            if defined IS_ELEVATED (echo 6: Błąd przed przetwarzaniem pliku >> "%log_file%") else (echo 6: Błąd przed przetwarzaniem pliku >&2)
+            exit /b 6
+        )
+        if defined IS_ELEVATED (echo [win_chown] Przetwarzanie pliku: !file_path! >> "%log_file%") else (echo [win_chown] Przetwarzanie pliku: !file_path!)
+        if not exist "!file_path!" (
+            if defined IS_ELEVATED (echo 7: Nie znaleziono pliku: !file_path! >> "%log_file%") else (echo 7: Nie znaleziono pliku: !file_path! >&2)
+            exit /b 7
+        )
+        if defined IS_ELEVATED (echo Tryb: %mode% >> "%log_file%") else (echo Tryb: %mode%)
+        if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!")
+        icacls "!file_path!"
+        if !errorlevel! neq 0 (
+            if defined IS_ELEVATED (echo 9: Błąd wykonania polecenia icacls dla !file_path! >> "%log_file%") else (echo 9: Błąd wykonania polecenia icacls dla !file_path! >&2)
+            exit /b 9
+        )
+        if defined IS_ELEVATED (echo Resetowanie uprawnień... >> "%log_file%") else (echo Resetowanie uprawnień...)
+        if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /reset >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /reset)
+        icacls "!file_path!" /reset
+        if !errorlevel! neq 0 (
+            if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
+            exit /b 8
+        )
+        if /i "%mode%"=="default" (
+            if defined IS_ELEVATED (echo Ustawiono domyślne uprawnienia. >> "%log_file%") else (echo Ustawiono domyślne uprawnienia.)
         ) else (
-            if defined IS_ELEVATED (echo Ustawianie uprawnień administratora... >> "%log_file%") else (echo Ustawianie uprawnień administratora...)
-            if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /grant *S-1-5-32-544:F >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /grant *S-1-5-32-544:F)
-            icacls "!file_path!" /grant *S-1-5-32-544:F
-            if !errorlevel! neq 0 (
-                if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
-                exit /b 8
-            )
-            if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /setowner *S-1-5-32-544 >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /setowner *S-1-5-32-544)
-            icacls "!file_path!" /setowner *S-1-5-32-544
-            if !errorlevel! neq 0 (
-                if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
-                exit /b 8
-            )
-            if /i "%mode%"=="root_private" (
-                if defined IS_ELEVATED (echo Ustawianie prywatnych uprawnień administratora... >> "%log_file%") else (echo Ustawianie prywatnych uprawnień administratora...)
-                if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F)
-                icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F
+            if /i "%mode%"=="private" (
+                if defined IS_ELEVATED (echo Ustawianie prywatnych uprawnień dla bieżącego użytkownika... >> "%log_file%") else (echo Ustawianie prywatnych uprawnień dla bieżącego użytkownika...)
+                if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /grant *!CURRENT_USER_SID!:F >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /grant *!CURRENT_USER_SID!:F)
+                icacls "!file_path!" /grant *!CURRENT_USER_SID!:F
+                if !errorlevel! neq 0 (
+                    if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
+                    exit /b 8
+                )
+                if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /setowner *!CURRENT_USER_SID! >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /setowner *!CURRENT_USER_SID!)
+                icacls "!file_path!" /setowner *!CURRENT_USER_SID!
+                if !errorlevel! neq 0 (
+                    if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
+                    exit /b 8
+                )
+                if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r *!CURRENT_USER_SID!:F >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r *!CURRENT_USER_SID!:F)
+                icacls "!file_path!" /inheritance:r /c /grant:r *!CURRENT_USER_SID!:F
                 if !errorlevel! neq 0 (
                     if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
                     exit /b 8
                 )
             ) else (
-                if /i "%mode%"=="root_public" (
-                    if defined IS_ELEVATED (echo Ustawianie publicznych uprawnień administratora... >> "%log_file%") else (echo Ustawianie publicznych uprawnień administratora...)
-                    if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX)
-                    icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
+                if defined IS_ELEVATED (echo Ustawianie uprawnień administratora... >> "%log_file%") else (echo Ustawianie uprawnień administratora...)
+                if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /grant *S-1-5-32-544:F >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /grant *S-1-5-32-544:F)
+                icacls "!file_path!" /grant *S-1-5-32-544:F
+                if !errorlevel! neq 0 (
+                    if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
+                    exit /b 8
+                )
+                if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /setowner *S-1-5-32-544 >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /setowner *S-1-5-32-544)
+                icacls "!file_path!" /setowner *S-1-5-32-544
+                if !errorlevel! neq 0 (
+                    if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
+                    exit /b 8
+                )
+                if /i "%mode%"=="root_private" (
+                    if defined IS_ELEVATED (echo Ustawianie prywatnych uprawnień administratora... >> "%log_file%") else (echo Ustawianie prywatnych uprawnień administratora...)
+                    if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F)
+                    icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F
                     if !errorlevel! neq 0 (
                         if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
                         exit /b 8
                     )
+                ) else (
+                    if /i "%mode%"=="root_public" (
+                        if defined IS_ELEVATED (echo Ustawianie publicznych uprawnień administratora... >> "%log_file%") else (echo Ustawianie publicznych uprawnień administratora...)
+                        if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX)
+                        icacls "!file_path!" /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
+                        if !errorlevel! neq 0 (
+                            if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
+                            exit /b 8
+                        )
+                    )
                 )
             )
         )
-    )
-    if defined IS_ELEVATED (echo Koncowe uprawnienia: >> "%log_file%") else (echo Koncowe uprawnienia:)
-    if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!")
-    icacls "!file_path!"
-    if !errorlevel! neq 0 (
-        if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
-        exit /b 8
-    )
-    if defined IS_ELEVATED (echo Weryfikacja dostępu do pliku... >> "%log_file%") else (echo Weryfikacja dostępu do pliku...)
-    if exist "!file_path!" (
-        dir "!file_path!" >nul 2>&1
+        if defined IS_ELEVATED (echo Koncowe uprawnienia: >> "%log_file%") else (echo Koncowe uprawnienia:)
+        if defined IS_ELEVATED (echo Wykonywanie: icacls "!file_path!" >> "%log_file%") else (echo Wykonywanie: icacls "!file_path!")
+        icacls "!file_path!"
         if !errorlevel! neq 0 (
-            if defined IS_ELEVATED (echo OSTRZEZENIE: Plik istnieje, ale moze miec problemy z dostepem. >> "%log_file%") else (echo OSTRZEZENIE: Plik istnieje, ale moze miec problemy z dostepem.)
-        ) else (
-            if defined IS_ELEVATED (echo Dostep do pliku zweryfikowany pomyslnie. >> "%log_file%") else (echo Dostep do pliku zweryfikowany pomyslnie.)
+            if defined IS_ELEVATED (echo 8: Nie udało się przetworzyć pliku: !file_path! >> "%log_file%") else (echo 8: Nie udało się przetworzyć pliku: !file_path! >&2)
+            exit /b 8
         )
-    ) else (
-        if defined IS_ELEVATED (echo 11: Plik przestal istniec po zmianie uprawnien: !file_path! >> "%log_file%") else (echo 11: Plik przestal istniec po zmianie uprawnien: !file_path! >&2)
-        exit /b 11
+        if defined IS_ELEVATED (echo Weryfikacja dostępu do pliku... >> "%log_file%") else (echo Weryfikacja dostępu do pliku...)
+        if exist "!file_path!" (
+            dir "!file_path!" >nul 2>&1
+            if !errorlevel! neq 0 (
+                if defined IS_ELEVATED (echo OSTRZEZENIE: Plik istnieje, ale moze miec problemy z dostepem. >> "%log_file%") else (echo OSTRZEZENIE: Plik istnieje, ale moze miec problemy z dostepem.)
+            ) else (
+                if defined IS_ELEVATED (echo Dostep do pliku zweryfikowany pomyslnie. >> "%log_file%") else (echo Dostep do pliku zweryfikowany pomyslnie.)
+            )
+        ) else (
+            if defined IS_ELEVATED (echo 11: Plik przestal istniec po zmianie uprawnien: !file_path! >> "%log_file%") else (echo 11: Plik przestal istniec po zmianie uprawnien: !file_path! >&2)
+            exit /b 11
+        )
+        if defined IS_ELEVATED (echo Pomyślnie przetworzono plik: !file_path! >> "%log_file%") else (echo Pomyślnie przetworzono plik: !file_path!)
     )
-    if defined IS_ELEVATED (echo Pomyślnie przetworzono plik: !file_path! >> "%log_file%") else (echo Pomyślnie przetworzono plik: !file_path!)
 )
 
 if defined IS_ELEVATED (echo ==================================================================== >> "%log_file%") else (echo ====================================================================)
