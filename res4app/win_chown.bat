@@ -1,6 +1,11 @@
 @echo off
 setlocal
 setlocal enabledelayedexpansion
+rem Detect elevated relaunch marker and strip it
+if /i "%~1"=="-elevated" (
+    set "IS_ELEVATED=1"
+    shift
+)
 
 ::=============================================================================
 :: repo_keys.bat - Narzędzie do zarządzania uprawnieniami plików repozytoriów
@@ -14,7 +19,7 @@ net session >nul 2>&1
 if %errorlevel% neq 0 (
     echo UWAGA: Ten skrypt wymaga uprawnień administratora.
     echo Próba uruchomienia z podwyższonymi uprawnieniami...
-    call :run_elevated
+    call :run_elevated %*
     exit /b
 )
 
@@ -64,26 +69,20 @@ if %errorlevel% neq 0 (
     if %errorlevel% neq 0 (
         call :end_with_error 6 "Błąd przed przetwarzaniem pliku"
     )
-
     :: Pobierz ścieżkę do pliku i sprawdź czy nie jest pusta
     set "file_path=%~1"
     if "!file_path!"=="" goto :happy_end
     echo "[repo_keys] Przetwarzanie pliku: !file_path!"
-
     :: Sprawdź czy plik istnieje
     if not exist "!file_path!" (
         call :end_with_error 7 "Nie znaleziono pliku: !file_path!"
     )
-
     echo Tryb: !mode!
-
     :: Pokaż aktualne uprawnienia
     call :run_cmd "!file_path!" silent
-
     :: Zresetuj uprawnienia
     echo "Resetowanie uprawnień..."
     call :run_cmd "!file_path! /reset"
-
     :: Ustaw uprawnienia w zależności od trybu
     if "!mode!"=="default" (
         echo Ustawiono domyślne uprawnienia.
@@ -100,22 +99,21 @@ if %errorlevel% neq 0 (
             if "!mode!"=="root_private" (
                 echo "Ustawianie prywatnych uprawnień administratora..."
                 call :run_cmd "!file_path! /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F"
-            ) else if "!mode!"=="root_public" (
-                echo "Ustawianie publicznych uprawnień administratora..."
-                call :run_cmd "!file_path! /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX"
+            ) else (
+                if "!mode!"=="root_public" (
+                    echo "Ustawianie publicznych uprawnień administratora..."
+                    call :run_cmd "!file_path! /inheritance:r /c /grant:r SYSTEM:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX"
+                )
             )
         )
     )
-
     :: Pokaż wynikowe uprawnienia
     echo "Końcowe uprawnienia:"
     call :run_cmd "!file_path!" silent
-
     :: Sprawdź czy operacja się powiodła
     if %errorlevel% neq 0 (
         call :end_with_error 8 "Nie udało się przetworzyć pliku: !file_path!"
     )
-
     :: Sprawdź czy plik jest dostępny po zmianie uprawnień
     echo "Weryfikacja dostępu do pliku..."
     if exist "!file_path!" (
@@ -128,7 +126,6 @@ if %errorlevel% neq 0 (
     ) else (
         call :end_with_error 11 "Plik przestał istnieć po zmianie uprawnień: !file_path!"
     )
-
     echo "Pomyślnie przetworzono plik: !file_path!"
 ) >> "%log_file%" 2>&1
 shift
@@ -138,23 +135,18 @@ goto :process_files
 :: Przygotuj argumenty polecenia icacls
 set args=%~1
 echo "Wykonywanie: icacls %args%"
-
 :: Wyświetlaj polecenia tylko jeśli nie jest w trybie cichym
 if "%~2"=="" (
     @echo on
 )
-
 :: Wykonaj polecenie icacls z poprawnymi cudzysłowami
 icacls %args%
-
 :: Przywróć tryb cichy
 @echo off
-
 :: Obsługa błędów wykonania polecenia
 if %errorlevel% neq 0 (
     call :end_with_error 9 "Błąd wykonania polecenia icacls dla %args%"
 )
-
 exit /b 0
 
 :end_with_error
@@ -165,17 +157,14 @@ if defined log_file (
     echo Polecenie: %~3>> "%log_file%"
     echo ------------------------------------------------------------->> "%log_file%"
 )
-
 :: Wyświetl komunikat błędu w standardowym wyjściu błędów
 echo %1: %2 >&2
-
 :: Wyświetl komunikat błędu w standardowym wyjściu z więcej informacjami
 echo.
 echo ====================================================================
 echo BŁĄD %1: %2
 echo ====================================================================
 echo.
-
 :: Jeśli to błąd związany z użyciem, pokaż instrukcję
 if "%~3"=="usage" (
     echo "Nieprawidłowe parametry: %*"
@@ -194,7 +183,6 @@ if "%~3"=="usage" (
     echo "  %~nx0 456 root_public "C:\ścieżka ze spacjami\*""
     echo.
 )
-
 :: Zakończ skrypt z kodem błędu
 exit %1
 
@@ -205,7 +193,6 @@ echo ====================================================================
 echo "Zakończono przetwarzanie wszystkich plików pomyślnie."
 echo ====================================================================
 echo.
-
 :: Wyświetl podsumowanie jeśli plik dziennika istnieje
 if defined log_file (
     echo "Podsumowanie operacji:"
@@ -216,7 +203,6 @@ if defined log_file (
     echo "Aby zobaczyć szczegółowy dziennik, otwórz plik:"
     echo "%log_file%"
 )
-
 exit 0
 
 :help
@@ -253,7 +239,6 @@ echo "  9 - Błąd wykonania polecenia icacls"
 echo "  10 - Błąd podwyższenia uprawnień"
 echo "  11 - Błąd weryfikacji dostępu"
 echo.
-
 echo "OKFIN"
 exit 0
 
@@ -261,9 +246,8 @@ exit 0
 :: Uruchom skrypt z uprawnieniami administratora
 @echo on
 echo "Uruchamianie z uprawnieniami administratora..."
-PowerShell -Command "Start-Process cmd -ArgumentList '/c %~dpnx0 re' -Verb RunAs -Wait -PassThru | Out-Null"
+PowerShell -Command "Start-Process -Verb RunAs -FilePath '%~f0' -ArgumentList '-elevated %*' -Wait"
 @echo off
-
 :: Sprawdź czy uruchomienie z podwyższonymi uprawnieniami się powiodło
 if %errorlevel% neq 0 (
     call :end_with_error 10 "Błąd podczas próby uruchomienia z uprawnieniami administratora"
