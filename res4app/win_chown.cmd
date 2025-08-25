@@ -46,16 +46,23 @@ echo PARSED:
 echo Command: "%~f0" %*
 echo(
 
-rem ------ OUT ONLY ------
-
-echo 1=[%~1] 2=[%~2] 3=[%~3] 4=[%~4] 5=[%~5] 6=[%~6]
+set "id=%~2"
+if "!id!"=="" (
+    echo 2: Brak wymaganego identyfikatora (argument 2: ID). Podaj liczbowy identyfikator procesu >&2
+    exit /b 2
+)
+echo Identyfikator procesu [id]: !id!
 
 set "LOG_DIR=%~3"
+echo !LOG_DIR!
+echo "LOG_DIR"
 if "!LOG_DIR!"=="" (
     echo 1: Nie podano katalogu dla pliku dziennika >&2
     exit /b 5
 )
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
+
+rem ------ OUT ONLY ------
 
 echo REV 3.0.0 CMD
 echo REV 3.0.0 CMD>> "!log_file!"
@@ -72,14 +79,6 @@ echo(
 rem ------ ARGS ------
 echo Test argumentow...>> "!log_file!"
 echo Test argumentow...
-
-set "id=%~2"
-if "!id!"=="" (
-    echo 2: Brak wymaganego identyfikatora (argument 2: ID). Podaj liczbowy identyfikator procesu.>> "!log_file!"
-    echo 2: Brak wymaganego identyfikatora (argument 2: ID). Podaj liczbowy identyfikator procesu >&2
-    exit /b 2
-)
-echo Identyfikator procesu [id]: !id!
 
 set /A num=!id! 2>nul
 if not "!num!"=="!id!" (
