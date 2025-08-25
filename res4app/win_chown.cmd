@@ -1,9 +1,5 @@
-@echo on
+@echo off
 setlocal enabledelayedexpansion
-fltmc >nul 2>&1
-set "IS_ELEVATED="
-if %errorlevel% equ 0 set "IS_ELEVATED=1"
-ver >nul 2>&1
 
 set "id=%~2"
 if "!id!"=="" (
@@ -28,7 +24,6 @@ if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"==
     echo 4: >&2
     exit /b 4
 )
-@echo off
 
 echo REV 2.2 CMD
 
@@ -38,6 +33,11 @@ if "!LOG_DIR!"=="" (
     exit /b 5
 )
 
+ver >nul 2>&1
+fltmc >nul 2>&1
+set "IS_ELEVATED="
+if %errorlevel% equ 0 set "IS_ELEVATED=1"
+ver >nul 2>&1
 if defined IS_ELEVATED (
     echo X: runas win_chown.cmd
     exit /b 1

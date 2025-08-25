@@ -1,9 +1,6 @@
-@echo on
+@echo off
 setlocal enabledelayedexpansion
-fltmc >nul 2>&1
-set "IS_ELEVATED="
-if %errorlevel% equ 0 set "IS_ELEVATED=1"
-ver >nul 2>&1
+
 set "id=%~2"
 if "!id!"=="" (
     exit /b 2
@@ -32,6 +29,11 @@ set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
 
 echo REV 2.2 BAT>> "!log_file!"
 
+ver >nul 2>&1
+fltmc >nul 2>&1
+set "IS_ELEVATED="
+if %errorlevel% equ 0 set "IS_ELEVATED=1"
+ver >nul 2>&1
 if not defined IS_ELEVATED (
     echo 1: run win_chown.bat>> "!log_file!"
     exit /b 1
