@@ -1,6 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
+echo REV 2.0
+
 fltmc >nul 2>&1
 set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
