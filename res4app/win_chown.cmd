@@ -2,7 +2,7 @@
 @echo off
 setlocal disabledelayedexpansion
 if "%~1"=="" (
-    echo 11: Brak trybu (argument 1) - Dozwolone: default, private, root_private, root_public >&2
+    echo 11: Brak trybu (argument 1): Dozwolone: default, private, root_private, root_public >&2
     exit /b 11
 )
 set "mode=%~1"
@@ -43,7 +43,7 @@ ver >nul 2>&1
 echo(
 echo Testy argumentow dla BAT...
 if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"=="root_private" if /i not "!mode!"=="root_public" (
-    echo 12: Nieprawidlowy tryb (argument 1) - Dozwolone: default, private, root_private, root_public >&2
+    echo 12: Nieprawidlowy tryb (argument 1): Dozwolone: default, private, root_private, root_public >&2
     exit /b 12
 )
 echo Tryb: !mode!
@@ -150,10 +150,10 @@ for /L %%N in (1,1,!FILE_CNT!) do (
 )
 echo(
 echo Podsumowanie operacji:
-echo   - Identyfikator: !id!
-echo   - Tryb uprawnien: !mode!
-echo   - Plik dziennika: !log_file!
-echo   - OKFIN
+echo     Identyfikator: !id!
+echo     Tryb uprawnien: !mode!
+echo     Plik dziennika: !log_file!
+echo     OKFIN
 echo(
 echo 30 sekund do samobojstwa...
 timeout /t 30 /nobreak >nul
