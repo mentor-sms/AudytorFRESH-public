@@ -27,7 +27,7 @@ if "!LOG_DIR!"=="" (
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
 @echo off
 
-echo REV 2.2 BAT>> "!log_file!"
+echo REV 2.3 BAT>> "!log_file!"
 
 ver >nul 2>&1
 fltmc >nul 2>&1
@@ -41,9 +41,9 @@ ver >nul 2>&1
 
 echo Tryb [mode]: !mode!>> "!log_file!"
 
-set "CURRENT_USER_SID="
+set "CURRENT_USER_SID=%~5"
+set "ARG_START_IDX=6"
 if /i "!mode!"=="private" (
-    for /f %%A in ('powershell -NoProfile -Command "[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value"') do set "CURRENT_USER_SID=%%A"
     if not defined CURRENT_USER_SID (
         echo 9: Nie udało się uzyskać SID bieżącego użytkownika>> "!log_file!"
         exit /b 9
@@ -54,7 +54,7 @@ set "arg_index=0"
 
 for /f "usebackq delims=" %%I in (`%ComSpec% /v:on /c for %%G in (^%*^) do @echo(%%~G`) do (
     set /a arg_index+=1
-    if !arg_index! geq 4 (
+    if !arg_index! geq !ARG_START_IDX! (
         set "file_path=%%~I"
         if "!file_path!"=="" (
             echo 6: Błąd przed przetwarzaniem pliku>> "!log_file!"
