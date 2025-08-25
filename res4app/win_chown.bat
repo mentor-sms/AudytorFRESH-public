@@ -243,4 +243,5 @@ echo   - Identyfikator: %id%>> "%log_file%"
 echo   - Tryb uprawnień: %mode%>> "%log_file%"
 echo   - Plik dziennika: %log_file%>> "%log_file%"
 echo   - OKFIN >> "%log_file%"
+echo OKFIN
 exit /b 0
