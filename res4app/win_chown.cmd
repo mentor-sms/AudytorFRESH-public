@@ -4,7 +4,6 @@ fltmc >nul 2>&1
 set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
 ver >nul 2>&1
-@echo off
 
 set "id=%~2"
 if "!id!"=="" (
@@ -65,6 +64,7 @@ if %errorlevel% neq 0 (
     echo 10: Błąd podczas próby uruchomienia z uprawnieniami administratora
     exit /b %errorlevel%
 )
+@echo off
 echo ====================================================================>>
 echo Zakończono przetwarzanie wszystkich plików pomyślnie.
 echo ====================================================================>>
