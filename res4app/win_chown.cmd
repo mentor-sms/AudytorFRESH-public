@@ -1,7 +1,5 @@
 
-rem ------ informacje ------
-
-@echo on
+@echo off
 
 rem ------------------------------------------------------------------------------
 rem
@@ -77,8 +75,6 @@ rem   50x  Bledy obslugi pliku dziennika
 rem     50 Ogolny blad dziennika
 rem     51 Nie uzyskano wylacznego dostepu do pliku dziennika po wykonani
 rem ------------------------------------------------------------------------------
-
-@echo off
 
 rem ------ DEFINICJE ------
 
