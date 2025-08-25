@@ -34,7 +34,7 @@ fltmc >nul 2>&1
 set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
 if not defined IS_ELEVATED (
-    echo 1: run win_chown.bat>> "!log_file!"
+    echo 1: run win_chown.cmd>> "!log_file!"
     exit /b 1
 )
 ver >nul 2>&1
@@ -43,7 +43,7 @@ echo Tryb [mode]: !mode!>> "!log_file!"
 
 set "CURRENT_USER_SID="
 if /i "!mode!"=="private" (
-    for /f "tokens=2" %%A in ('whoami /user ^| findstr /R "S-1-"') do set "CURRENT_USER_SID=%%A"
+    for /f %%A in ('powershell -NoProfile -Command "[System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value"') do set "CURRENT_USER_SID=%%A"
     if not defined CURRENT_USER_SID (
         echo 9: Nie udało się uzyskać SID bieżącego użytkownika>> "!log_file!"
         exit /b 9
@@ -51,6 +51,7 @@ if /i "!mode!"=="private" (
     echo SID bieżącego użytkownika: !CURRENT_USER_SID!>> "!log_file!"
 )
 set "arg_index=0"
+
 for /f "usebackq delims=" %%I in (`%ComSpec% /v:on /c for %%G in (^%*^) do @echo(%%~G`) do (
     set /a arg_index+=1
     if !arg_index! geq 4 (

@@ -38,7 +38,7 @@ fltmc >nul 2>&1
 set "IS_ELEVATED="
 whoami /groups | findstr /C:"S-1-16-12288" >nul 2>&1 && set "IS_ELEVATED=1"
 if defined IS_ELEVATED (
-    echo X: runas win_chown.cmd
+    echo X: runas win_chown.bat
     exit /b 1
 )
 ver >nul 2>&1
