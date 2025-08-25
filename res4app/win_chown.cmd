@@ -6,7 +6,7 @@ set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
 ver >nul 2>&1
 
-echo REV 2.0 CMD
+echo REV 2.1 CMD
 
 set "id=%~2"
 if "%id%"=="" (
