@@ -9,9 +9,7 @@ setlocal enabledelayedexpansion
 (
     echo REV 3.0.0 BAT
     echo(
-    echo URUCHOMIENIE:
-    echo %cmdcmdline%
-    echo ZPARSOWANE:
+    echo Rozruch: %cmdcmdline%
     echo Polecenie: "%~f0" %*
     echo(
 ) >> "%log_file%" 2>&1
