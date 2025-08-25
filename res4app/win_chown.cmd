@@ -32,10 +32,8 @@ if /i "!mode!"=="private" (
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
 echo REV 3.0.0 CMD
 echo(
-echo URUCHOMIENIE:
-echo %cmdcmdline%
-echo ZPARSOWANE:
 echo Polecenie: "%~f0" %*
+echo Rozruch: %cmdcmdline%
 echo(
 echo Docelowe uprawnienia [tryb]: !mode!
 echo Dziennik: !LOG_DIR!\cmd_!id!.run.lab.log
@@ -51,42 +49,39 @@ set "ARG_START_IDX=6"
 set "ARG_INDEX=0"
 set "FILE_CNT=0"
 set "PS_ARGS="
-:__ARG_LOOP
-if "%~1"=="" goto __ARG_LOOP_END
-set /a ARG_INDEX+=1
-set "CUR_ARG=%~1"
-set "CUR_ESC=!CUR_ARG:'='''!"
-if defined PS_ARGS (
-    set "PS_ARGS=!PS_ARGS!,'!CUR_ESC!'"
-) else (
-    set "PS_ARGS='!CUR_ESC!'"
+for %%A in (%*) do (
+    set /a ARG_INDEX+=1
+    set "CUR_ARG=%%~A"
+    set "CUR_ESC=!CUR_ARG:'='''!"
+    if defined PS_ARGS (
+        set "PS_ARGS=!PS_ARGS!,'!CUR_ESC!'"
+    ) else (
+        set "PS_ARGS='!CUR_ESC!'"
+    )
+    if !ARG_INDEX! geq !ARG_START_IDX! (
+        set /a FILE_CNT+=1
+        set "FILE_!FILE_CNT!=!CUR_ARG!"
+        if "!CUR_ARG!"=="" (
+            echo 21: Blad przed przetwarzaniem pliku (pusta sciezka) >&2
+            exit /b 21
+        )
+        if not exist "!CUR_ARG!" (
+            echo 22: Nie znaleziono pliku: !CUR_ARG! >&2
+            exit /b 22
+        )
+        icacls "!CUR_ARG!" >nul 2>&1
+        if !errorlevel! neq 0 (
+            echo 23: Blad odczytu ACL (icacls) dla: !CUR_ARG! >&2
+            exit /b 23
+        )
+        dir "!CUR_ARG!" >nul 2>&1
+        if !errorlevel! neq 0 (
+            echo 24: Plik istnieje, ale moze byc problem z dostepem: !CUR_ARG! >&2
+            exit /b 24
+        )
+        echo Plik: !CUR_ARG!
+    )
 )
-if !ARG_INDEX! geq !ARG_START_IDX! (
-    set /a FILE_CNT+=1
-    set "FILE_!FILE_CNT!=!CUR_ARG!"
-    if "!CUR_ARG!"=="" (
-        echo 21: Blad przed przetwarzaniem pliku (pusta sciezka) >&2
-        exit /b 21
-    )
-    if not exist "!CUR_ARG!" (
-        echo 22: Nie znaleziono pliku: !CUR_ARG! >&2
-        exit /b 22
-    )
-    icacls "!CUR_ARG!" >nul 2>&1
-    if !errorlevel! neq 0 (
-        echo 23: Blad odczytu ACL (icacls) dla: !CUR_ARG! >&2
-        exit /b 23
-    )
-    dir "!CUR_ARG!" >nul 2>&1
-    if !errorlevel! neq 0 (
-        echo 24: Plik istnieje, ale moze byc problem z dostepem: !CUR_ARG! >&2
-        exit /b 24
-    )
-    echo Plik: !CUR_ARG!
-)
-shift /1
-goto __ARG_LOOP
-:__ARG_LOOP_END
 echo(
 echo Uruchamianie BAT...
 setlocal DisableDelayedExpansion

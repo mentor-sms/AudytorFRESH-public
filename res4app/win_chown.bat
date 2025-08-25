@@ -17,16 +17,13 @@ setlocal enabledelayedexpansion
 ) >> "%log_file%" 2>&1
 set "ARG_INDEX=0"
 set "FILE_CNT=0"
-:__COLLECT
-if "%~1"=="" goto __COLLECT_DONE
-set /a ARG_INDEX+=1
-if %ARG_INDEX% GEQ 6 (
-    set /a FILE_CNT+=1
-    call set "FILE_%FILE_CNT%=%~1"
+for %%A in (%*) do (
+    set /a ARG_INDEX+=1
+    if !ARG_INDEX! GEQ 6 (
+        set /a FILE_CNT+=1
+        set "FILE_!FILE_CNT!=%%~A"
+    )
 )
-shift /1
-goto __COLLECT
-:__COLLECT_DONE
 for /L %%N in (1,1,%FILE_CNT%) do (
     call set "_FP=%%FILE_%%N%%"
     >> "%log_file%" echo.
