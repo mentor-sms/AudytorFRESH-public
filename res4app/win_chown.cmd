@@ -28,6 +28,7 @@ if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"==
     echo 4: >&2
     exit /b 4
 )
+@echo off
 
 echo REV 2.2 CMD
 
@@ -35,13 +36,6 @@ set "LOG_DIR=%~3"
 if "!LOG_DIR!"=="" (
     echo 1: Nie podano katalogu dla pliku dziennika >&2
     exit /b 5
-)
-if not exist "!LOG_DIR!\NUL" (
-    mkdir "!LOG_DIR!" >nul 2>&1
-    if %errorlevel% neq 0 (
-        echo 1: Nie można utworzyć katalogu dziennika: "!LOG_DIR!" >&2
-        exit /b 6
-    )
 )
 
 if defined IS_ELEVATED (
@@ -64,7 +58,6 @@ if %errorlevel% neq 0 (
     echo 10: Błąd podczas próby uruchomienia z uprawnieniami administratora
     exit /b %errorlevel%
 )
-@echo off
 echo ====================================================================>>
 echo Zakończono przetwarzanie wszystkich plików pomyślnie.
 echo ====================================================================>>

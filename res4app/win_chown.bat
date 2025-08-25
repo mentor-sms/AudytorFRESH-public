@@ -26,12 +26,7 @@ set "LOG_DIR=%~3"
 if "!LOG_DIR!"=="" (
     exit /b 5
 )
-if not exist "!LOG_DIR!\NUL" (
-    mkdir "!LOG_DIR!" >nul 2>&1
-    if %errorlevel% neq 0 (
-        exit /b 5
-    )
-)
+
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
 @echo off
 
