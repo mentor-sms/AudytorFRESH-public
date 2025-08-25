@@ -1,3 +1,41 @@
+
+rem -----------------------------------------------------------------------------
+rem Usage and argument parsing guide (read before editing or calling this script)
+rem -----------------------------------------------------------------------------
+rem Call syntax:
+rem   win_chown.cmd <mode> <id> <log_dir> <reserved> <current_user_sid> <file1> [file2 ...]
+rem
+rem Parsed arguments (positions are 1-based, as passed on the command line):
+rem   %~1 -> mode                : Permission mode. Supported (case-insensitive):
+rem                                - default
+rem                                - private        (requires %~5 CURRENT_USER_SID)
+rem                                - root_private
+rem                                - root_public
+rem   %~2 -> id                  : Numeric identifier used for logging (validated).
+rem   %~3 -> LOG_DIR             : Directory where logs are written (required).
+rem                                Log file path: <LOG_DIR>\cmd_<id>.run.lab.log
+rem   %~4 -> reserved/unused     : Accepted but ignored by this script.
+rem   %~5 -> CURRENT_USER_SID    : Required only when mode=private (error 12 if missing).
+rem   %~6+ -> file paths         : One or more file paths to process. Each path may be quoted.
+rem
+rem Exit codes summary:
+rem   0    OK (success)
+rem   1    Unexpected administrative privileges detected on entry
+rem   2    Missing or non-numeric id (argument 2)
+rem   3    No file paths provided (arguments from position 6)
+rem   4    Missing or invalid mode (argument 1)
+rem   5    Missing log directory (argument 3)
+rem   6    Empty file path encountered
+rem   7    File not found
+rem   9    ACL read error (icacls)
+rem   10   Failed to start elevated process
+rem   12   Missing SID for private mode (argument 5)
+rem   13   File exists but access may be restricted
+rem   14   Post-run permission verification failed
+rem   15   Could not exclusively open the log file after run
+rem   1223 Elevation canceled by user (UAC)
+rem -----------------------------------------------------------------------------
+
 @echo on
 setlocal enabledelayedexpansion
 

@@ -1,3 +1,27 @@
+
+rem -----------------------------------------------------------------------------
+rem Usage and argument parsing guide (read before editing or calling this script)
+rem -----------------------------------------------------------------------------
+rem Call syntax:
+rem   win_chown.bat <mode> <id> <log_dir> <reserved> <current_user_sid> <file1> [file2 ...]
+rem
+rem Parsed arguments (positions are 1-based, as passed on the command line):
+rem   %~1 -> mode                : Permission mode. Supported (case-insensitive):
+rem                                - default
+rem                                - private        (requires %~5 CURRENT_USER_SID)
+rem                                - root_private
+rem                                - root_public
+rem   %~2 -> id                  : Identifier used for logging.
+rem   %~3 -> LOG_DIR             : Directory where logs are written.
+rem                                Log file path: <LOG_DIR>\cmd_<id>.run.lab.log
+rem   %~4 -> reserved/unused     : Accepted but ignored by this script.
+rem   %~5 -> CURRENT_USER_SID    : Required only when mode=private (error 12 if missing).
+rem   %~6+ -> file paths         : One or more file paths to process. Each path may be quoted.
+rem
+rem Exit codes summary:
+rem   11    Ooups!
+rem -----------------------------------------------------------------------------
+
 @echo on
 setlocal enabledelayedexpansion
 
