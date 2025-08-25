@@ -50,6 +50,8 @@ setlocal enabledelayedexpansion
 
 rem ------ OUT ONLY ------
 
+echo 1=[%~1] 2=[%~2] 3=[%~3] 4=[%~4] 5=[%~5] 6=[%~6]
+
 set "LOG_DIR=%~3"
 if "!LOG_DIR!"=="" (
     echo 1: Nie podano katalogu dla pliku dziennika >&2
