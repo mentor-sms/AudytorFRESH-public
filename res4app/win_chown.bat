@@ -1,6 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 
+fltmc >nul 2>&1
+set "IS_ELEVATED="
+if %errorlevel% equ 0 set "IS_ELEVATED=1"
+ver >nul 2>&1
+
 echo REV 2.0
 
 set "id=%~2"
@@ -33,17 +38,16 @@ if not exist "%LOG_DIR%" (
     )
 )
 
-set "log_file=%LOG_DIR%\cmd_%id%.lab.log"
+if defined IS_ELEVATED (
+    set "log_file=%LOG_DIR%\cmd_%id%.el.lab.log"
+) else (
+    set "log_file=%LOG_DIR%\cmd_%id%.run.lab.log"
+)
 echo Zapisywanie dziennika do pliku: %log_file%
 echo Zapisywanie dziennika do pliku: %log_file%>> "%log_file%"
 
 echo Podano identyfikator [id]: %id%>> "%log_file%"
 echo Identyfikator [id] jest liczbą: %id%>> "%log_file%"
-
-fltmc >nul 2>&1
-set "IS_ELEVATED="
-if %errorlevel% equ 0 set "IS_ELEVATED=1"
-ver >nul 2>&1
 
 set "mode=%~1"
 if "%mode%"=="" (
@@ -65,6 +69,8 @@ if /i not "%base_mode%"=="default" if /i not "%base_mode%"=="private" if /i not 
     echo 3: Nieprawidłowy tryb [mode]: %mode%>> "%log_file%"
     exit /b 3
 )
+echo Tryb [mode]: %mode%
+echo Tryb [mode]: %mode%>> "%log_file%"
 echo Tryb bazowy [base_mode]: %base_mode% (SKIP_ELEVATE=%SKIP_ELEVATE%)
 echo Tryb bazowy [base_mode]: %base_mode% (SKIP_ELEVATE=%SKIP_ELEVATE%)>> "%log_file%"
 if not defined IS_ELEVATED (
