@@ -9,8 +9,8 @@ setlocal enabledelayedexpansion
 (
     echo REV 3.0.0 BAT
     echo(
-    echo Rozruch: %cmdcmdline%
-    echo Polecenie: "%~f0" %*
+    echo Rozruch %cmdcmdline%
+    echo Polecenie "%~f0" %*
     echo(
 ) >> "%log_file%" 2>&1
 set "ARG_INDEX=0"
@@ -25,7 +25,7 @@ for %%A in (%*) do (
 for /L %%N in (1,1,%FILE_CNT%) do (
     call set "_FP=%%FILE_%%N%%"
     >> "%log_file%" echo.
-    >> "%log_file%" echo Plik: "!_FP!"
+    >> "%log_file%" echo Plik "!_FP!"
 
     setlocal DisableDelayedExpansion
     icacls "%_FP%" /reset >> "%log_file%" 2>&1
