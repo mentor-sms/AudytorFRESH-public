@@ -1,6 +1,5 @@
 @echo on
 setlocal enabledelayedexpansion
-
 fltmc >nul 2>&1
 set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
@@ -17,12 +16,10 @@ if not "!num!"=="!id!" (
     echo 2: Nieprawidłowy identyfikator (argument 2: ID nie jest liczbą). >&2
     exit /b 2
 )
-
 if "%~4"=="" (
     echo 3: Brak ścieżek plików do przetworzenia (argumenty od 4.). Podaj co najmniej jedną ścieżkę. >&2
     exit /b 3
 )
-
 set "mode=%~1"
 if "!mode!"=="" (
     echo 4: Brak trybu (argument 1). Dozwolone: default, private, root_private, root_public. >&2

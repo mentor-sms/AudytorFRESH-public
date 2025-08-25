@@ -1,11 +1,9 @@
 @echo on
 setlocal enabledelayedexpansion
-
 fltmc >nul 2>&1
 set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
 ver >nul 2>&1
-
 set "id=%~2"
 if "!id!"=="" (
     exit /b 2
@@ -14,11 +12,9 @@ set /A num=!id! 2>nul
 if not "!num!"=="!id!" (
     exit /b 2
 )
-
 if "%~4"=="" (
     exit /b 3
 )
-
 set "mode=%~1"
 if "!mode!"=="" (
     exit /b 4
@@ -26,7 +22,6 @@ if "!mode!"=="" (
 if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"=="root_private" if /i not "!mode!"=="root_public" (
     exit /b 4
 )
-
 set "LOG_DIR=%~3"
 if "!LOG_DIR!"=="" (
     exit /b 5
@@ -37,9 +32,7 @@ if not exist "!LOG_DIR!" (
         exit /b 5
     )
 )
-
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
-
 @echo off
 
 echo REV 2.1 BAT>> "!log_file!"
