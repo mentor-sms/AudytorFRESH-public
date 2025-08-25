@@ -1,9 +1,0 @@
-txt
-sh
-md
-MD
-pub
-bat
-inf
-ps1
-cmd
