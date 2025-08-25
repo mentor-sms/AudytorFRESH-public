@@ -1,4 +1,6 @@
 
+@echo off
+
 rem -----------------------------------------------------------------------------
 rem Usage and argument parsing guide (read before editing or calling this script)
 rem -----------------------------------------------------------------------------
@@ -36,6 +38,13 @@ rem   15   Could not exclusively open the log file after run
 rem   1223 Elevation canceled by user (UAC)
 rem -----------------------------------------------------------------------------
 
+echo(
+echo RUN:
+echo %cmdcmdline%
+echo PARSED:
+echo Command: "%~f0" %*
+echo(
+
 @echo on
 setlocal enabledelayedexpansion
 
@@ -50,14 +59,21 @@ set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
 
 @echo off
 
+echo REV 3.0.0 CMD
+echo REV 3.0.0 CMD>> "!log_file!"
+echo Dziennik: !LOG_DIR!\cmd_!id!.run.lab.log
+
+echo(>> "!log_file!"
+echo RUN:>> "!log_file!"
+echo %cmdcmdline%>> "!log_file!"
+echo PARSED:>> "!log_file!"
+echo Command: "%~f0" %*>> "!log_file!"
+echo(>> "!log_file!"
+
 echo(
 rem ------ ARGS ------
 echo Test argumentow...>> "!log_file!"
 echo Test argumentow...
-
-echo REV 3.0.0 CMD
-echo REV 3.0.0 CMD>> "!log_file!"
-echo Dziennik: !LOG_DIR!\cmd_!id!.run.lab.log
 
 set "id=%~2"
 if "!id!"=="" (

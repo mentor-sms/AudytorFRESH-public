@@ -1,4 +1,6 @@
 
+@echo off
+
 rem -----------------------------------------------------------------------------
 rem Usage and argument parsing guide (read before editing or calling this script)
 rem -----------------------------------------------------------------------------
@@ -21,6 +23,13 @@ rem
 rem Exit codes summary:
 rem   11    Ooups!
 rem -----------------------------------------------------------------------------
+
+echo(
+echo RUN:
+echo %cmdcmdline%
+echo PARSED:
+echo Command: "%~f0" %*
+echo(
 
 @echo on
 setlocal enabledelayedexpansion
@@ -47,6 +56,13 @@ echo Dziennik: !LOG_DIR!\cmd_!id!.run.lab.log
 echo REV 3.0.0 BAT>> "!log_file!"
 echo   - Identyfikator: !id!>> "!log_file!"
 echo   - Tryb uprawnien: !mode!>> "!log_file!"
+
+echo(>> "!log_file!"
+echo RUN:>> "!log_file!"
+echo %cmdcmdline%>> "!log_file!"
+echo PARSED:>> "!log_file!"
+echo Command: "%~f0" %*>> "!log_file!"
+echo(>> "!log_file!"
 
 set "CURRENT_USER_SID=%~5"
 set "ARG_START_IDX=6"
