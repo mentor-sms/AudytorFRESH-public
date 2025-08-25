@@ -1,5 +1,6 @@
 
 @echo off
+setlocal enabledelayedexpansion
 
 rem -----------------------------------------------------------------------------
 rem Usage and argument parsing guide (read before editing or calling this script)
@@ -45,9 +46,6 @@ echo PARSED:
 echo Command: "%~f0" %*
 echo(
 
-@echo on
-setlocal enabledelayedexpansion
-
 rem ------ OUT ONLY ------
 
 echo 1=[%~1] 2=[%~2] 3=[%~3] 4=[%~4] 5=[%~5] 6=[%~6]
@@ -58,8 +56,6 @@ if "!LOG_DIR!"=="" (
     exit /b 5
 )
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
-
-@echo off
 
 echo REV 3.0.0 CMD
 echo REV 3.0.0 CMD>> "!log_file!"
