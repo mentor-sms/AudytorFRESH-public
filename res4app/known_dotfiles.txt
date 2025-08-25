@@ -2,17 +2,3 @@ gitignore
 gitattributes
 gitmodules
 editorconfig
-profile
-bash_profile
-bash_login
-bash_logout
-Xdefaults
-Xresources
-xinitrc
-xsession
-bashrc
-dockerignore
-env
-exports
-aliases
-functions
