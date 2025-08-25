@@ -1,18 +1,11 @@
 @echo off
-
-rem ------ DEFINICJE ------
 setlocal disabledelayedexpansion
-
 set "mode=%~1"
 set "id=%~2"
 set "LOG_DIR=%~3"
-rem 4. argument ignorowany
 set "CURRENT_USER_SID=%~5"
 set "log_file=%LOG_DIR%\cmd_%id%.run.lab.log"
-
 setlocal enabledelayedexpansion
-
-rem ------ KONTEKST ------
 (
     echo REV 3.0.0 BAT
     echo(
@@ -22,10 +15,8 @@ rem ------ KONTEKST ------
     echo Polecenie: "%~f0" %*
     echo(
 ) >> "%log_file%" 2>&1
-
 set "ARG_INDEX=0"
 set "FILE_CNT=0"
-
 :__COLLECT
 if "%~1"=="" goto __COLLECT_DONE
 set /a ARG_INDEX+=1
@@ -36,35 +27,29 @@ if %ARG_INDEX% GEQ 6 (
 shift /1
 goto __COLLECT
 :__COLLECT_DONE
-
-rem ------ PRACA ------
 for /L %%N in (1,1,%FILE_CNT%) do (
     call set "_FP=%%FILE_%%N%%"
     >> "%log_file%" echo.
     >> "%log_file%" echo Plik: "!_FP!"
 
-    rem reset ACL
     setlocal DisableDelayedExpansion
     icacls "%_FP%" /reset >> "%log_file%" 2>&1
     set "rc=%errorlevel%"
     endlocal & set "rc=%rc%"
     if not "!rc!"=="0" exit /b 23
-
     if /i "%mode%"=="default" (
-        rem brak dodatkowych zmian po reset
+
     ) else if /i "%mode%"=="private" (
         setlocal DisableDelayedExpansion
         icacls "%_FP%" /grant *%CURRENT_USER_SID%:F >> "%log_file%" 2>&1
         set "rc=%errorlevel%"
         endlocal & set "rc=%rc%"
         if not "!rc!"=="0" exit /b 23
-
         setlocal DisableDelayedExpansion
         icacls "%_FP%" /setowner *%CURRENT_USER_SID% >> "%log_file%" 2>&1
         set "rc=%errorlevel%"
         endlocal & set "rc=%rc%"
         if not "!rc!"=="0" exit /b 23
-
         setlocal DisableDelayedExpansion
         icacls "%_FP%" /inheritance:r /c /grant:r *%CURRENT_USER_SID%:F >> "%log_file%" 2>&1
         set "rc=%errorlevel%"
@@ -76,13 +61,11 @@ for /L %%N in (1,1,%FILE_CNT%) do (
         set "rc=%errorlevel%"
         endlocal & set "rc=%rc%"
         if not "!rc!"=="0" exit /b 23
-
         setlocal DisableDelayedExpansion
         icacls "%_FP%" /setowner *S-1-5-32-544 >> "%log_file%" 2>&1
         set "rc=%errorlevel%"
         endlocal & set "rc=%rc%"
         if not "!rc!"=="0" exit /b 23
-
         if /i "%mode%"=="root_private" (
             setlocal DisableDelayedExpansion
             icacls "%_FP%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F >> "%log_file%" 2>&1
@@ -98,7 +81,5 @@ for /L %%N in (1,1,%FILE_CNT%) do (
         )
     )
 )
-
-rem ------ WYNIK ------
 echo OKFIN>> "%log_file%"
 exit /b 0

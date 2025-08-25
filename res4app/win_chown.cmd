@@ -1,111 +1,27 @@
 
 @echo off
-
-rem ------------------------------------------------------------------------------
-rem
-rem Skladnia wywolania:
-rem   win_chown.cmd <tryb> <id> <katalog_logow> <zarezerwowane> <sid_uzytkownika> <plik1> [plik2 ...]
-rem
-rem Kody wyjscia (win_chown.cmd):
-rem   0    OK (sukces)
-rem
-rem   10x  Bledy argumentow/parsowania
-rem     10 Ogolny blad argumentow
-rem     11 Brak trybu (argument 1)
-rem     12 Nieprawidlowy tryb (argument 1)
-rem     13 Brak lub nieliczbowy identyfikator (argument 2)
-rem     14 Brak katalogu logow (argument 3)
-rem     15 Brak sciezek plikow (od argumentu 6)
-rem     16 Brak SID dla trybu private (argument 5)
-rem
-rem   20x  Bledy plikow i dostepu
-rem     20 Ogolny blad pliku/dostepu
-rem     21 Pusta sciezka pliku
-rem     22 Nie znaleziono pliku
-rem     23 Blad ACL (icacls)
-rem     24 Plik/katalog istnieje, ale moze byc problem z dostepem
-rem
-rem   30x  Bledy podniesienia uprawnien (UAC)
-rem     30 Ogolny blad UAC
-rem     31 Nie udalo sie uruchomic procesu z uprawnieniami administratora
-rem     32 Podniesienie uprawnien anulowane przez uzytkownika (UAC)
-rem
-rem   40x  Bledy weryfikacji po wykonaniu
-rem     40 Ogolny blad weryfikacji
-rem     41 Weryfikacja uprawnien (private) nie powiodla sie
-rem     42 Weryfikacja uprawnien (root_private) nie powiodla sie
-rem     43 Weryfikacja uprawnien (root_public) nie powiodla sie
-rem
-rem   50x  Bledy obslugi pliku dziennika
-rem     50 Ogolny blad dziennika
-rem     51 Nie uzyskano wylacznego dostepu do pliku dziennika po wykonaniu
-rem ---------------------------------------
-rem
-rem Kody wyjscia (win_chown.bat):
-rem   0    OK (sukces)
-rem
-rem   10x  Bledy argumentow/parsowania
-rem     10 Ogolny blad argumentow
-rem     11 Brak trybu (argument 1)
-rem     12 Nieprawidlowy tryb (argument 1)
-rem     13 Brak lub nieliczbowy identyfikator (argument 2)
-rem     14 Brak katalogu logow (argument 3)
-rem     15 Brak sciezek plikow (od argumentu 6)
-rem     16 Brak SID dla trybu private (argument 5)
-rem
-rem   20x  Bledy plikow i dostepu
-rem     20 Ogolny blad pliku/dostepu
-rem     21 Pusta sciezka pliku
-rem     22 Nie znaleziono pliku
-rem     23 Blad operacji ACL (icacls)
-rem     24 Plik/katalog istnieje, ale moze byc problem z dostepem
-rem
-rem   30x  Bledy podniesienia uprawnien (UAC)
-rem     30 Ogolny blad UAC
-rem     31 Nie udalo sie uruchomic procesu z uprawnieniami administratora
-rem     32 Podniesienie uprawnien anulowane przez uzytkownika (UAC)
-rem
-rem   40x  Bledy weryfikacji po wykonaniu
-rem     40 Ogolny blad weryfikacji
-rem     41 Weryfikacja uprawnien (private) nie powiodla sie
-rem     42 Weryfikacja uprawnien (root_private) nie powiodla sie
-rem     43 Weryfikacja uprawnien (root_public) nie powiodla sie
-rem
-rem   50x  Bledy obslugi pliku dziennika
-rem     50 Ogolny blad dziennika
-rem     51 Nie uzyskano wylacznego dostepu do pliku dziennika po wykonani
-rem ------------------------------------------------------------------------------
-
-rem ------ DEFINICJE ------
-
 setlocal disabledelayedexpansion
-
 if "%~1"=="" (
     echo 11: Brak trybu (argument 1) - Dozwolone: default, private, root_private, root_public >&2
     exit /b 11
 )
 set "mode=%~1"
-
 set /A __num=0+%~2 2>nul
 if not "%__num%"=="%~2" (
     echo 13: Brak lub nieliczbowy identyfikator (argument 2: ID) >&2
     exit /b 13
 )
 set "id=%~2"
-
 if "%~3"=="" (
     echo 14: Brak katalogu logow (argument 3) >&2
     exit /b 14
 )
 set "LOG_DIR=%~3"
-
 if "%~6"=="" (
     echo 15: Brak sciezek plikow do przetworzenia (od argumentu 6) >&2
     exit /b 15
 )
-
 setlocal enabledelayedexpansion
-
 if /i "!mode!"=="private" (
     if "%~5"=="" (
         echo 16: Brak SID (argument 5) wymagany dla trybu private >&2
@@ -114,9 +30,6 @@ if /i "!mode!"=="private" (
     set "SID_ARG=%~5"
 )
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
-
-rem ------ szybki kontekst ------
-
 echo REV 3.0.0 CMD
 echo(
 echo URUCHOMIENIE:
@@ -126,37 +39,28 @@ echo Polecenie: "%~f0" %*
 echo(
 echo Docelowe uprawnienia [tryb]: !mode!
 echo Dziennik: !LOG_DIR!\cmd_!id!.run.lab.log
-
-rem ------ testy ------
-
 ver >nul 2>&1
-
 echo(
 echo Testy argumentow dla BAT...
-
 if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"=="root_private" if /i not "!mode!"=="root_public" (
     echo 12: Nieprawidlowy tryb (argument 1) - Dozwolone: default, private, root_private, root_public >&2
     exit /b 12
 )
 echo Tryb: !mode!
-
 set "ARG_START_IDX=6"
 set "ARG_INDEX=0"
 set "FILE_CNT=0"
 set "PS_ARGS="
-
 :__ARG_LOOP
 if "%~1"=="" goto __ARG_LOOP_END
 set /a ARG_INDEX+=1
 set "CUR_ARG=%~1"
 set "CUR_ESC=!CUR_ARG:'='''!"
-
 if defined PS_ARGS (
     set "PS_ARGS=!PS_ARGS!,'!CUR_ESC!'"
 ) else (
     set "PS_ARGS='!CUR_ESC!'"
 )
-
 if !ARG_INDEX! geq !ARG_START_IDX! (
     set /a FILE_CNT+=1
     set "FILE_!FILE_CNT!=!CUR_ARG!"
@@ -183,7 +87,6 @@ if !ARG_INDEX! geq !ARG_START_IDX! (
 shift /1
 goto __ARG_LOOP
 :__ARG_LOOP_END
-
 echo(
 echo Uruchamianie BAT...
 setlocal DisableDelayedExpansion
@@ -204,7 +107,6 @@ if errorlevel 1224 (
     exit /b %RC%
 )
 endlocal
-
 echo(
 echo Oczekiwanie na zwolnienie pliku dziennika...
 powershell -NoProfile -Command "$p = [IO.Path]::GetFullPath('%log_file%'); $deadline = [DateTime]::UtcNow.AddSeconds(10); while ($true) { try { $s = [IO.File]::Open($p, 'Append', 'Write', 'None'); $s.Close(); exit 0 } catch { Start-Sleep -Milliseconds 100; if ([DateTime]::UtcNow -gt $deadline) { exit 1 } } }" >nul 2>&1
@@ -214,14 +116,10 @@ if errorlevel 1 (
     echo 51: Nie uzyskano wylacznego dostepu do pliku dziennika po wykonaniu BAT >&2
     exit /b 51
 )
-
 echo [/BAT]
 echo(
-
 echo Test wynikow...
-
 set "SID_PS=!SID_ARG!"
-
 for /L %%N in (1,1,!FILE_CNT!) do (
     set "__TMP_FP__=!FILE_%%N!"
     setlocal DisableDelayedExpansion
@@ -229,7 +127,6 @@ for /L %%N in (1,1,!FILE_CNT!) do (
     set "_FP_ESC_RAW=%_FP_RAW:'='''%"
     endlocal & set "_FP=%_FP_RAW%" & set "_FP_ESC=%_FP_ESC_RAW%"
     set "_QFP='!_FP_ESC!'"
-
     if /i "!mode!"=="private" (
         powershell -NoProfile -Command "$p=Get-Acl -LiteralPath !_QFP!; $acct=(New-Object System.Security.Principal.SecurityIdentifier('!SID_PS!')).Translate([System.Security.Principal.NTAccount]).Value; $owner=$p.Owner; $prot=$p.AreAccessRulesProtected; $has=$p.Access | Where-Object { $_.IdentityReference.Value -eq $acct -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; if ($owner -eq $acct -and $prot -and $has) { exit 0 } else { exit 1 }" >nul 2>&1
         if !errorlevel! neq 0 (
@@ -251,7 +148,6 @@ for /L %%N in (1,1,!FILE_CNT!) do (
     )
     echo OK: !_FP!
 )
-
 echo(
 echo Podsumowanie operacji:
 echo   - Identyfikator: !id!
