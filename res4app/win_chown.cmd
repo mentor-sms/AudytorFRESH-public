@@ -36,12 +36,12 @@ if "!LOG_DIR!"=="" (
 ver >nul 2>&1
 fltmc >nul 2>&1
 set "IS_ELEVATED="
-if %errorlevel% equ 0 set "IS_ELEVATED=1"
-ver >nul 2>&1
+whoami /groups | findstr /C:"S-1-16-12288" >nul 2>&1 && set "IS_ELEVATED=1"
 if defined IS_ELEVATED (
     echo X: runas win_chown.cmd
     exit /b 1
 )
+ver >nul 2>&1
 
 echo Dziennik: !LOG_DIR!\cmd_!id![.run].lab.log
 

@@ -33,11 +33,11 @@ ver >nul 2>&1
 fltmc >nul 2>&1
 set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
-ver >nul 2>&1
 if not defined IS_ELEVATED (
     echo 1: run win_chown.bat>> "!log_file!"
     exit /b 1
 )
+ver >nul 2>&1
 
 echo Tryb [mode]: !mode!>> "!log_file!"
 
