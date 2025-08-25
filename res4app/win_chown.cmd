@@ -8,12 +8,6 @@ if "!LOG_DIR!"=="" (
     echo 1: Nie podano katalogu dla pliku dziennika >&2
     exit /b 5
 )
-mkdir "!LOG_DIR!" >nul 2>&1
-dir /ad "!LOG_DIR!" >nul 2>&1
-if errorlevel 1 (
-    echo 1: Nie mozna utworzyc katalogu dziennika: "!LOG_DIR!" >&2
-    exit /b 6
-)
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
 
 @echo off
@@ -25,7 +19,7 @@ echo Test argumentow...
 
 echo REV 3.0.0 CMD
 echo REV 3.0.0 CMD>> "!log_file!"
-echo Dziennik: !LOG_DIR!\cmd_!id![.run].lab.log
+echo Dziennik: !LOG_DIR!\cmd_!id!.run.lab.log
 
 set "id=%~2"
 if "!id!"=="" (

@@ -17,7 +17,7 @@ if not defined IS_ELEVATED (
     exit /b 1
 )
 ver >nul 2>&1
-echo Dziennik: !LOG_DIR!\cmd_!id![.run].lab.log
+echo Dziennik: !LOG_DIR!\cmd_!id!.run.lab.log
 @echo off
 
 echo REV 3.0.0 BAT>> "!log_file!"
