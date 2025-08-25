@@ -6,7 +6,7 @@ set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
 ver >nul 2>&1
 
-echo REV 2.0 BAT
+echo REV 2.0 CMD
 
 set "id=%~2"
 if "%id%"=="" (
@@ -66,7 +66,7 @@ if /i not "%mode%"=="default" if /i not "%mode%"=="private" if /i not "%mode%"==
 if not defined IS_ELEVATED (
         echo Próba uruchomienia z podwyższonymi uprawnieniami...
         echo Próba uruchomienia z podwyższonymi uprawnieniami...>> "%log_file%"
-        PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList '%*' -PassThru; $p.WaitForExit(); exit $p.ExitCode"
+        PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process -Verb RunAs -FilePath '%~dpn0.cmd' -ArgumentList '%*' -PassThru; $p.WaitForExit(); exit $p.ExitCode"
         if %errorlevel% equ 1223 (
             echo 10: Podniesienie uprawnień anulowane przez użytkownika (UAC, kod 1223)
             echo 10: Podniesienie uprawnień anulowane przez użytkownika (UAC, kod 1223)>> "%log_file%"
