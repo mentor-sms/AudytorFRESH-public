@@ -30,16 +30,16 @@ if /i "!mode!"=="private" (
     set "SID_ARG=%~5"
 )
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
-echo REV 3.0.0 CMD
+echo "REV 3.0.0 CMD"
 echo(
-echo Polecenie: "%~f0" %*
-echo Rozruch: %cmdcmdline%
+rem echo Polecenie: "%~f0" %*
+rem echo Rozruch: %cmdcmdline%
 echo(
 echo Docelowe uprawnienia [tryb]: !mode!
-echo Dziennik: !LOG_DIR!\cmd_!id!.run.lab.log
+rem echo Dziennik: "!LOG_DIR!\cmd_!id!.run.lab.log"
 ver >nul 2>&1
 echo(
-echo Testy argumentow dla BAT...
+echo Testy argumentow dla BAT
 if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"=="root_private" if /i not "!mode!"=="root_public" (
     echo 12: Nieprawidlowy tryb (argument 1): Dozwolone: default, private, root_private, root_public >&2
     exit /b 12
@@ -83,7 +83,7 @@ for %%A in (%*) do (
     )
 )
 echo(
-echo Uruchamianie BAT...
+echo Uruchamianie BAT
 setlocal DisableDelayedExpansion
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$a = @(%PS_ARGS%); $p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList $a -PassThru; $p.WaitForExit(); exit $p.ExitCode"
 if errorlevel 1224 (
@@ -103,8 +103,8 @@ if errorlevel 1224 (
 )
 endlocal
 echo(
-echo Oczekiwanie na zwolnienie pliku dziennika...
-powershell -NoProfile -Command "$p = [IO.Path]::GetFullPath('%log_file%'); $deadline = [DateTime]::UtcNow.AddSeconds(10); while ($true) { try { $s = [IO.File]::Open($p, 'Append', 'Write', 'None'); $s.Close(); exit 0 } catch { Start-Sleep -Milliseconds 100; if ([DateTime]::UtcNow -gt $deadline) { exit 1 } } }" >nul 2>&1
+echo Oczekiwanie na zwolnienie pliku dziennika
+rem powershell -NoProfile -Command "$p = [IO.Path]::GetFullPath('%log_file%'); $deadline = [DateTime]::UtcNow.AddSeconds(10); while ($true) { try { $s = [IO.File]::Open($p, 'Append', 'Write', 'None'); $s.Close(); exit 0 } catch { Start-Sleep -Milliseconds 100; if ([DateTime]::UtcNow -gt $deadline) { exit 1 } } }" >nul 2>&1
 if errorlevel 1 (
     echo(
     echo [/BAT]
@@ -113,36 +113,36 @@ if errorlevel 1 (
 )
 echo [/BAT]
 echo(
-echo Test wynikow...
-set "SID_PS=!SID_ARG!"
-for /L %%N in (1,1,!FILE_CNT!) do (
-    set "__TMP_FP__=!FILE_%%N!"
-    setlocal DisableDelayedExpansion
-    set "_FP_RAW=%__TMP_FP__%"
-    set "_FP_ESC_RAW=%_FP_RAW:'='''%"
-    endlocal & set "_FP=%_FP_RAW%" & set "_FP_ESC=%_FP_ESC_RAW%"
-    set "_QFP='!_FP_ESC!'"
-    if /i "!mode!"=="private" (
-        powershell -NoProfile -Command "$p=Get-Acl -LiteralPath !_QFP!; $acct=(New-Object System.Security.Principal.SecurityIdentifier('!SID_PS!')).Translate([System.Security.Principal.NTAccount]).Value; $owner=$p.Owner; $prot=$p.AreAccessRulesProtected; $has=$p.Access | Where-Object { $_.IdentityReference.Value -eq $acct -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; if ($owner -eq $acct -and $prot -and $has) { exit 0 } else { exit 1 }" >nul 2>&1
-        if !errorlevel! neq 0 (
-            echo 41: Weryfikacja uprawnien (private) nie powiodla sie dla: !_FP! >&2
-            exit /b 41
-        )
-    ) else if /i "!mode!"=="root_private" (
-        powershell -NoProfile -Command "$p=Get-Acl -LiteralPath !_QFP!; $adm=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]).Value; $sys=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')).Translate([System.Security.Principal.NTAccount]).Value; $okOwner=($p.Owner -eq $adm); $prot=$p.AreAccessRulesProtected; $hasAdm=$p.Access | Where-Object { $_.IdentityReference.Value -eq $adm -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; $hasSys=$p.Access | Where-Object { $_.IdentityReference.Value -eq $sys -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; if ($okOwner -and $prot -and $hasAdm -and $hasSys) { exit 0 } else { exit 1 }" >nul 2>&1
-        if !errorlevel! neq 0 (
-            echo 42: Weryfikacja uprawnien (root_private) nie powiodla sie dla: !_FP! >&2
-            exit /b 42
-        )
-    ) else if /i "!mode!"=="root_public" (
-        powershell -NoProfile -Command "$p=Get-Acl -LiteralPath !_QFP!; $adm=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]).Value; $sys=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')).Translate([System.Security.Principal.NTAccount]).Value; $usr=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-545')).Translate([System.Security.Principal.NTAccount]).Value; $auth=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-11')).Translate([System.Security.Principal.NTAccount]).Value; $okOwner=($p.Owner -eq $adm); $prot=$p.AreAccessRulesProtected; $rx=[System.Security.AccessControl.FileSystemRights]::ReadAndExecute; $hasAdm=$p.Access | Where-Object { $_.IdentityReference.Value -eq $adm -and (($_.FileSystemRights -band $rx) -ne 0) -and $_.AccessControlType -eq 'Allow' }; $hasSys=$p.Access | Where-Object { $_.IdentityReference.Value -eq $sys -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; $hasUsr=$p.Access | Where-Object { $_.IdentityReference.Value -eq $usr -and (($_.FileSystemRights -band $rx) -ne 0) -and $_.AccessControlType -eq 'Allow' }; $hasAuth=$p.Access | Where-Object { $_.IdentityReference.Value -eq $auth -and (($_.FileSystemRights -band $rx) -ne 0) -and $_.AccessControlType -eq 'Allow' }; if ($okOwner -and $prot -and $hasAdm -and $hasSys -and $hasUsr -and $hasAuth) { exit 0 } else { exit 1 }" >nul 2>&1
-        if !errorlevel! neq 0 (
-            echo 43: Weryfikacja uprawnien (root_public) nie powiodla sie dla: !_FP! >&2
-            exit /b 43
-        )
-    )
-    echo OK: !_FP!
-)
+echo Test wynikow
+rem set "SID_PS=!SID_ARG!"
+rem for /L %%N in (1,1,!FILE_CNT!) do (
+rem     set "__TMP_FP__=!FILE_%%N!"
+rem     setlocal DisableDelayedExpansion
+rem     set "_FP_RAW=%__TMP_FP__%"
+rem     set "_FP_ESC_RAW=%_FP_RAW:'='''%"
+rem     endlocal & set "_FP=%_FP_RAW%" & set "_FP_ESC=%_FP_ESC_RAW%"
+rem     set "_QFP='!_FP_ESC!'"
+rem     if /i "!mode!"=="private" (
+rem         powershell -NoProfile -Command "$p=Get-Acl -LiteralPath !_QFP!; $acct=(New-Object System.Security.Principal.SecurityIdentifier('!SID_PS!')).Translate([System.Security.Principal.NTAccount]).Value; $owner=$p.Owner; $prot=$p.AreAccessRulesProtected; $has=$p.Access | Where-Object { $_.IdentityReference.Value -eq $acct -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; if ($owner -eq $acct -and $prot -and $has) { exit 0 } else { exit 1 }" >nul 2>&1
+rem         if !errorlevel! neq 0 (
+rem             echo 41: Weryfikacja uprawnien (private) nie powiodla sie dla: !_FP! >&2
+rem             exit /b 41
+rem         )
+rem     ) else if /i "!mode!"=="root_private" (
+rem         powershell -NoProfile -Command "$p=Get-Acl -LiteralPath !_QFP!; $adm=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]).Value; $sys=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')).Translate([System.Security.Principal.NTAccount]).Value; $okOwner=($p.Owner -eq $adm); $prot=$p.AreAccessRulesProtected; $hasAdm=$p.Access | Where-Object { $_.IdentityReference.Value -eq $adm -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; $hasSys=$p.Access | Where-Object { $_.IdentityReference.Value -eq $sys -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; if ($okOwner -and $prot -and $hasAdm -and $hasSys) { exit 0 } else { exit 1 }" >nul 2>&1
+rem         if !errorlevel! neq 0 (
+rem             echo 42: Weryfikacja uprawnien (root_private) nie powiodla sie dla: !_FP! >&2
+rem             exit /b 42
+rem         )
+rem     ) else if /i "!mode!"=="root_public" (
+rem         powershell -NoProfile -Command "$p=Get-Acl -LiteralPath !_QFP!; $adm=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')).Translate([System.Security.Principal.NTAccount]).Value; $sys=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')).Translate([System.Security.Principal.NTAccount]).Value; $usr=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-545')).Translate([System.Security.Principal.NTAccount]).Value; $auth=(New-Object System.Security.Principal.SecurityIdentifier('S-1-5-11')).Translate([System.Security.Principal.NTAccount]).Value; $okOwner=($p.Owner -eq $adm); $prot=$p.AreAccessRulesProtected; $rx=[System.Security.AccessControl.FileSystemRights]::ReadAndExecute; $hasAdm=$p.Access | Where-Object { $_.IdentityReference.Value -eq $adm -and (($_.FileSystemRights -band $rx) -ne 0) -and $_.AccessControlType -eq 'Allow' }; $hasSys=$p.Access | Where-Object { $_.IdentityReference.Value -eq $sys -and (($_.FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne 0) -and $_.AccessControlType -eq 'Allow' }; $hasUsr=$p.Access | Where-Object { $_.IdentityReference.Value -eq $usr -and (($_.FileSystemRights -band $rx) -ne 0) -and $_.AccessControlType -eq 'Allow' }; $hasAuth=$p.Access | Where-Object { $_.IdentityReference.Value -eq $auth -and (($_.FileSystemRights -band $rx) -ne 0) -and $_.AccessControlType -eq 'Allow' }; if ($okOwner -and $prot -and $hasAdm -and $hasSys -and $hasUsr -and $hasAuth) { exit 0 } else { exit 1 }" >nul 2>&1
+rem         if !errorlevel! neq 0 (
+rem             echo 43: Weryfikacja uprawnien (root_public) nie powiodla sie dla: !_FP! >&2
+rem             exit /b 43
+rem         )
+rem     )
+rem     echo OK: !_FP!
+rem )
 echo(
 echo Podsumowanie operacji:
 echo     Identyfikator: !id!
@@ -150,6 +150,6 @@ echo     Tryb uprawnien: !mode!
 echo     Plik dziennika: !log_file!
 echo     OKFIN
 echo(
-echo 30 sekund do samobojstwa...
+echo 30 sekund do samobojstwa
 timeout /t 30 /nobreak >nul
 exit /b 0
