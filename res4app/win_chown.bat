@@ -1,6 +1,8 @@
 @echo on
 setlocal enabledelayedexpansion
 
+rem ------ SETUP ------
+
 set "mode=%~1"
 set "id=%~2"
 set "LOG_DIR=%~3"
@@ -32,6 +34,8 @@ if /i "!mode!"=="private" (
     echo SID biezacego uzytkownika: !CURRENT_USER_SID!>> "!log_file!"
 )
 set "arg_index=0"
+
+rem ------ SET ------
 
 for /f "usebackq delims=" %%I in (`%ComSpec% /v:on /c for %%G in (^%*^) do @echo(%%~G`) do (
     set /a arg_index+=1
@@ -153,6 +157,9 @@ for /f "usebackq delims=" %%I in (`%ComSpec% /v:on /c for %%G in (^%*^) do @echo
         echo Pomyslnie przetworzono plik: !file_path!>> "!log_file!"
     )
 )
+
+rem ------ FIN ------
+
 echo(
 echo Podsumowanie operacji:>> "!log_file!"
 echo   - Identyfikator: !id!>> "!log_file!"
