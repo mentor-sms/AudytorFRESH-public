@@ -18,7 +18,7 @@ if not exist "%LOG_DIR%" (
         exit /b 1
     )
 )
-set "log_file=%LOG_DIR%\win_chown.%id%.lab.log"
+set "log_file=%LOG_DIR%\cmd_%id%.lab.log"
 echo Zapisywanie dziennika do pliku: %log_file%
 echo Zapisywanie dziennika do pliku: %log_file%>> "%log_file%"
 set "mode=%~1"
