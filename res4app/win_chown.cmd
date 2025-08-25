@@ -8,36 +8,36 @@ ver >nul 2>&1
 
 set "id=%~2"
 if "!id!"=="" (
-    echo 2: Brak wymaganego identyfikatora (argument 2: ID). Podaj liczbowy identyfikator procesu. >&2
+    echo 2: >&2
     exit /b 2
 )
 set /A num=!id! 2>nul
 if not "!num!"=="!id!" (
-    echo 2: Nieprawidłowy identyfikator (argument 2: ID nie jest liczbą). >&2
+    echo 2: >&2
     exit /b 2
 )
 if "%~4"=="" (
-    echo 3: Brak ścieżek plików do przetworzenia (argumenty od 4.). Podaj co najmniej jedną ścieżkę. >&2
+    echo 3: >&2
     exit /b 3
 )
 set "mode=%~1"
 if "!mode!"=="" (
-    echo 4: Brak trybu (argument 1). Dozwolone: default, private, root_private, root_public. >&2
+    echo 4: >&2
     exit /b 4
 )
 if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"=="root_private" if /i not "!mode!"=="root_public" (
-    echo 4: Nieprawidłowy tryb (argument 1). Dozwolone: default, private, root_private, root_public. >&2
+    echo 4: >&2
     exit /b 4
 )
 
-echo REV 2.1 CMD
+echo REV 2.2 CMD
 
 set "LOG_DIR=%~3"
 if "!LOG_DIR!"=="" (
     echo 1: Nie podano katalogu dla pliku dziennika >&2
     exit /b 5
 )
-if not exist "!LOG_DIR!" (
+if not exist "!LOG_DIR!\NUL" (
     mkdir "!LOG_DIR!" >nul 2>&1
     if %errorlevel% neq 0 (
         echo 1: Nie można utworzyć katalogu dziennika: "!LOG_DIR!" >&2

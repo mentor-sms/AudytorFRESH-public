@@ -26,7 +26,7 @@ set "LOG_DIR=%~3"
 if "!LOG_DIR!"=="" (
     exit /b 5
 )
-if not exist "!LOG_DIR!" (
+if not exist "!LOG_DIR!\NUL" (
     mkdir "!LOG_DIR!" >nul 2>&1
     if %errorlevel% neq 0 (
         exit /b 5
@@ -35,7 +35,7 @@ if not exist "!LOG_DIR!" (
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
 @echo off
 
-echo REV 2.1 BAT>> "!log_file!"
+echo REV 2.2 BAT>> "!log_file!"
 
 if not defined IS_ELEVATED (
     echo 1: run win_chown.bat>> "!log_file!"
