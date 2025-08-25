@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 fltmc >nul 2>&1
 set "IS_ELEVATED="
 if %errorlevel% equ 0 set "IS_ELEVATED=1"
-
+ver >nul 2>&1
 set "id=%~2"
 set "LOG_DIR=%~3"
 if "%LOG_DIR%"=="" (
@@ -40,16 +40,20 @@ if /i not "%base_mode%"=="default" if /i not "%base_mode%"=="private" if /i not 
 )
 if not defined IS_ELEVATED (
     if not defined SKIP_ELEVATE (
-        echo UWAGA: Ten skrypt wymaga uprawnień administratora.
-        echo UWAGA: Ten skrypt wymaga uprawnień administratora.>> "%log_file%"
         echo Próba uruchomienia z podwyższonymi uprawnieniami...
         echo Próba uruchomienia z podwyższonymi uprawnieniami...>> "%log_file%"
         PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process -Verb RunAs -FilePath '%~f0' -ArgumentList '%*' -PassThru; $p.WaitForExit(); exit $p.ExitCode"
+        if %errorlevel% equ 1223 (
+            echo 10: Podniesienie uprawnień anulowane przez użytkownika (UAC, kod 1223)
+            echo 10: Podniesienie uprawnień anulowane przez użytkownika (UAC, kod 1223)>> "%log_file%"
+            exit /b 1223
+        )
         if %errorlevel% neq 0 (
             echo 10: Błąd podczas próby uruchomienia z uprawnieniami administratora
             echo 10: Błąd podczas próby uruchomienia z uprawnieniami administratora>> "%log_file%"
             exit /b %errorlevel%
         )
+        echo OKFIN
         exit /b 0
     )
 )
@@ -236,5 +240,5 @@ echo Podsumowanie operacji:>> "%log_file%"
 echo   - Identyfikator: %id%>> "%log_file%"
 echo   - Tryb uprawnień: %mode%>> "%log_file%"
 echo   - Plik dziennika: %log_file%>> "%log_file%"
-echo OKFIN >> "%log_file%"
+echo   - OKFIN >> "%log_file%"
 exit /b 0
