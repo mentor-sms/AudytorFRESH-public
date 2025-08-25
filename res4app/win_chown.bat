@@ -1,33 +1,10 @@
-@echo off
+@echo on
 setlocal enabledelayedexpansion
 
-set "id=%~2"
-if "!id!"=="" (
-    exit /b 2
-)
-set /A num=!id! 2>nul
-if not "!num!"=="!id!" (
-    exit /b 2
-)
-if "%~4"=="" (
-    exit /b 3
-)
 set "mode=%~1"
-if "!mode!"=="" (
-    exit /b 4
-)
-if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"=="root_private" if /i not "!mode!"=="root_public" (
-    exit /b 4
-)
+set "id=%~2"
 set "LOG_DIR=%~3"
-if "!LOG_DIR!"=="" (
-    exit /b 5
-)
-
 set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
-@echo off
-
-echo REV 2.3 BAT>> "!log_file!"
 
 ver >nul 2>&1
 fltmc >nul 2>&1
@@ -38,8 +15,12 @@ if not defined IS_ELEVATED (
     exit /b 1
 )
 ver >nul 2>&1
+echo Dziennik: !LOG_DIR!\cmd_!id![.run].lab.log
+@echo off
 
-echo Tryb [mode]: !mode!>> "!log_file!"
+echo REV 2.3 BAT>> "!log_file!"
+echo   - Identyfikator: !id!>> "!log_file!"
+echo   - Tryb uprawnień: !mode!>> "!log_file!"
 
 set "CURRENT_USER_SID=%~5"
 set "ARG_START_IDX=6"
@@ -173,11 +154,5 @@ for /f "usebackq delims=" %%I in (`%ComSpec% /v:on /c for %%G in (^%*^) do @echo
         echo Pomyślnie przetworzono plik: !file_path!>> "!log_file!"
     )
 )
-echo ====================================================================>> "!log_file!"
-echo Zakończono przetwarzanie wszystkich plików pomyślnie.>> "!log_file!"
-echo ====================================================================>> "!log_file!"
-echo Podsumowanie operacji:>> "!log_file!"
-echo   - Identyfikator: !id!>> "!log_file!"
-echo   - Tryb uprawnień: !mode!>> "!log_file!"
 echo   - OKFIN >> "!log_file!"
 exit /b 0
