@@ -2,7 +2,11 @@
 @echo off
 ver >nul 2>&1
 
-REM win_chown.cmd FILE MODE=default [SID] ID=0 LOG_DIR=workdir
+REM win_chown.cmd FILE MODE=DEFAULT SID ID=0 LOG_DIR=workdir
+
+echo REV3 CMD
+echo CMDLINE %cmdcmdline%
+echo RUNDIR %cd%
 
 
 REM ARGC:
@@ -15,26 +19,20 @@ if not "%3"=="" set "ARGC=3" & set "IS_INT=%~3"
 if not "%4"=="" set "ARGC=4" & set "IS_INT=%~4"
 if not "%5"=="" set "ARGC=5"
 if not "%~6"=="" (
-    echo too many arguments>&2
+    echo too many arguments 1>&2
     exit /b 5
 )
 
 if %ARGC% LSS 2 (
-    echo too few arguments>&2
+    echo too few arguments 1>&2
     exit /b 2
 )
 
 if defined IS_INT (
-  rem IS_INT
-    set "r=%IS_INT%"
-    set "IS_INT="
-    if "%r:~0,1%"=="-" set "r=%r:~1%"
-    if "%r:~0,1%"=="+" set "r=%r:~1%"
-    set "nd=x"
-    for /f "tokens=1 delims=0123456789" %%A in ("%r%") do set "nd=%%A"
-    set "IS_INT="
-    if not "%r%"=="" if "%nd%"=="x" set "IS_INT=1"
-  rem IS_INT FIN
+  set "r=%IS_INT%"
+  set "IS_INT="
+  echo(%r%| findstr /r /c:"^[0-9][0-9]*$" >nul 2 >&1 && set "IS_INT=1"
+  if not defined IS_INT echo(%r%| findstr /r /c:"^[+-][0-9][0-9]*$" >nul 2 >&1 && set "IS_INT=1"
 )
 
 
@@ -42,7 +40,7 @@ REM ARGS:
 
 set "FILE=%~1"
 if "%FILE%"=="" (
-  echo missing FILE>&2
+  echo missing FILE 1>&2
   exit /b 1
 )
 
@@ -52,7 +50,7 @@ if not "%3"=="" (
   if "%4"=="" (
     if defined IS_INT (
       set "ID=%~3"
-    ) else (=
+    ) else (
       set "SID=%~3"
     )
   ) else if "%5"=="" (
@@ -74,67 +72,70 @@ if not "%3"=="" (
 REM DEFS:
 
 if "%ID%"=="" set "ID=0"
-if "%MODE%"=="" set "MODE=default"
+if "%MODE%"=="" set "MODE=DEFAULT"
 if "%LOG_DIR%"=="" set "LOG_DIR=%cd%"
 
 set "log_file=%LOG_DIR%\cmd_%id%.run.lab.log"
 
-setlocal EnableDelayedExpansion
-
-if "!MODE!"=="private" if "!SID!"=="" (
-    echo missing SID for private mode>&2
+if "%SID%"=="" (
+  if "%MODE%"=="PRIVATE" (
+    echo missing SID for PRIVATE mode 1>&2
     exit /b 6
+  )
+  set "SID=S-1-5-21-0000000000-0000000000-0000000000-501"
 )
 
+setlocal EnableDelayedExpansion
+
 if !ERRORLEVEL! neq 0 (
-    echo internal error>&2
+    echo internal error 1>&2
     exit /b 7
 )
 
 
 REM WORK
 
-echo "REV3 CMD"
-echo "ID %ID%"
-echo COMMAND %~f0 %*
-echo CMDLINE %cmdcmdline%
-echo "MODE %MODE%"
+echo ID %ID%
+echo MODE %MODE%
+echo SID %SID%
 
 setlocal DisableDelayedExpansion
 
 echo INBAT
-PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$a = @('%MODE%','%FILE%','%SID%','%log_file%'); $p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList $a -PassThru; $p.WaitForExit(); exit $p.ExitCode"
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$a = @('%FILE%','%MODE%', '%SID%','%log_file%'); $p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList $a -PassThru; $p.WaitForExit(); exit $p.ExitCode"
 echo OUTBAT
 if ERRORLEVEL 70001 (
-    echo wrapper failed>&2
+    echo wrapper failed 1>&2
     exit /b 91
 )
 if ERRORLEVEL 1224 (
-    echo elevation failed>&2
+    echo elevation failed 1>&2
     exit /b 92
 ) else if ERRORLEVEL 1223 (
-    echo user canceled>&2
+    echo user canceled 1>&2
     exit /b 93
 ) else if ERRORLEVEL 1 (
     setlocal EnableDelayedExpansion
     set "BC=!ERRORLEVEL!"
-    echo BAT err !BC!>&2
+    echo BAT err !BC! 1>&2
     set /a RC=BC+100
     exit /b !RC!
 )
 endlocal
 
 if !ERRORLEVEL! neq 0 (
-    echo internal error after elevation handling>&2
+    echo internal error after elevation handling 1>&2
     exit /b 13
 )
 
 echo OKFIN
-
-timeout /t 30 /nobreak >nul
+echo "
+timeout /t 5 /nobreak >nul
 
 if !ERRORLEVEL! neq 0 (
-    echo timeout failed>&2
+    echo timeout failed 1>&2
+
+    echo See this? OK, no error!
 
     exit /b 19
 )

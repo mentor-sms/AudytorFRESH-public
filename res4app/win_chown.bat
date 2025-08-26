@@ -1,4 +1,4 @@
-@echo on
+@echo off
 ver >nul 2>&1
 
 set "FILE=%~1"
@@ -8,65 +8,91 @@ set "LOG_FILE=%~4"
 
 setlocal EnableDelayedExpansion
 
-if !errorlevel! neq 0 echo init errorlevel non-zero>> "%LOG_FILE%" & exit /b 10
+echo REV3 BAT [%date% %time%]
+
+if !errorlevel! neq 0 exit /b 10
 
 (
-  echo "REV3 BAT"
-  echo "ID %ID%"
-  echo "SID %SID%"
-  echo "%cmdcmdline%"
-  echo "%~f0" "%*"
-  echo "MODE %MODE%"
-)>> "%LOG_FILE%" 2>&1
+  echo win_chown.cmd -> win_chown.bat
+  echo(
+  if "%MODE%"=="PRIVATE" (
+    echo %MODE% (%SID%):
+  ) else (
+    echo %MODE%:
+  )
+  echo %FILE%
+  echo(
+  echo RUN:
+  echo %cmdcmdline%
+  echo(
+)>"%LOG_FILE%"
 
-if !errorlevel! neq 0 echo failed to write header to log>> "%LOG_FILE%" & exit /b 11
+if !errorlevel! neq 0 exit /b 11
 
-echo WORK file "%FILE%">> "%LOG_FILE%"
-
-icacls "%FILE%" /reset
+echo(>>"%LOG_FILE%"
+echo /RESET: >>"%LOG_FILE%"
+icacls "%FILE%" /reset >>"%LOG_FILE%" 2>&1
 set "rc=!ERRORLEVEL!"
-if not "!rc!"=="0" echo icaclserr !rc!>> "%LOG_FILE%" & exit /b 22
+if not "!rc!"=="0" exit /b 22
 
-if /i "%MODE%"=="private" (
-
-  icacls "%FILE%" /grant *%SID%:F
+if "%MODE%"=="PRIVATE" (
+  echo(>>"%LOG_FILE%"
+  echo /PREPARE: >>"%LOG_FILE%"
+  icacls "%FILE%" /grant *%SID%:F >>"%LOG_FILE%" 2>&1
   set "rc=!ERRORLEVEL!"
-  if not "!rc!"=="0" echo icaclserr !rc!>> "%LOG_FILE%" & exit /b 23
+  if not "!rc!"=="0" exit /b 23
 
-  icacls "%FILE%" /setowner *%SID%
+  echo(>>"%LOG_FILE%"
+  echo /YOU (OWN): >>"%LOG_FILE%"
+  icacls "%FILE%" /setowner *%SID% >>"%LOG_FILE%" 2>&1
   set "rc=!ERRORLEVEL!"
-  if not "!rc!"=="0" echo icaclserr !rc!>> "%LOG_FILE%" & exit /b 24
+  if not "!rc!"=="0" exit /b 24
 
-  icacls "%FILE%" /inheritance:r /c /grant:r *%SID%:F
+  echo(>>"%LOG_FILE%"
+  echo /YOU (RW): >>"%LOG_FILE%"
+  icacls "%FILE%" /inheritance:r /c /grant:r *%SID%:F >>"%LOG_FILE%" 2>&1
   set "rc=!ERRORLEVEL!"
-  if not "!rc!"=="0" echo icaclserr !rc!>> "%LOG_FILE%" & exit /b 25
+  if not "!rc!"=="0" exit /b 25
 
-) else if not /i "%MODE%"=="default" (
+) else if not "%MODE%"=="DEFAULT" (
 
-  icacls "%FILE%" /grant *S-1-5-32-544:F
+  echo(>>"%LOG_FILE%"
+  echo /PREPARE: >>"%LOG_FILE%"
+  icacls "%FILE%" /grant *S-1-5-32-544:F >>"%LOG_FILE%" 2>&1
   set "rc=!ERRORLEVEL!"
-  if not "!rc!"=="0" echo icaclserr !rc!>> "%LOG_FILE%" & exit /b 26
+  if not "!rc!"=="0" exit /b 26
 
-  icacls "%FILE%" /setowner *S-1-5-32-544
+  echo(>>"%LOG_FILE%"
+  echo /ADMINS (OWN): >>"%LOG_FILE%"
+  icacls "%FILE%" /setowner *S-1-5-32-544 >>"%LOG_FILE%" 2>&1
   set "rc=!ERRORLEVEL!"
-  if not "!rc!"=="0" echo icaclserr !rc!>> "%LOG_FILE%" & exit /b 27
+  if not "!rc!"=="0" exit /b 27
 
-  if /i "%MODE%"=="root_private" (
+  if "%MODE%"=="ROOT" (
 
-    icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F
+    echo(>>"%LOG_FILE%"
+    echo /ADMINS AND SYSTEM (RW): >>"%LOG_FILE%"
+    icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F >>"%LOG_FILE%" 2>&1
     set "rc=!ERRORLEVEL!"
-    if not "!rc!"=="0" echo icaclserr !rc!>> "%LOG_FILE%" & exit /b 28
+    if not "!rc!"=="0" exit /b 28
 
-  ) else if /i "%MODE%"=="root_public" (
+  ) else if "%MODE%"=="PROTECTED" (
 
-    icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
+    echo(>>"%LOG_FILE%"
+    echo /LOCALS AND AUTHS (RO): >>"%LOG_FILE%"
+    icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX >>"%LOG_FILE%" 2>&1
     set "rc=!ERRORLEVEL!"
-    if not "!rc!"=="0" echo icaclserr !rc!>> "%LOG_FILE%" & exit /b 29
+    if not "!rc!"=="0" exit /b 29
+  )
+  else (
+    exit /b 1
   )
 )
 
-if !errorlevel! neq 0 echo post-file processing error for "%FILE%">> "%LOG_FILE%" & exit /b 15
+echo DONE >>"%LOG_FILE%"
 
-echo OK file "%FILE%">> "%LOG_FILE%"
-echo OKFIN>> "%LOG_FILE%"
+if !errorlevel! neq 0 exit /b 19
+
+echo(>>"%LOG_FILE%"
+echo OKFIN >>"%LOG_FILE%"
 exit /b 0
