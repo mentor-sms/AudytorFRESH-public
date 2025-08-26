@@ -1,115 +1,145 @@
 
-@echo off
-setlocal disabledelayedexpansion
-if "%~1"=="" (
-    echo 11 Brak trybu (argument 1) Dozwolone default, private, root_private, root_public >&2
-    exit /b 11
-)
-set "mode=%~1"
-set /A __num=0+%~2 2>nul
-if not "%__num%"=="%~2" (
-    echo 13 Brak lub nieliczbowy identyfikator (argument 2 ID) >&2
-    exit /b 13
-)
-set "id=%~2"
-if "%~3"=="" (
-    echo 14 Brak katalogu logow (argument 3) >&2
-    exit /b 14
-)
-set "LOG_DIR=%~3"
-if "%~6"=="" (
-    echo 15 Brak sciezek plikow do przetworzenia (od argumentu 6) >&2
-    exit /b 15
-)
-setlocal enabledelayedexpansion
-if /i "!mode!"=="private" (
-    if "%~5"=="" (
-        echo 16 Brak SID (argument 5) wymagany dla trybu private >&2
-        exit /b 16
-    )
-    set "SID_ARG=%~5"
-)
-set "log_file=!LOG_DIR!\cmd_!id!.run.lab.log"
-echo "REV 3.0.0 CMD"
-echo(
-rem echo Polecenie "%~f0" %*
-rem echo Rozruch %cmdcmdline%
-echo(
-echo Docelowe uprawnienia [tryb] !mode!
-rem echo Dziennik "!LOG_DIR!\cmd_!id!.run.lab.log"
+@echo on
 ver >nul 2>&1
-echo(
-echo Testy argumentow dla BAT
-if /i not "!mode!"=="default" if /i not "!mode!"=="private" if /i not "!mode!"=="root_private" if /i not "!mode!"=="root_public" (
-    echo 12 Nieprawidlowy tryb (argument 1) Dozwolone default, private, root_private, root_public >&2
-    exit /b 12
+
+set "MODE=%~1"
+set "ID=%~2"
+set "LOG_DIR=%~3"
+set "SID=%~5"
+
+set "log_file=%LOG_DIR%\cmd_%id%.run.lab.log"
+
+if errorlevel (
+    echo init errorlevel non-zero
+    exit /b 10
 )
-echo Tryb !mode!
+
+if "%~6"=="" (
+    echo missing required argument 6
+    exit /b 6
+)
+
+setlocal EnableDelayedExpansion
+
+if /i not "!MODE!"=="default" if /i not "!MODE!"=="private" if /i not "!MODE!"=="root_private" if /i not "!MODE!"=="root_public" (
+    echo invalid MODE "!MODE!"
+    exit /b 1
+)
+if "!ID!"=="" (
+    echo missing ID
+    exit /b 2
+)
+if "!LOG_DIR!"=="" (
+    echo missing LOG_DIR
+    exit /b 3
+)
+if /i "!MODE!"=="private" (
+    if "!SID!"=="" (
+        echo missing SID for private mode
+        exit /b 5
+    )
+)
+
+echo "REV3 BAT"
+echo "ID !ID!"
+echo "SID !SID!"
+echo "%cmdcmdline%"
+echo "%~f0" "%*"
+echo "MODE !MODE!"
+
 set "ARG_START_IDX=6"
-set "ARG_INDEX=0"
+set "arg_idx=0"
 set "FILE_CNT=0"
 set "PS_ARGS="
+
+if !errorlevel! neq 0 (
+    echo internal error before args loop
+    exit /b 11
+)
+
 for %%A in (%*) do (
-    set /a ARG_INDEX+=1
-    set "CUR_ARG=%%~A"
-    set "CUR_ESC=!CUR_ARG:'='''!"
+
+    set /a arg_idx+=1
+
+    setlocal DisableDelayedExpansion
+    set "curr_arg=%%~A"
+    endlocal & set "curr_arg=%curr_arg%"
+
+    echo !arg_idx! FILE "!curr_arg!"
+
+    set "CUR_ESC=!curr_arg:'='''!"
+
     if defined PS_ARGS (
         set "PS_ARGS=!PS_ARGS!,'!CUR_ESC!'"
     ) else (
         set "PS_ARGS='!CUR_ESC!'"
     )
-    if !ARG_INDEX! geq !ARG_START_IDX! (
+
+    if !arg_idx! geq !ARG_START_IDX! (
         set /a FILE_CNT+=1
-        set "FILE_!FILE_CNT!=!CUR_ARG!"
-        if "!CUR_ARG!"=="" (
-            echo 21 Blad przed przetwarzaniem pliku (pusta sciezka) >&2
+        set "FILE_!FILE_CNT!=!curr_arg!"
+
+        if "!curr_arg!"=="" (
+            echo empty path argument
             exit /b 21
         )
-        if not exist "!CUR_ARG!" (
-            echo 22 Nie znaleziono pliku !CUR_ARG! >&2
+        if not exist "!curr_arg!" (
+            echo path does not exist: "!curr_arg!"
             exit /b 22
         )
-        icacls "!CUR_ARG!" >nul 2>&1
+
+        icacls "!curr_arg!" >nul 2>&1
         if !errorlevel! neq 0 (
-            echo 23 Blad odczytu ACL (icacls) dla !CUR_ARG! >&2
+            echo icacls test failed for "!curr_arg!"
             exit /b 23
         )
-        dir "!CUR_ARG!" >nul 2>&1
+
+        dir "!curr_arg!" >nul 2>&1
         if !errorlevel! neq 0 (
-            echo 24 Plik istnieje, ale moze byc problem z dostepem !CUR_ARG! >&2
+            echo dir test failed for "!curr_arg!"
             exit /b 24
         )
-        echo Plik !CUR_ARG!
     )
 )
-echo(
-echo Uruchamianie BAT
+
+if !errorlevel! neq 0 (
+    echo internal error after args loop
+    exit /b 12
+)
+
 setlocal DisableDelayedExpansion
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$a = @(%PS_ARGS%); $p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList $a -PassThru; $p.WaitForExit(); exit $p.ExitCode"
+if errorlevel 70001 (
+    echo wrapper failed
+    exit /b 91
+)
 if errorlevel 1224 (
-    echo(
-    echo [/BAT]
-    echo 31 Nie udalo sie uruchomic procesu z uprawnieniami administratora >&2
-    exit /b 31
+    echo elevation failed
+    exit /b 92
 ) else if errorlevel 1223 (
-    echo 32 Podniesienie uprawnien anulowane przez uzytkownika (UAC) >&2
-    exit /b 32
+    echo user canceled
+    exit /b 93
 ) else if errorlevel 1 (
-    set "RC=%errorlevel%"
-    echo(
-    echo [/BAT]
-    echo %RC% Proces BAT zakonczyl sie kodem bledu %RC% >&2
-    exit /b %RC%
+    setlocal EnableDelayedExpansion
+    set "BC=!errorlevel!"
+    echo BAT err !BC!
+    set /a RC=BC+100
+    exit /b !RC!
 )
 endlocal
-echo [/BAT]
-echo(
-echo Podsumowanie operacji
-echo     Identyfikator !id!
-echo     Tryb uprawnien !mode!
-echo     Plik dziennika !log_file!
-echo     OKFIN
-echo(
-echo 30 sekund do samobojstwa
+
+if !errorlevel! neq 0 (
+    echo internal error after elevation handling
+    exit /b 13
+)
+
+echo OKFIN
+
 timeout /t 30 /nobreak >nul
+
+if !errorlevel! neq 0 (
+    echo timeout failed
+    exit /b 19
+)
+
 exit /b 0

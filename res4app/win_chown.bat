@@ -1,80 +1,118 @@
 @echo off
-setlocal disabledelayedexpansion
-set "mode=%~1"
-set "id=%~2"
+ver >nul 2>&1
+
+set "MODE=%~1"
+set "ID=%~2"
 set "LOG_DIR=%~3"
-set "CURRENT_USER_SID=%~5"
+set "SID=%~5"
+
 set "log_file=%LOG_DIR%\cmd_%id%.run.lab.log"
-setlocal enabledelayedexpansion
+
+setlocal EnableDelayedExpansion
+
+if !errorlevel! neq 0 echo init errorlevel non-zero>> "!log_file!" & exit /b 10
+
 (
-    echo REV 3.0.0 BAT
-    echo(
-    echo Rozruch %cmdcmdline%
-    echo Polecenie "%~f0" %*
-    echo(
-) >> "%log_file%" 2>&1
-set "ARG_INDEX=0"
-set "FILE_CNT=0"
+  echo "REV3 BAT"
+  echo "ID !ID!"
+  echo "SID !SID!"
+  echo "%cmdcmdline%"
+  echo "%~f0" "%*"
+  echo "MODE !MODE!"
+)>> "!log_file!" 2>&1
+
+if !errorlevel! neq 0 echo failed to write header to log>> "!log_file!" & exit /b 11
+
+set "arg_index=0"
+set "file_cnt=0"
 for %%A in (%*) do (
-    set /a ARG_INDEX+=1
-    if !ARG_INDEX! GEQ 6 (
-        set /a FILE_CNT+=1
-        set "FILE_!FILE_CNT!=%%~A"
-    )
+  set /a arg_index+=1
+  if !arg_index! GEQ 6 (
+    set /a file_cnt+=1
+    set "FILE_!file_cnt!=%%~A"
+  )
+  echo !file_cnt! FILE "!_FP!">> "!log_file!"
 )
-for /L %%N in (1,1,%FILE_CNT%) do (
-    call set "_FP=%%FILE_%%N%%"
-    >> "%log_file%" echo.
-    >> "%log_file%" echo Plik "!_FP!"
+
+if !errorlevel! neq 0 echo args enumeration failed>> "!log_file!" & exit /b 12
+
+for /L %%N in (1,1,!file_cnt!) do (
+  setlocal DisableDelayedExpansion
+  call set "_FP=%%FILE_%%N%%"
+  endlocal & set "_FP=%_FP%"
+
+  if !errorlevel! neq 0 echo failed to resolve file path index %%N>> "!log_file!" & exit /b 21
+
+  echo WORK file "!_FP!">> "!log_file!"
+
+  setlocal DisableDelayedExpansion
+  icacls "%_FP%" /reset
+  call set "rc=%%ERRORLEVEL%%"
+  endlocal & set "rc=%rc%"
+
+  if not "!rc!"=="0" echo icaclserr !rc!>> "!log_file!" & exit /b 22
+
+  if /i "%MODE%"=="private" (
 
     setlocal DisableDelayedExpansion
-    icacls "%_FP%" /reset >> "%log_file%" 2>&1
-    set "rc=%errorlevel%"
+    icacls "%_FP%" /grant *%SID%:F
+    call set "rc=%%ERRORLEVEL%%"
     endlocal & set "rc=%rc%"
-    if not "!rc!"=="0" exit /b 23
-    if /i "%mode%"=="default" (
+    if not "!rc!"=="0" echo icaclserr !rc!>> "!log_file!" & exit /b 23
 
-    ) else if /i "%mode%"=="private" (
-        setlocal DisableDelayedExpansion
-        icacls "%_FP%" /grant *%CURRENT_USER_SID%:F >> "%log_file%" 2>&1
-        set "rc=%errorlevel%"
-        endlocal & set "rc=%rc%"
-        if not "!rc!"=="0" exit /b 23
-        setlocal DisableDelayedExpansion
-        icacls "%_FP%" /setowner *%CURRENT_USER_SID% >> "%log_file%" 2>&1
-        set "rc=%errorlevel%"
-        endlocal & set "rc=%rc%"
-        if not "!rc!"=="0" exit /b 23
-        setlocal DisableDelayedExpansion
-        icacls "%_FP%" /inheritance:r /c /grant:r *%CURRENT_USER_SID%:F >> "%log_file%" 2>&1
-        set "rc=%errorlevel%"
-        endlocal & set "rc=%rc%"
-        if not "!rc!"=="0" exit /b 23
-    ) else (
-        setlocal DisableDelayedExpansion
-        icacls "%_FP%" /grant *S-1-5-32-544:F >> "%log_file%" 2>&1
-        set "rc=%errorlevel%"
-        endlocal & set "rc=%rc%"
-        if not "!rc!"=="0" exit /b 23
-        setlocal DisableDelayedExpansion
-        icacls "%_FP%" /setowner *S-1-5-32-544 >> "%log_file%" 2>&1
-        set "rc=%errorlevel%"
-        endlocal & set "rc=%rc%"
-        if not "!rc!"=="0" exit /b 23
-        if /i "%mode%"=="root_private" (
-            setlocal DisableDelayedExpansion
-            icacls "%_FP%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F >> "%log_file%" 2>&1
-            set "rc=%errorlevel%"
-            endlocal & set "rc=%rc%"
-            if not "!rc!"=="0" exit /b 23
-        ) else if /i "%mode%"=="root_public" (
-            setlocal DisableDelayedExpansion
-            icacls "%_FP%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX >> "%log_file%" 2>&1
-            set "rc=%errorlevel%"
-            endlocal & set "rc=%rc%"
-            if not "!rc!"=="0" exit /b 23
-        )
+    setlocal DisableDelayedExpansion
+    icacls "%_FP%" /setowner *%SID%
+    call set "rc=%%ERRORLEVEL%%"
+    endlocal & set "rc=%rc%"
+    if not "!rc!"=="0" echo icaclserr !rc!>> "!log_file!" & exit /b 24
+
+    setlocal DisableDelayedExpansion
+    icacls "%_FP%" /inheritance:r /c /grant:r *%SID%:F
+    call set "rc=%%ERRORLEVEL%%"
+    endlocal & set "rc=%rc%"
+    if not "!rc!"=="0" echo icaclserr !rc!>> "!log_file!" & exit /b 25
+
+  ) else if not /i "%MODE%"=="default" (
+
+    setlocal DisableDelayedExpansion
+    icacls "%_FP%" /grant *S-1-5-32-544:F
+    call set "rc=%%ERRORLEVEL%%"
+    endlocal & set "rc=%rc%"
+    if not "!rc!"=="0" echo icaclserr !rc!>> "!log_file!" & exit /b 26
+
+    setlocal DisableDelayedExpansion
+    icacls "%_FP%" /setowner *S-1-5-32-544
+    call set "rc=%%ERRORLEVEL%%"
+    endlocal & set "rc=%rc%"
+    if not "!rc!"=="0" echo icaclserr !rc!>> "!log_file!" & exit /b 27
+
+    if /i "%MODE%"=="root_private" (
+
+      setlocal DisableDelayedExpansion
+      icacls "%_FP%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F
+      call set "rc=%%ERRORLEVEL%%"
+      endlocal & set "rc=%rc%"
+      if not "!rc!"=="0" echo icaclserr !rc!>> "!log_file!" & exit /b 28
+
+    ) else if /i "%MODE%"=="root_public" (
+
+      setlocal DisableDelayedExpansion
+      icacls "%_FP%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
+      call set "rc=%%ERRORLEVEL%%"
+      endlocal & set "rc=%rc%"
+      if not "!rc!"=="0" echo icaclserr !rc!>> "!log_file!" & exit /b 29
     )
+  )
+
+  if !errorlevel! neq 0 echo post-file processing error for "%_FP%">> "!log_file!" & exit /b 15
+
+  echo OK file "!_FP!">> "!log_file!"
 )
-echo OKFIN>> "%log_file%"
+
+if !errorlevel! neq 0 (
+  echo loop termination error>> "!log_file!"
+  exit /b 19
+)
+
+echo OKFIN>> "!log_file!"
 exit /b 0
