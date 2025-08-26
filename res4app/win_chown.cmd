@@ -1,5 +1,5 @@
 
-@echo on
+@echo off
 ver >nul 2>&1
 
 set "MODE=%~1"
@@ -9,7 +9,7 @@ set "SID=%~5"
 
 set "log_file=%LOG_DIR%\cmd_%id%.run.lab.log"
 
-if errorlevel (
+if errorlevel 1 (
     echo init errorlevel non-zero
     exit /b 10
 )
@@ -40,7 +40,7 @@ if /i "!MODE!"=="private" (
     )
 )
 
-echo "REV3 BAT"
+echo "REV3 CMD"
 echo "ID !ID!"
 echo "SID !SID!"
 echo "%cmdcmdline%"
@@ -108,7 +108,9 @@ if !errorlevel! neq 0 (
 )
 
 setlocal DisableDelayedExpansion
+echo INBAT
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$a = @(%PS_ARGS%); $p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList $a -PassThru; $p.WaitForExit(); exit $p.ExitCode"
+echo OUTBAT
 if errorlevel 70001 (
     echo wrapper failed
     exit /b 91

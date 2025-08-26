@@ -1,4 +1,4 @@
-@echo off
+@echo on
 ver >nul 2>&1
 
 set "MODE=%~1"
