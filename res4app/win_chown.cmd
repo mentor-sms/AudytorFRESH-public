@@ -8,25 +8,24 @@ ver >nul 2>nul
 rem ------------------------------------------ CONSTS:
 
 set "RUNDIR=%cd%"
-set "arg1=%1"
-set "arg2=%2"
-set "arg3=%3"
-set "arg4=%4"
-set "arg5=%5"
-set "argx=%6"
+set "CCL=%cmdcmdline%"
 
-echo(
-echo(%date% %time%
-echo(
+set "FILE=%~1"
+
 echo(CHOWN CMD REV3
-echo(%RUNDIR%$ %cmdcmdline%
+echo(%date% %time%
+echo(%RUNDIR%$ %CCL:"=%
 echo(
+
+if "%FILE%"=="" (
+  echo(missing FILE 1>&2
+  exit /b 1
+)
 
 rem ------------------------------------------ ARGC:
 
-set "ARGC=0"
+set "ARGC=1"
 set "IS_INT="
-if not "%~1"=="" ( set "ARGC=1" & echo(arg1: "%~1" )
 if not "%~2"=="" ( set "ARGC=2" & echo(arg2: "%~2" )
 if not "%~3"=="" ( set "ARGC=3" & set "IS_INT=%~3" & echo(arg3: "%~3" )
 if not "%~4"=="" ( set "ARGC=4" & set "IS_INT=%~4" & echo(arg4: "%~4" )
@@ -34,14 +33,16 @@ if not "%~5"=="" ( set "ARGC=5" & echo(arg5: "%~5" )
 if not "%6"=="" set "ARGC=6"
 
 if 5 LSS %ARGC% (
-  echo too many arguments 1>&2
+  echo(too many arguments 1>&2
   exit /b 5
 )
 
 if %ARGC% LSS 1 (
-    echo too few arguments 1>&2
+    echo(too few arguments 1>&2
     exit /b 2
 )
+
+echo(ARGC: %ARGC%
 
 rem ------------------------------------------ ARGS:
 
@@ -52,147 +53,137 @@ if defined IS_INT (
   if not defined IS_INT echo(%r%| findstr /r /c:"^[+-][0-9][0-9]*$" >nul 2>nul && set "IS_INT=1"
 )
 
-setlocal EnableDelayedExpansion
-REM win_chown.cmd FILE MODE=DEFAULT SID ID=0 LOG_DIR=workdir
-
-if not "%3"=="" (
-  if "%4"=="" (
-    if defined IS_INT (
-      set "ID=%~3"
-    ) else (
-      set "SID=%~3"
-    )
-  ) else if "%5"=="" (
-    if defined IS_INT (
-      set "ID=%~3"
-      set "LOGD=%~4"
-    ) else (
-      set "SID=%~3"
-      set "ID=%~4"
-    )
-  ) else (
-    set "SID=%~3"
-    set "ID=%~4"
-    set "LOGD=%~5"
-  )
-)
-
 rem ------------------------------------------ SET:
 
+set "arg2=%2"
+set "arg3=%3"
+set "arg4=%4"
+set "arg5=%5"
 
-set "FILE=%~1"
-set "MODE=%~2"
+rem --------------------------------------------------- EXPANSION!
+setlocal EnableDelayedExpansion
 
-if "%FILE%"=="" (
-  echo missing FILE 1>&2
-  exit /b 1
+set "MODE=!arg2!"
+
+if not !arg3!=="" (
+  if !arg4!=="" (
+    if defined IS_INT (
+      set "ID=!arg3!"
+    ) else (
+      set "SID=!arg3!"
+    )
+  ) else if !arg5!=="" (
+    if defined IS_INT (
+      set "ID=!arg3!"
+      set "LOG_DIR=!arg4!"
+    ) else (
+      set "SID=!arg3!"
+      set "ID=!arg4!"
+    )
+  ) else (
+    set "SID=!arg3!"
+    set "ID=!arg4!"
+    set "LOG_DIR=!arg5!"
+  )
 )
 
 rem ------------------------------------------ FIX:
 
-echo(
-echo(CMD ARGS:
-
 if "!MODE!"=="" (
   set "MODE=DEFAULT"
-  echo(~mode: !MODE!
+  echo(default mode: !MODE!
 ) else (
   echo(mode: !MODE!
 )
 
 if "!SID!"=="" (
   if "!MODE!"=="PRIVATE" (
-    echo missing SID for PRIVATE mode 1>&2
+    echo(missing SID for PRIVATE mode 1>&2
     exit /b 6
   )
   set "SID=S-1-5-21-0000000000-0000000000-0000000000-501"
+  echo(sid: useless
 ) else (
-  echo(sid: !SID! & if not "!MODE!"=="PRIVATE" echo((useless^)
+  echo(sid: !SID!
 )
 
-rem ------------------------------------------ TEST:
+rem ------------------------------------------ LOG:
 
 if "!ID!"=="" set "ID=0"
-if "!LOGD!"=="" set "LOGD=!RUNDIR!"
-set "log_file=!LOGD!\cmd_!ID!.run.lab.log"
+if "!LOG_DIR!"=="" set "LOG_DIR=!RUNDIR!"
+set "log_file=!LOG_DIR!\cmd_!ID!.run.lab.log"
 
+rem --------------------------------------------------- /EXPANSION OFF:
 setlocal DisableDelayedExpansion
 
-
-echo(
-echo(log: %log_file%
-
-(
-  echo(%date% %time%
-  echo(CHOWN CMD REV3
-  echo(%RUNDIR%$ %cmdcmdline%
-  echo(
-  echo(CMD ARGS:
-  echo(file: %FILE%
-  echo(mode: %MODE%
-  echo(sid: %SID%
-  echo(
-)>"%log_file%"
+rem ------------------------------------------ SETUP:
 
 set "RUNLINE=PowerShell -NoProfile -ExecutionPolicy Bypass -Command"
-set "BARGS=$a = @('%FILE%','%MODE%', '%SID%','%log_file%')"
+set "BARGS=$a = @('%FILE%', '%MODE%', '%log_file%', '%SID%')"
 set "PROC=$p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList $a -PassThru"
 set "GO=$p.WaitForExit()"
 set "EXT=exit $p.ExitCode"
 
-(
-  echo(
-  echo(RUN:
-  echo(%RUNLINE%
-  echo(%BARGS%
-  echo(%PROC%
-  echo(%GO%
-  echo(%EXT%
-) | powershell -NoProfile -Command "$input | Tee-Object -FilePath '%log_file%' -Append"
+echo(RUN:
+echo(%RUNLINE%
+echo(%BARGS%
+echo(%PROC%
+echo(%GO%
+echo(%EXT%
 
 set "RUN=%RUNLINE% %BARGS%; %PROC%; %GO%; %EXT%"
 
-(
-  echo(
-  echo(ACTUAL:
-  echo(%RUN%
-  echo(
-)>>"%log_file%"
+echo(ACTUAL:
+echo(%RUN%
+
+echo(INBAT
+
+rem ------------------------------------------ RUN:
+
+if errorlevel 1 exit /b 666
 
 if "%MODE%"=="DBG" exit /b 0
 
-echo(INBAT>>"%log_file%"
-
 call %RUN%
 
-set "EXIT_CODE=%ERRORLEVEL%"
+set "EXIT_CODE=%errorlevel%"
 
+rem --------------------------------------------------- EXPANSION!
 setlocal EnableDelayedExpansion
-echo OUTBAT>>"%log_file%"
+
+rem ------------------------------------------ OUTPUT:
+
+echo(OUTBAT
+echo(EXIT: !EXIT_CODE!
 
 if "!EXIT_CODE!"=="70001" (
-    echo wrapper failed 1>&2
+    echo(wrapper failed 1>&2
     exit /b 91
-if "!EXIT_CODE!"=="1224" (
-    echo elevation failed 1>&2
+) else if "!EXIT_CODE!"=="1224" (
+    echo(elevation failed 1>&2
     exit /b 92
-if "!EXIT_CODE!"=="1223" (
-    echo user canceled 1>&2
+) else if "!EXIT_CODE!"=="1223" (
+    echo(user canceled 1>&2
     exit /b 93
-)
-if !EXIT_CODE! neq 0 (
-    echo BATERR!EXIT_CODE! 1>&2
+) else if !EXIT_CODE! neq 0 (
+    echo(BATERR!EXIT_CODE! 1>&2
     set /a RC=!EXIT_CODE!+100
     exit /b !RC!
 )
-echo(EXIT: !EXIT_CODE!>>"%log_file%"
-endlocal
+
+rem --------------------------------------------------- /EXPANSION OFF:
+setlocal DisableDelayedExpansion
+
+rem ------------------------------------------ FIN:
 
 echo(
-echo OKFIN
+echo(
+echo(LOG:
+type !log_file!
 
 timeout /t 2 /nobreak >nul
 echo(Waiting to be killed...
 timeout /t 5 /nobreak >nul
-echo Suicide
+
+echo(Suicide: %EXIT_CODE%
 exit /b %EXIT_CODE%
