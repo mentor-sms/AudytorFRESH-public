@@ -1,6 +1,6 @@
 
 @echo off
-ver >nul 2>&1
+ver >nul 2>nul
 
 REM win_chown.cmd FILE MODE=DEFAULT SID ID=0 LOG_DIR=workdir
 
@@ -31,8 +31,8 @@ if %ARGC% LSS 2 (
 if defined IS_INT (
   set "r=%IS_INT%"
   set "IS_INT="
-  echo(%r%| findstr /r /c:"^[0-9][0-9]*$" >nul 2 >&1 && set "IS_INT=1"
-  if not defined IS_INT echo(%r%| findstr /r /c:"^[+-][0-9][0-9]*$" >nul 2 >&1 && set "IS_INT=1"
+  echo(%r%| findstr /r /c:"^[0-9][0-9]*$" >nul 2>nul && set "IS_INT=1"
+  if not defined IS_INT echo(%r%| findstr /r /c:"^[+-][0-9][0-9]*$" >nul 2>nul && set "IS_INT=1"
 )
 
 
@@ -104,19 +104,19 @@ setlocal DisableDelayedExpansion
 echo INBAT
 PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$a = @('%FILE%','%MODE%', '%SID%','%log_file%'); $p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList $a -PassThru; $p.WaitForExit(); exit $p.ExitCode"
 echo OUTBAT
-if ERRORLEVEL 70001 (
+set "BC=%ERRORLEVEL%"
+if %BC%==ERRORLEVEL 70001 (
     echo wrapper failed 1>&2
     exit /b 91
 )
-if ERRORLEVEL 1224 (
+if %BC%==1224 (
     echo elevation failed 1>&2
     exit /b 92
-) else if ERRORLEVEL 1223 (
+) else if %BC%==ERRORLEVEL 1223 (
     echo user canceled 1>&2
     exit /b 93
-) else if ERRORLEVEL 1 (
+) else if %BC%==ERRORLEVEL 1 (
     setlocal EnableDelayedExpansion
-    set "BC=!ERRORLEVEL!"
     echo BAT err !BC! 1>&2
     set /a RC=BC+100
     exit /b !RC!

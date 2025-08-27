@@ -1,5 +1,5 @@
 @echo off
-ver >nul 2>&1
+ver >nul 2>nul
 
 set "FILE=%~1"
 set "MODE=%~2"
