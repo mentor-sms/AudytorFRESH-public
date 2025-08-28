@@ -1,122 +1,78 @@
 
-@echo on
+@echo off
 
-rem win_chown.bat FILE MODE LOG_FILE SID
+REM win_chown.bat FILE MODE LOG_FILE SID
 
 ver >nul 2>nul
 
 set "RUNDIR=%cd%"
 set "CCL=%cmdcmdline%"
 
-set "FILE=%1"
-set "MODE=%2"
-set "LOG_FILE=%3"
+set "FILE=~1"
+set "MODE=~2"
+set "LOG_FILE=~3"
+set "SID=~4"
 
-if "%FILE%"=="" exit /b 1
+echo(CHOWN BAT REV3 >>"%LOG_FILE%" || exit /b 11
+echo(%time% >>"%LOG_FILE%"
+echo(%RUNDIR%$ %CCL:"=% >>"%LOG_FILE%"
+echo( >>"%LOG_FILE%"
+echo( >>"%LOG_FILE%"
+echo( >>"%LOG_FILE%"
 
-if "%MODE%"=="" exit /b 2
-
-if "%LOG_FILE%"=="" exit /b 3
-
-set "ARGC=3"
-if not "%~4"=="" ( set "ARGC=4" & set "GOT=%~4" )
-if not "%5"=="" set "ARGC=5"
-
-if 4 LSS %ARGC% (
-  echo(too many arguments 1>&2
-  exit /b 5
+if "%FILE%"=="" (
+  echo(missing FILE arg >>"%LOG_FILE%"
+  exit /b 1
+)
+if not exist "%FILE%" (
+  echo(file not found on disk: %FILE% >>"%LOG_FILE%"
+  exit /b 2
+)
+if exist "%FILE%\NUL" (
+  echo(path is a directory, not a file: %FILE% >>"%LOG_FILE%"
+  exit /b 3
 )
 
-if %ARGC% LSS 3 (
-    echo(too few arguments 1>&2
-    exit /b 2
-)
+if /I not "%MODE%"=="PRIVATE" if /I not "%MODE%"=="PROTECTED" if /I not "%MODE%"=="ROOT" if /I not "%MODE%"=="DEFAULT" exit /b 4
 
-echo(ARGC: %ARGC%
+if /I "%MODE%"=="PRIVATE" set "PRIVATE=1"
+if /I "%MODE%"=="PROTECTED" set "PROTECTED=1"
+if /I "%MODE%"=="ROOT" set "ROOT=1"
+if /I "%MODE%"=="DEFAULT" set "DEFAULT=1"
 
-rem --------------------------------------------------- EXPANSION!
-
-echo(RESET:>>"%LOGF%"
+echo(RESET:>>"%LOG_FILE%"
 icacls "%FILE%" /reset
-set "rc=%ERRORLEVEL%"
-setlocal EnableDelayedExpansion
-if not "!rc!"=="0" exit /b 22
-endlocal
+if errorlevel 1 exit /b 20
+if defined DEFAULT ((echo(OKFIN DEFAULT>>"%LOG_FILE%" || exit /b 12) & exit /b 0)
 
-if "%MODE%"=="PRIVATE" (
+if not defined PRIVATE echo(PREPARE: >>"%LOG_FILE%"
+if not defined PRIVATE icacls "%FILE%" /grant *S-1-5-32-544:F
+if errorlevel 1 exit /b 21
 
-  echo(PREPARE: >>"%LOGF%"
-  icacls "%FILE%" /grant *%SID%:F
+if not defined PRIVATE echo(ADMINS (OWN): >>"%LOG_FILE%"
+if not defined PRIVATE icacls "%FILE%" /setowner *S-1-5-32-544
+if errorlevel 1 exit /b 22
 
-  set "rc=%ERRORLEVEL%"
-  setlocal EnableDelayedExpansion
-  if not "!rc!"=="0" exit /b 22
-  endlocal
+if defined PROTECTED echo(LOCALS AND AUTHS (RO):>>"%LOG_FILE%"
+if defined PROTECTED icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
+if errorlevel 1 exit /b 23
 
+if defined ROOT echo(ADMINS AND SYSTEM (RW):>>"%LOG_FILE%"
+if defined ROOT icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F
+if errorlevel 1 exit /b 24
 
-  echo(YOU (OWN): >>"%LOGF%"
-  icacls "%FILE%" /setowner *%SID%
+if not defined PRIVATE ((echo(OKFIN ADMINS>>"%LOG_FILE%" || exit /b 13) & exit /b 0)
 
-  set "rc=%ERRORLEVEL%"
-  setlocal EnableDelayedExpansion
-  if not "!rc!"=="0" exit /b 22
-  endlocal
+echo(PREPARE: >>"%LOG_FILE%"
+icacls "%FILE%" /grant *%SID%:F
+if errorlevel 1 exit /b 25
 
+echo(YOU (OWN): >>"%LOG_FILE%"
+icacls "%FILE%" /setowner *%SID%
+if errorlevel 1 exit /b 26
 
-  echo(YOU (RW): >>"%LOGF%"
-  icacls "%FILE%" /inheritance:r /c /grant:r *%SID%:F
+echo(YOU (RW): >>"%LOG_FILE%"
+icacls "%FILE%" /inheritance:r /c /grant:r *%SID%:F
+if errorlevel 1 exit /b 27
 
-  set "rc=%ERRORLEVEL%"
-  setlocal EnableDelayedExpansion
-  if not "!rc!"=="0" exit /b 22
-  endlocal
-
-) else if not "%MODE%"=="DEFAULT" (
-
-  echo(PREPARE: >>"%LOGF%"
-  icacls "%FILE%" /grant *S-1-5-32-544:F
-
-  set "rc=%ERRORLEVEL%"
-  setlocal EnableDelayedExpansion
-  if not "!rc!"=="0" exit /b 22
-  endlocal
-
-
-  echo(ADMINS (OWN): >>"%LOGF%"
-  icacls "%FILE%" /setowner *S-1-5-32-544
-
-  set "rc=%ERRORLEVEL%"
-  setlocal EnableDelayedExpansion
-  if not "!rc!"=="0" exit /b 22
-  endlocal
-
-
-  if "%MODE%"=="ROOT" (
-
-    echo(ADMINS AND SYSTEM (RW):>>"%LOGF%"
-    icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F
-
-    set "rc=%ERRORLEVEL%"
-    setlocal EnableDelayedExpansion
-    if not "!rc!"=="0" exit /b 22
-  endlocal
-  ) else if "%MODE%"=="PROTECTED" (
-
-    echo(LOCALS AND AUTHS (RO):>>"%LOGF%"
-    icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
-
-    set "rc=%ERRORLEVEL%"
-    setlocal EnableDelayedExpansion
-    if not "!rc!"=="0" exit /b 22
-    endlocal
-
-  )
-  else (
-    exit /b 10
-  )
-)
-
-echo(DONE>>"%LOGF%"
-echo(>>"%LOGF%"
-echo(OKFIN>>"%LOGF%"
-exit /b 0
+((echo(OKFIN PRIVATE>>"%LOG_FILE%" || exit /b 14) & exit /b 0)
