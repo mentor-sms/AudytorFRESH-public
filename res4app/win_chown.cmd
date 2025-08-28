@@ -1,120 +1,132 @@
 
-REM win_chown.cmd FILE MODE=DEFAULT SID ID=0 LOG_DIR=workdir
+REM win_chown.cmd FILE
+REM win_chown.cmd FILE MODE
+REM win_chown.cmd FILE MODE ID
+REM win_chown.cmd FILE MODE ID LOG_DIR
+REM win_chown.cmd FILE MODE SID
+REM win_chown.cmd FILE MODE SID ID
+REM win_chown.cmd FILE MODE SID ID LOG_DIR
 
 @echo off
-
-ver >nul 2>nul
 
 rem ------------------------------------------ CONSTS:
 
 set "RUNDIR=%cd%"
 set "CCL=%cmdcmdline%"
 
-set "FILE=%~1"
-
 echo(CHOWN CMD REV3
 echo(%date% %time%
 echo(%RUNDIR%$ %CCL:"=%
 echo(
 
-if "%FILE%"=="" (
-  echo(missing FILE 1>&2
-  exit /b 1
-)
-
 rem ------------------------------------------ ARGC:
-
-set "ARGC=1"
-set "IS_INT="
-if not "%~2"=="" ( set "ARGC=2" & echo(arg2: "%~2" )
-if not "%~3"=="" ( set "ARGC=3" & set "IS_INT=%~3" & echo(arg3: "%~3" )
-if not "%~4"=="" ( set "ARGC=4" & set "IS_INT=%~4" & echo(arg4: "%~4" )
-if not "%~5"=="" ( set "ARGC=5" & echo(arg5: "%~5" )
-if not "%6"=="" set "ARGC=6"
-
-if 5 LSS %ARGC% (
-  echo(too many arguments 1>&2
-  exit /b 5
-)
-
-if %ARGC% LSS 1 (
-    echo(too few arguments 1>&2
-    exit /b 2
-)
-
-echo(ARGC: %ARGC%
-
-rem ------------------------------------------ ARGS:
-
-set "r=%IS_INT%"
-if defined IS_INT (
-  set "IS_INT="
-  echo(%r%| findstr /r /c:"^[0-9][0-9]*$" >nul 2>nul && set "IS_INT=1"
-  if not defined IS_INT echo(%r%| findstr /r /c:"^[+-][0-9][0-9]*$" >nul 2>nul && set "IS_INT=1"
-)
-
-rem ------------------------------------------ SET:
-
-set "arg2=%2"
-set "arg3=%3"
-set "arg4=%4"
-set "arg5=%5"
-
-rem --------------------------------------------------- EXPANSION!
-setlocal EnableDelayedExpansion
-
-set "MODE=!arg2!"
-
-if not !arg3!=="" (
-  if !arg4!=="" (
-    if defined IS_INT (
-      set "ID=!arg3!"
-    ) else (
-      set "SID=!arg3!"
-    )
-  ) else if !arg5!=="" (
-    if defined IS_INT (
-      set "ID=!arg3!"
-      set "LOG_DIR=!arg4!"
-    ) else (
-      set "SID=!arg3!"
-      set "ID=!arg4!"
-    )
-  ) else (
-    set "SID=!arg3!"
-    set "ID=!arg4!"
-    set "LOG_DIR=!arg5!"
-  )
-)
-
-rem ------------------------------------------ FIX:
-
-if "!MODE!"=="" (
-  set "MODE=DEFAULT"
-  echo(default mode: !MODE!
+rem ------------------------- ARGC call:
+set "MINC=1"
+set "MAXC=5"
+set "CONSTC=2"
+rem ------------------------- ARGC body:
+set "ARGC=0"
+if not "%~1"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~1" )
+if not "%~2"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~2" )
+if not "%~3"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~3" )
+if not "%~4"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~4" )
+if not "%~5"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~5" )
+if not "%~6"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~6" )
+if not "%~7"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~7" )
+if not "%~8"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~8" )
+if not "%~9"=="" ( set /a ARGC+=1 & call set "arg%%ARGC%%=%~9" )
+if %ARGC% GTR %CONSTC% (
+  set "TEST_ARG=3"
 ) else (
-  echo(mode: !MODE!
+  set "TEST_ARG=0"
+)
+echo(ARGC: %ARGC%
+if %MAXC% LSS %ARGC% (
+  echo(too many args: got %ARGC%, need %MACX% 1>&2
+  exit /b %MAXC%
+)
+if %ARGC% LSS %MINC% (
+    echo(too few args: got %ARGC%", need %MINC% 1>&2
+    exit /b %MINC"
+)
+if 0 LSS %ARGC% echo(arg1: %arg1%
+if 1 LSS %ARGC% echo(arg2: %arg2%
+if 2 LSS %ARGC% echo(arg3: %arg3%
+if 3 LSS %ARGC% echo(arg4: %arg4%
+if 4 LSS %ARGC% echo(arg5: %arg5%
+if 5 LSS %ARGC% echo(arg6: %arg6%
+if 6 LSS %ARGC% echo(arg7: %arg7%
+if 7 LSS %ARGC% echo(arg8: %arg8%
+if 8 LSS %ARGC% echo(arg9: %arg9%
+echo(
+rem ------------------------- ARGC swap:
+if TEST_ARG GTR 0 call set "testarg=%%arg%TEST_ARG%%%"
+echo(testing %testarg%
+if TEST_ARG GTR 0 if %ARGC% GTR %CONSTC% echo(%testarg%| findstr /r "^[+-]*[0-9][0-9]*$" >nul
+if TEST_ARG GTR 0 set "SWAP=%errorlevel%"
+set "narg1=%arg1%"
+if defined SWAP if %TEST_ARG% LSS 2 if %ARGC% NEQ 1 set "narg1=%arg2%"
+if defined SWAP if %TEST_ARG% LSS 3 if %ARGC% NEQ 2 set "narg2=%arg3%"
+if defined SWAP if %TEST_ARG% LSS 4 if %ARGC% NEQ 3 set "narg3=%arg4%"
+if defined SWAP if %TEST_ARG% LSS 5 if %ARGC% NEQ 4 set "narg4=%arg5%"
+if defined SWAP if %TEST_ARG% LSS 6 if %ARGC% NEQ 5 set "narg5=%arg6%"
+if defined SWAP if %TEST_ARG% LSS 7 if %ARGC% NEQ 6 set "narg6=%arg7%"
+if defined SWAP if %TEST_ARG% LSS 8 if %ARGC% NEQ 7 set "narg7=%arg8%"
+if defined SWAP if %TEST_ARG% LSS 9 if %ARGC% NEQ 8 set "narg8=%arg9%"
+if defined SWAP set "narg9=%testarg%"
+if not defined narg1 if %ARGC% NEQ 1 set "narg1=%arg1%"
+if not defined narg2 if %ARGC% NEQ 2 set "narg2=%arg2%"
+if not defined narg3 if %ARGC% NEQ 3 set "narg3=%arg3%"
+if not defined narg4 if %ARGC% NEQ 4 set "narg4=%arg4%"
+if not defined narg5 if %ARGC% NEQ 5 set "narg5=%arg5%"
+if not defined narg6 if %ARGC% NEQ 6 set "narg6=%arg6%"
+if not defined narg7 if %ARGC% NEQ 7 set "narg7=%arg7%"
+if not defined narg8 if %ARGC% NEQ 8 set "narg8=%arg8%"
+if not defined narg9 if %ARGC% NEQ 9 set "narg9=%arg9%"
+echo(narg1: %narg1%
+echo(narg2: %narg2%
+echo(narg3: %narg3%
+echo(narg4: %narg4%
+echo(narg5: %narg5%
+echo(narg6: %narg6%
+echo(narg7: %narg7%
+echo(narg8: %narg8%
+echo(narg9: %narg9%
+rem ------------------------------------------ ARGC end.
+
+rem ------------------------------------------ VARS:
+set "FILE=%narg1%"
+set "MODE=%narg2%"
+set "ID=%narg3%"
+set "LOG_DIR=%narg4%"
+set "SID=%narg9%"
+
+if "%MODE%"=="" (
+  set "MODE=DEFAULT"
+  echo(default mode: %MODE%
+) else (
+  echo(mode:%!MODE%
 )
 
-if "!SID!"=="" (
-  if "!MODE!"=="PRIVATE" (
+if "%SID%"=="" (
+  if "%MODE%"=="PRIVATE" (
     echo(missing SID for PRIVATE mode 1>&2
     exit /b 6
   )
   set "SID=S-1-5-21-0000000000-0000000000-0000000000-501"
   echo(sid: useless
 ) else (
-  echo(sid: !SID!
+  echo(sid: %SID%
 )
 
-rem ------------------------------------------ LOG:
+if "%ID%"=="" set "ID=0"
+if "%LOG_DIR%"=="" set "LOG_DIR=%RUNDIR%"
 
-if "!ID!"=="" set "ID=0"
-if "!LOG_DIR!"=="" set "LOG_DIR=!RUNDIR!"
-set "log_file=!LOG_DIR!\cmd_!ID!.run.lab.log"
+echo(%FILE% %MODE% %SID% %ID% %LOG_DIR%
 
-rem --------------------------------------------------- /EXPANSION OFF:
-setlocal DisableDelayedExpansion
+set "log_file=%LOG_DIR%\cmd_%ID%.run.lab.log"
+
+echo(log file: %log_file%
 
 rem ------------------------------------------ SETUP:
 
