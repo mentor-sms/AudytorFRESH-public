@@ -136,6 +136,22 @@ if "%SID%"=="" (
   echo(sid: %SID%
 )
 
+rem Validate SID format (general SID)
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$s = '%SID%'; if ($s -match '^S-1(-\d+){1,14}$') { exit 0 } else { exit 1 }"
+if errorlevel 1 (
+  echo SID is invalid: %SID% 1>&2
+  exit /b 9
+)
+
+if /I "%MODE%"=="PRIVATE" (
+  PowerShell -NoProfile -ExecutionPolicy Bypass -Command "$s = '%SID%'; if ($s -match '^S-1-5-21(-\d+){3}-\d+$') { exit 0 } else { exit 1 }"
+  if errorlevel 1 (
+    echo SID is not user type: %SID% 1>&2
+    exit /b 9
+  )
+)
+
+
 set "ID=%arg3%"
 if "%ID%"=="" set "ID=0"
 echo(%ID%| findstr /r "^[+-]*[0-9][0-9]*$" >nul
