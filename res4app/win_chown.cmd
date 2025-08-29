@@ -63,9 +63,9 @@ if 8 LSS %ARGC% echo(arg9: %~9
 echo(
 rem ------------------------- ARGC swap:
 if %TEST_ARG% GTR 0 call set "testarg=%%~%TEST_ARG%"
-echo(testing %testarg%
-if TEST_ARG GTR 0 if %ARGC% GTR %CONSTC% echo(%testarg%| findstr /r "^[+-]*[0-9][0-9]*$" >nul
-if TEST_ARG GTR 0 set "SWAP=%errorlevel%"
+if defined testarg echo(testing %testarg%
+if defined testarg echo(%testarg%| findstr /r "^[+-]*[0-9][0-9]*$" >nul
+if defined testarg set "SWAP=%errorlevel%"
 set "arg1=%~1"
 if defined SWAP if %TEST_ARG% LSS 2 if %ARGC% NEQ 1 set "arg1=%~2"
 if defined SWAP if %TEST_ARG% LSS 3 if %ARGC% NEQ 2 set "arg2=%~3"
@@ -76,24 +76,33 @@ if defined SWAP if %TEST_ARG% LSS 7 if %ARGC% NEQ 6 set "arg6=%~7"
 if defined SWAP if %TEST_ARG% LSS 8 if %ARGC% NEQ 7 set "arg7=%~8"
 if defined SWAP if %TEST_ARG% LSS 9 if %ARGC% NEQ 8 set "arg8=%~9"
 if defined SWAP set "arg9=%testarg%"
-if not defined arg1 if %ARGC% NEQ 1 set "arg1=%~1"
-if not defined arg2 if %ARGC% NEQ 2 set "arg2=%~2"
-if not defined arg3 if %ARGC% NEQ 3 set "arg3=%~3"
-if not defined arg4 if %ARGC% NEQ 4 set "arg4=%~4"
-if not defined arg5 if %ARGC% NEQ 5 set "arg5=%~5"
-if not defined arg6 if %ARGC% NEQ 6 set "arg6=%~6"
-if not defined arg7 if %ARGC% NEQ 7 set "arg7=%~7"
-if not defined arg8 if %ARGC% NEQ 8 set "arg8=%~8"
-if not defined arg9 if %ARGC% NEQ 9 set "arg9=%~9"
-echo(arg1: %arg1%
-echo(arg2: %arg2%
-echo(arg3: %arg3%
-echo(arg4: %arg4%
-echo(arg5: %arg5%
-echo(arg6: %arg6%
-echo(arg7: %arg7%
-echo(arg8: %arg8%
-echo(arg9: %arg9%
+if defined SWAP if not defined arg1 if %ARGC% NEQ 1 set "arg1=%~1"
+if defined SWAP if not defined arg2 if %ARGC% NEQ 2 set "arg2=%~2"
+if defined SWAP if not defined arg3 if %ARGC% NEQ 3 set "arg3=%~3"
+if defined SWAP if not defined arg4 if %ARGC% NEQ 4 set "arg4=%~4"
+if defined SWAP if not defined arg5 if %ARGC% NEQ 5 set "arg5=%~5"
+if defined SWAP if not defined arg6 if %ARGC% NEQ 6 set "arg6=%~6"
+if defined SWAP if not defined arg7 if %ARGC% NEQ 7 set "arg7=%~7"
+if defined SWAP if not defined arg8 if %ARGC% NEQ 8 set "arg8=%~8"
+if defined SWAP if not defined arg9 if %ARGC% NEQ 9 set "arg9=%~9"
+if not defined SWAP if not defined arg1 set "arg1=%~1"
+if not defined SWAP if not defined arg2 set "arg2=%~2"
+if not defined SWAP if not defined arg3 set "arg3=%~3"
+if not defined SWAP if not defined arg4 set "arg4=%~4"
+if not defined SWAP if not defined arg5 set "arg5=%~5"
+if not defined SWAP if not defined arg6 set "arg6=%~6"
+if not defined SWAP if not defined arg7 set "arg7=%~7"
+if not defined SWAP if not defined arg8 set "arg8=%~8"
+if not defined SWAP if not defined arg9 set "arg9=%~9"
+if 0 LSS %ARGC% echo(arg1: %arg1%
+if 1 LSS %ARGC% echo(arg2: %arg2%
+if 2 LSS %ARGC% echo(arg3: %arg3%
+if 3 LSS %ARGC% echo(arg4: %arg4%
+if 4 LSS %ARGC% echo(arg5: %arg5%
+if 5 LSS %ARGC% echo(arg6: %arg6%
+if 6 LSS %ARGC% echo(arg7: %arg7%
+if 7 LSS %ARGC% echo(arg8: %arg8%
+if defined SWAP echo(arg9: %arg9%
 rem ------------------------------------------ ARGC end.
 
 rem ------------------------------------------ VARS:
@@ -105,27 +114,26 @@ if "%FILE%"=="" (
 )
 if not exist "%FILE%" (
   echo(file not found on disk: %FILE% 1>&2
-  exit /b 1
+  exit /b 2
 )
 if exist "%FILE%\NUL" (
   echo(path is a directory, not a file: %FILE% 1>&2
-  exit /b 1
+  exit /b 3
 )
 
 set "MODE=%arg2%"
 if "%MODE%"=="" (
-  set "MODE=DEFAULT"
+  set "MODE=PUBLIC"
   echo(default mode: %MODE%
 ) else (
   echo(mode:%MODE%
 )
-if /I not "%MODE%"=="PRIVATE" if /I not "%MODE%"=="PROTECTED" if /I not "%MODE%"=="ROOT" if /I not "%MODE%"=="DEFAULT" (echo(unknown mode %MODE% & exit /b 1)
 
 set "SID=%arg9%"
 if "%SID%"=="" (
   if "%MODE%"=="PRIVATE" (
     echo(missing SID for PRIVATE mode 1>&2
-    exit /b 1
+    exit /b 9
   )
   set "SID=S-1-5-21-0000000000-0000000000-0000000000-501"
   echo(sid: useless
@@ -135,23 +143,24 @@ if "%SID%"=="" (
 
 set "ID=%arg3%"
 if "%ID%"=="" set "ID=0"
-echo(%testarg%| findstr /r "^[+-]*[0-9][0-9]*$" >nul
+echo(%ID%| findstr /r "^[+-]*[0-9][0-9]*$" >nul
 if errorlevel 1 (
-  echo ID is invalid 1>&2
-  exit /b 1
+  echo ID is invalid: %ID% 1>&2
+  exit /b 10
 )
 
 set "LOG_DIR=%arg4%"
 if "%LOG_DIR%"=="" set "LOG_DIR=%RUNDIR%"
-set "log_file=%LOG_DIR%\cmd_%ID%.run.lab.log"
-echo(log file: %log_file%
+set "LOG_FILE=%LOG_DIR%\cmd_%ID%.run.lab.log"
+echo(log file: %LOG_FILE%
 
-(echo(INIT %date% %time% > "%LOG_FILE%") || (echo(failed to write to log file: %LOG_FILE% 1>&2 & exit /b 1)
+(echo(CHOWN CMD REV3 %date% %time% > "%LOG_FILE%") || (echo(failed to write to log file: %LOG_FILE% 1>&2 & exit /b 1)
+type %LOG_FILE%
 
 rem ------------------------------------------ SETUP:
 
 set "RUNLINE=PowerShell -NoProfile -ExecutionPolicy Bypass -Command"
-set "BARGS=$a = @('%FILE%', '%MODE%', '%log_file%', '%SID%')"
+set "BARGS=$a = @('%FILE%', '%MODE%', '%SID%', '%LOG_FILE%')"
 set "PROC=$p = Start-Process -Verb RunAs -FilePath '%~dpn0.bat' -ArgumentList $a -PassThru"
 set "GO=$p.WaitForExit()"
 set "EXT=exit $p.ExitCode"
@@ -204,7 +213,7 @@ rem ------------------------------------------ FIN:
 echo(
 echo(
 echo(LOG:
-type %log_file%
+type %LOG_FILE%
 
 timeout /t 2 /nobreak >nul
 echo(Waiting to be killed...

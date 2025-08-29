@@ -1,24 +1,23 @@
 
 @echo off
 
-REM win_chown.bat FILE MODE LOG_FILE SID
+REM win_chown.bat FILE MODE SID LOG_FILE
 
 ver >nul 2>nul
 
 set "RUNDIR=%cd%"
 set "CCL=%cmdcmdline%"
 
-set "FILE=~1"
-set "MODE=~2"
-set "LOG_FILE=~3"
-set "SID=~4"
+set "FILE=%~1"
+set "MODE=%~2"
+set "SID=%~3"
+set "LOG_FILE=%~4"
 
-echo(CHOWN BAT REV3 >>"%LOG_FILE%" || exit /b 11
-echo(%time% >>"%LOG_FILE%"
+echo(CHOWN BAT REV3 %time% >>"%LOG_FILE%" || exit /b 11
 echo(%RUNDIR%$ %CCL:"=% >>"%LOG_FILE%"
-echo( >>"%LOG_FILE%"
-echo( >>"%LOG_FILE%"
-echo( >>"%LOG_FILE%"
+echo(file: %FILE% >>"%LOG_FILE%"
+echo(mode: %MODE% >>"%LOG_FILE%"
+echo(sid: %SID% >>"%LOG_FILE%"
 
 if "%FILE%"=="" (
   echo(missing FILE arg >>"%LOG_FILE%"
@@ -33,17 +32,17 @@ if exist "%FILE%\NUL" (
   exit /b 3
 )
 
-if /I not "%MODE%"=="PRIVATE" if /I not "%MODE%"=="PROTECTED" if /I not "%MODE%"=="ROOT" if /I not "%MODE%"=="DEFAULT" exit /b 4
+if /I not "%MODE%"=="PRIVATE" if /I not "%MODE%"=="PROTECTED" if /I not "%MODE%"=="ROOT" if /I not "%MODE%"=="PUBLIC" exit /b 4
 
 if /I "%MODE%"=="PRIVATE" set "PRIVATE=1"
 if /I "%MODE%"=="PROTECTED" set "PROTECTED=1"
 if /I "%MODE%"=="ROOT" set "ROOT=1"
-if /I "%MODE%"=="DEFAULT" set "DEFAULT=1"
+if /I "%MODE%"=="PUBLIC" set "PUBLIC=1"
 
 echo(RESET:>>"%LOG_FILE%"
 icacls "%FILE%" /reset
 if errorlevel 1 exit /b 20
-if defined DEFAULT ((echo(OKFIN DEFAULT>>"%LOG_FILE%" || exit /b 12) & exit /b 0)
+if defined PUBLIC ((echo(OKFIN PUBLIC>>"%LOG_FILE%" || exit /b 12) & exit /b 0)
 
 if not defined PRIVATE echo(PREPARE: >>"%LOG_FILE%"
 if not defined PRIVATE icacls "%FILE%" /grant *S-1-5-32-544:F
@@ -62,6 +61,8 @@ if defined ROOT icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32
 if errorlevel 1 exit /b 24
 
 if not defined PRIVATE ((echo(OKFIN ADMINS>>"%LOG_FILE%" || exit /b 13) & exit /b 0)
+
+if "%SID%"=="" exit /b 9
 
 echo(PREPARE: >>"%LOG_FILE%"
 icacls "%FILE%" /grant *%SID%:F
