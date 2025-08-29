@@ -34,33 +34,33 @@ if exist "%FILE%\NUL" (
 
 if /I not "%MODE%"=="PRIVATE" if /I not "%MODE%"=="PROTECTED" if /I not "%MODE%"=="ROOT" if /I not "%MODE%"=="PUBLIC" exit /b 4
 
-if /I "%MODE%"=="PRIVATE" set "PRIVATE=1"
-if /I "%MODE%"=="PROTECTED" set "PROTECTED=1"
-if /I "%MODE%"=="ROOT" set "ROOT=1"
-if /I "%MODE%"=="PUBLIC" set "PUBLIC=1"
+if /I "%MODE%"=="PRIVATE" set "MODE_PRIVATE=1"
+if /I "%MODE%"=="PROTECTED" set "MODE_PROTECTED=1"
+if /I "%MODE%"=="ROOT" set "MODE_ROOT=1"
+if /I "%MODE%"=="PUBLIC" set "MODE_PUBLIC=1"
 
 echo(RESET:>>"%LOG_FILE%"
 icacls "%FILE%" /reset
 if errorlevel 1 exit /b 20
-if defined PUBLIC ((echo(OKFIN PUBLIC>>"%LOG_FILE%" || exit /b 12) & exit /b 0)
+if defined MODE_PUBLIC ((echo(OKFIN PUBLIC>>"%LOG_FILE%" || exit /b 12) & exit /b 0)
 
-if not defined PRIVATE echo(PREPARE: >>"%LOG_FILE%"
-if not defined PRIVATE icacls "%FILE%" /grant *S-1-5-32-544:F
+if not defined MODE_PRIVATE echo(PREPARE: >>"%LOG_FILE%"
+if not defined MODE_PRIVATE icacls "%FILE%" /grant *S-1-5-32-544:F
 if errorlevel 1 exit /b 21
 
-if not defined PRIVATE echo(ADMINS (OWN): >>"%LOG_FILE%"
-if not defined PRIVATE icacls "%FILE%" /setowner *S-1-5-32-544
+if not defined MODE_PRIVATE echo(ADMINS (OWN): >>"%LOG_FILE%"
+if not defined MODE_PRIVATE icacls "%FILE%" /setowner *S-1-5-32-544
 if errorlevel 1 exit /b 22
 
-if defined PROTECTED echo(LOCALS AND AUTHS (RO):>>"%LOG_FILE%"
-if defined PROTECTED icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
+if defined MODE_PROTECTED echo(LOCALS AND AUTHS (RO):>>"%LOG_FILE%"
+if defined MODE_PROTECTED icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F *S-1-5-11:RX *S-1-5-32-545:RX
 if errorlevel 1 exit /b 23
 
-if defined ROOT echo(ADMINS AND SYSTEM (RW):>>"%LOG_FILE%"
-if defined ROOT icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F
+if defined MODE_ROOT echo(ADMINS AND SYSTEM (RW):>>"%LOG_FILE%"
+if defined MODE_ROOT icacls "%FILE%" /inheritance:r /c /grant:r *S-1-5-18:F *S-1-5-32-544:F
 if errorlevel 1 exit /b 24
 
-if not defined PRIVATE ((echo(OKFIN ADMINS>>"%LOG_FILE%" || exit /b 13) & exit /b 0)
+if not defined MODE_PRIVATE ((echo(OKFIN ADMINS>>"%LOG_FILE%" || exit /b 13) & exit /b 0)
 
 if "%SID%"=="" exit /b 9
 
