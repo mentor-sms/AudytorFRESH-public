@@ -215,9 +215,9 @@ echo(
 echo(LOG:
 type %LOG_FILE%
 
-timeout /t 2 /nobreak >nul
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command Start-Sleep -Seconds 2
 echo(Waiting to be killed...
-timeout /t 5 /nobreak >nul
+PowerShell -NoProfile -ExecutionPolicy Bypass -Command Start-Sleep -Seconds 5
 
 echo(Suicide
 exit /b 0
