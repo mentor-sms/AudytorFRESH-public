@@ -1,10 +1,5 @@
 
-REM win_chown.cmd FILE
-REM win_chown.cmd FILE MODE
-REM win_chown.cmd FILE MODE ID
 REM win_chown.cmd FILE MODE ID LOG_DIR
-REM win_chown.cmd FILE MODE SID
-REM win_chown.cmd FILE MODE SID ID
 REM win_chown.cmd FILE MODE SID ID LOG_DIR
 
 @echo off
@@ -65,7 +60,7 @@ rem ------------------------- ARGC swap:
 if %TEST_ARG% GTR 0 call set "testarg=%%~%TEST_ARG%"
 if defined testarg echo(testing %testarg%
 if defined testarg echo(%testarg%| findstr /r "^[+-]*[0-9][0-9]*$" >nul
-if defined testarg set "SWAP=%errorlevel%"
+if defined testarg if errorlevel 1 set "SWAP=1"
 set "arg1=%~1"
 if defined SWAP if %TEST_ARG% LSS 2 if %ARGC% NEQ 1 set "arg1=%~2"
 if defined SWAP if %TEST_ARG% LSS 3 if %ARGC% NEQ 2 set "arg2=%~3"
