@@ -839,7 +839,7 @@ format_file_list() {
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
     target="$target_root"home/"$username"/
-    run="$target"mentor/prepare4lab.sh
+    run="$target"mentor/prepare4lab/prepare4lab.sh
     local exclude_option
     exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.lab.bak"
     if [[ "$mntdir" == "$target"* ]]; then
