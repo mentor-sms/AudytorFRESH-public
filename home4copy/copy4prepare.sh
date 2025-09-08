@@ -677,7 +677,7 @@ create_backup() {
         echo_info "--nobackup włączone. Pomijanie tworzenia kopii zapasowej dla: $filepath"
         return 0
     fi
-    if [[ "$filepath" == *"home/$username/.mentor"* || "$filepath" == *"home/$username/.source4rpi"* ]]; then
+    if [[ "$filepath" == *"home/$username/.mentor"* || "$filepath" == *"home/$username/mentor"* || "$filepath" == *"home/$username/.source4rpi"* ]]; then
         echo_info "Pomijanie tworzenia kopii zapasowej dla: $filepath (ścieżka wykluczona)"
         return 0
     fi
