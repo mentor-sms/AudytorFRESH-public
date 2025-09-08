@@ -1,6 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
-WERSJA=2.0.0
+WERSJA=2.0.0 #4lab>var
 show_help() {
     cat << EOF
 ===============================================================================
@@ -24,28 +24,20 @@ show_help() {
    --username
    --target-lan
    --devel
- prepare4lab-specific Options (passed through):
-   --student [Nr] [IP]
-   --mic
 ===============================================================================
 EOF
 }
 from="USB"
 mntdir="/mnt/labusb"
 target_root="/"
-username="pi"
+username="pi" #4lab>var
 quick=0
 job="help"
 timeout=0
 dry=0
-user=1
-keyboard=$user
 debug=0
 nobackup=0
 devel=0
-student_nr=0
-student_ip="0.0.0.0"
-mic=0
 target_lan=0
 parse_arguments() {
     while [ $# -gt 0 ]; do
@@ -108,12 +100,6 @@ parse_arguments() {
                 debug=1
                 echo_info "debug"
                 ;;
-            --remote)
-                user=0
-                keyboard=0
-                export DEBIAN_FRONTEND=noninteractive
-                echo_info "setup4rpi"
-                ;;
             --devel)
                 devel=1
                 echo_info "setup4rpi"
@@ -121,25 +107,6 @@ parse_arguments() {
             --dry)
                 dry=1
                 echo_info "dry"
-                ;;
-            --mic)
-                mic=1
-                echo_info "dynamiczny mikrofon"
-                ;;
-            --student)
-                shift
-                student_nr="${1:-}"
-                if [ -z "$student_nr" ]; then
-                    echo_error $LINENO "Missing argument for --student (student number)"
-                fi
-                shift
-                student_ip="${1:-}"
-                if [ -z "$student_ip" ]; then
-                    echo_error $LINENO "Missing argument for --student (student IP)"
-                fi
-                echo "$student_nr" | grep -Eq '^[0-9]+$' || echo_error $LINENO "Numer studenta musi byc liczba calkowita"
-                echo "$student_ip" | grep -Eq '^([0-9]{1,3}\.){3}[0-9]{1,3}$' || echo_error $LINENO "Adres IP studenta ma nieprawidlowy format"
-                echo_info "student configuration: nr=$student_nr, ip=$student_ip"
                 ;;
             *)
                 ;;
@@ -274,7 +241,6 @@ main() {
     if [ "$timeout" -gt 0 ]; then
         echo_info "Czekam $timeout sekund, podlacz pendrive z katalogiem home4copy..."
         sleep "$timeout"
-        keyboard=0
     fi
     mnt_init
     if [ ! -d "$from/$home_dir" ]; then
@@ -283,7 +249,6 @@ main() {
         run_rsync
     un_un
     if [ "$timeout" -gt 0 ]; then
-            keyboard=$user
             echo_stop "Odlacz pendrive, podlacz klawiature."
     fi
     verify_prepare_script
@@ -305,12 +270,6 @@ main() {
     fi
     if [ "$devel" -eq 1 ]; then
         prepare_args="$prepare_args --devel"
-    fi
-    if [ "$student_nr" -gt 0 ]; then
-        prepare_args="$prepare_args --student $student_nr $student_ip"
-    fi
-    if [ "$mic" -eq 1 ]; then
-        prepare_args="$prepare_args --mic"
     fi
     if [ "$target_lan" -eq 1 ]; then
         prepare_args="$prepare_args --target-lan"
@@ -337,33 +296,28 @@ main() {
                 fi
                 set +o pipefail
     sync || true
-    if [ "$debug" -eq 1 ] || [ "$keyboard" -eq 1 ]; then
-        if [ "$quick" -eq 1 ]; then
-            shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
-            exit 0
-        else
-            echo_info "============================================================="
-            echo_info "   PODSUMOWANIE WYKONANIA"
-            echo_info "============================================================="
-            echo_info "Skrypt: copy4prepare.sh v$WERSJA"
-            echo_info "Zadanie: $job"
-            echo_info "Zrodlo: $from"
-            echo_info "Cel: $target"
-            echo_info "Katalog domowy: $home_dir"
-            echo_info "Tryb szybki: $([ "$quick" -eq 1 ] && echo "tak" || echo "nie")"
-            echo_info "Tryb debugowania: $([ "$debug" -eq 1 ] && echo "tak" || echo "nie")"
-            echo_info "Tryb symulacji: $([ "$dry" -eq 1 ] && echo "tak" || echo "nie")"
-            echo_info "Czas rozpoczecia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
-            echo_info "Czas zakonczenia: $(date '+%H:%M:%S')"
-            echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
-            echo_info "============================================================="
-            echo_info "copy4prepare.sh zakonczony pomyslnie"
-            echo_stop "RESTART SYSTEMU za minute"
-            shutdown -r +1 || systemctl reboot || echo_error $LINENO "Restart systemu nieudany"
-       fi
-    else
-        shutdown -r now >/dev/null 2>&1 || systemctl reboot >/dev/null 2>&1 || echo_error $LINENO "Ciche restartowanie systemu nieudane"
+    if [ "$quick" -eq 1 ]; then
+        shutdown -r now || systemctl reboot || echo_error $LINENO "Natychmiastowy restart systemu nieudany"
         exit 0
+    else
+        echo_info "============================================================="
+        echo_info "   PODSUMOWANIE WYKONANIA"
+        echo_info "============================================================="
+        echo_info "Skrypt: copy4prepare.sh v$WERSJA"
+        echo_info "Zadanie: $job"
+        echo_info "Zrodlo: $from"
+        echo_info "Cel: $target"
+        echo_info "Katalog domowy: $home_dir"
+        echo_info "Tryb szybki: $([ "$quick" -eq 1 ] && echo "tak" || echo "nie")"
+        echo_info "Tryb debugowania: $([ "$debug" -eq 1 ] && echo "tak" || echo "nie")"
+        echo_info "Tryb symulacji: $([ "$dry" -eq 1 ] && echo "tak" || echo "nie")"
+        echo_info "Czas rozpoczecia: $(date -d @"$SECONDS_START" '+%H:%M:%S' 2>/dev/null || echo "nieznany")"
+        echo_info "Czas zakonczenia: $(date '+%H:%M:%S')"
+        echo_info "Calkowity czas wykonania: $(($(date +%s) - SECONDS_START)) sekund"
+        echo_info "============================================================="
+        echo_info "copy4prepare.sh zakonczony pomyslnie"
+        echo_stop "RESTART SYSTEMU za minute"
+        shutdown -r +1 || systemctl reboot || echo_error $LINENO "Restart systemu nieudany"
     fi
     sleep 90
     echo_error $LINENO "System nie zrestartowal sie w wymaganym czasie"
@@ -409,35 +363,26 @@ echo_stop() {
     local operation="$1"
     local additional_info="${2:-}"
     sync
-    if [ "$keyboard" -eq 1 ]; then
-        echo ""
-        if [ "$quick" -eq 1 ]; then
-            echo "[STOP] $operation //[Enter] (5s)"
-            if [ -n "$additional_info" ]; then
-                echo "$additional_info"
-            fi
-            read -t 5 -r || true
-        else
-            echo "[STOP] $operation"
-            if [ -n "$additional_info" ]; then
-                echo "$additional_info"
-            fi
-            echo "Nacisnij [Enter], aby kontynuowac, Ctrl+C, aby anulowac..."
-            read -r
+    echo ""
+    if [ "$quick" -eq 1 ]; then
+        echo "[STOP] $operation //[Enter] (5s)"
+        if [ -n "$additional_info" ]; then
+            echo "$additional_info"
         fi
+        read -t 5 -r || true
     else
         echo "[STOP] $operation"
         if [ -n "$additional_info" ]; then
             echo "$additional_info"
         fi
+        echo "Nacisnij [Enter], aby kontynuowac, Ctrl+C, aby anulowac..."
+        read -r
     fi
 }
 echo_wait() {
     local message="$1"
-    if [ "$keyboard" -eq 1 ]; then
-        echo ""
-    fi
-    if [[ "$keyboard" -eq 1 || "$debug" -eq 1 ]] && [ "$quick" -eq 0 ]; then
+    echo ""
+    if [ "$quick" -eq 0 ] || [ "$debug" -eq 1 ]; then
         echo "$message"
         read -t 4 -r || true
     else
@@ -468,15 +413,15 @@ clean_home() {
             echo_info "Dry run: Would remove $file"
         done
     fi
-    if [ -f "$pihome/.prepare4lab.step" ]; then
-        echo_info "Removing .prepare4lab.step file"
+    if [ -f "$pihome/.mentor/prepare.lab.step" ]; then
+        echo_info "Removing prepare.lab.step file"
         if [ "$dry" -ne 1 ]; then
-            rm -f "$pihome/.prepare4lab.step" || echo_error $LINENO "Failed to remove .prepare4lab.step file"
+            rm -f "$pihome/.mentor/prepare.lab.step" || echo_error $LINENO "Failed to remove prepare.lab.step file"
         else
-            echo_info "Dry run: Would remove $pihome/.prepare4lab.step"
+            echo_info "Dry run: Would remove $pihome/.mentor/prepare.lab.step"
         fi
     else
-        echo_info ".prepare4lab.step file does not exist"
+        echo_info "prepare.lab.step file does not exist"
     fi
     if [ -d "$pihome/.source4rpi" ]; then
         echo_info "Removing .source4rpi directory"
@@ -731,7 +676,7 @@ create_backup() {
         echo_info "--nobackup włączone. Pomijanie tworzenia kopii zapasowej dla: $filepath"
         return 0
     fi
-    if [[ "$filepath" == *"home/pi/.mentor"* || "$filepath" == *"home/pi/.source4rpi"* ]]; then
+    if [[ "$filepath" == *"home/$username/.mentor"* || "$filepath" == *"home/$username/.source4rpi"* ]]; then
         echo_info "Pomijanie tworzenia kopii zapasowej dla: $filepath (ścieżka wykluczona)"
         return 0
     fi
@@ -893,14 +838,14 @@ format_file_list() {
 run_rsync() {
     echo_info "Uruchamianie rsync dla katalogu home_dir (copy4prepare)"
     target="$target_root"home/"$username"/
-    run="$target".mentor/prepare4lab.sh
+    run="$target"mentor/prepare4lab.sh
     local exclude_option
     exclude_option="--exclude=/root4rpi --exclude=/copy4prepare.sh --exclude=*.lab.bak"
     if [[ "$mntdir" == "$target"* ]]; then
         exclude_option="$exclude_option --exclude=/${mntdir#"$target"/}"
     fi
     local rcmd cont rsync_cmd dry_rsync_cmd
-    rcmd="sudo -u pi rsync --relative -rtcvv"
+    rcmd="sudo -u $username rsync --relative -rtcvv"
     cont="$from/$home_dir/./ $target"
     rsync_cmd="$rcmd $exclude_option $cont"
     dry_rsync_cmd="$rcmd --dry-run $exclude_option $cont"
