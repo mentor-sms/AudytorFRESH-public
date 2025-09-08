@@ -30,7 +30,8 @@ EOF
 from="USB"
 mntdir="/mnt/labusb"
 target_root="/"
-username="pi" #4lab>var
+PI_USER="pi" #4lab>var
+username="$PI_USER"
 quick=0
 job="help"
 timeout=0
