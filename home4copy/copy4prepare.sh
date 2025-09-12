@@ -1,5 +1,6 @@
 #!/bin/bash
 # -*- coding: utf-8 -*-
+
 WERSJA=2.0.0 #4lab>var
 show_help() {
     cat << EOF
@@ -49,14 +50,14 @@ parse_arguments() {
                 ;;
             --from)
                 shift
-                from="${1:-}"
+                from="$1"
                 if [ -z "$from" ]; then
                     echo_error $LINENO "Missing argument for --from"
                 fi
                 ;;
             --target)
                 shift
-                target_root="${1:-}"
+                target_root="$1"
                 if [ -z "$target_root" ]; then
                     echo_error $LINENO "Missing argument for --target"
                 fi
@@ -66,25 +67,25 @@ parse_arguments() {
                 ;;
             --mnt)
                 shift
-                mntdir="${1:-}"
+                mntdir="$1"
                 if [ -z "$mntdir" ]; then
                     echo_error $LINENO "Missing argument for --mnt"
                 fi
                 ;;
             --username)
                 shift
-                username="${1:-}"
+                username="$1"
                 if [ -z "$username" ]; then
                     echo_error $LINENO "Missing argument for --username"
                 fi
                 ;;
             --target-lan)
-                                                                target_lan=1
+                target_lan=1
                 echo_info "auto-reboot, no full-upgrade"
                 ;;
             --timeout)
                 shift
-                timeout="${1:-}"
+                timeout="$1"
                 if [ -z "$timeout" ]; then
                     echo_error $LINENO "Missing argument for --timeout"
                 fi
@@ -119,11 +120,11 @@ parse_arguments() {
     echo_info "timeout=$timeout"
 }
 debian_upgrade() {
-    APT_GET=${APT_GET:-"apt-get -q"}
+    APT_GET="apt-get -q"
     APT_Y=""
     APT_DPKG_OPTS=""
     APT_UPDATE_OPTS="--allow-releaseinfo-change"
-    if [ "${quick:-0}" -eq 1 ]; then
+    if [ "${quick}" -eq 1 ]; then
         APT_Y="-y"
         APT_DPKG_OPTS="-o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confnew"
     fi
@@ -134,7 +135,7 @@ debian_upgrade() {
     echo_info "disabled: $aptcmd_update $APT_UPDATE_OPTS update"
     $aptcmd_update $APT_UPDATE_OPTS update || echo_stop "Nie można zaktualizować listy pakietów"
     #4lab>on wait_apt
-    if [ "${target_lan:-0}" -eq 1 ]; then
+    if [ "${target_lan}" -eq 1 ]; then
         echo_info "Wykonywanie aktualizacji systemu (upgrade)"
         echo_info "disabled: $aptcmd_pkg upgrade"
     #4lab>on     $aptcmd_pkg upgrade || echo_stop "Aktualizacja systemu nie powiodla sie"
@@ -148,7 +149,7 @@ debian_upgrade() {
     #4lab>on $aptcmd_pkg install \
     #4lab>on     #4lab>list deps4rpi.txt
     echo_info "disabled: $aptcmd_pkg install"
-    #4lab>on if [ "${devel:-0}" -eq 1 ]; then
+    #4lab>on if [ "${devel}" -eq 1 ]; then
     #4lab>on     wait_apt
         echo_info "Instalowanie pakietow dla trybu deweloperskiego"
     #4lab>on     $aptcmd_pkg install \
@@ -260,9 +261,9 @@ main() {
     if [ "$nobackup" -eq 1 ]; then
         prepare_args="$prepare_args --no-backup"
     fi
-    if [ "$quick" -eq 1 ]; then
-        prepare_args="$prepare_args --quick"
-    fi
+  if [ "$quick" -eq 1 ]; then
+    prepare_args="$prepare_args --quick"
+  fi
     if [ "$debug" -eq 1 ]; then
         prepare_args="$prepare_args --debug"
     fi
@@ -740,15 +741,14 @@ verify_prepare_script() {
     fi
     wersja_in_script=$(grep -m 1 "^WERSJA=" "$run" | cut -d'=' -f2 | sed 's/[[:space:]]*#.*$//' | sed 's/[[:space:]]*$//')
     if [ -z "$wersja_in_script" ]; then
-        echo_info "Ostrzezenie: Nie mozna odczytac wersji ze skryptu"
-        echo_wait "Wersja skryptu nie znaleziona, kontynuowac?"
+        echo_error "Nie mozna odczytac wersji ze skryptu"
     else
         echo_info "Znaleziona wersja skryptu: $wersja_in_script"
         if [ "$wersja_in_script" != "$WERSJA" ]; then
             echo_info "UWAGA: Wykryto niezgodnosc wersji!"
             echo_info "  Wersja copy4prepare.sh: $WERSJA"
             echo_info "  Wersja $preparecztery: $wersja_in_script"
-            echo_stop "Niezgodnosc wersji" "Uruchomienie skryptu z inna wersja moze powodowac problemy"
+            echo_stop "Niezgodnosc wersji! Uruchomienie skryptu z inna wersja moze powodowac problemy"
         else
             echo_info "Weryfikacja wersji udana: Oba skrypty w wersji $WERSJA"
         fi
@@ -880,9 +880,8 @@ run_rsync() {
     if [ ${#files_to_process[@]} -gt 0 ]; then
         local formatted_list
         formatted_list=$(format_file_list files_to_process)
-        echo_stop "Lista plikow z pierwszej analizy: $formatted_list" \
-            "Czy kontynuowac z przetwarzaniem ${#files_to_process[@]} plikow? Pliki zostana skopiowane i przetworzone."
-        echo_info "Tworzenie kopii zapasowych..."
+        echo_info "Lista plikow z pierwszej analizy: $formatted_list"
+        echo_wait "Tworzenie kopii zapasowych..."
         for first_part in "${files_to_process[@]}"; do
             local fpath="$target$first_part"
             if [ "$dry" -ne 1 ]; then
@@ -947,8 +946,7 @@ run_rsync() {
         if [ ${#actual_processed_files[@]} -gt 0 ]; then
             local formatted_second_list
             formatted_second_list=$(format_file_list actual_processed_files)
-            echo_stop "Lista plikow rzeczywiscie przetworzonych: $formatted_second_list" \
-                "Czy kontynuowac z przetwarzaniem ${#actual_processed_files[@]} plikow?"
+            echo_wait "Lista plikow rzeczywiscie przetworzonych: $formatted_second_list"
             local additional_files=()
             for file in "${actual_processed_files[@]}"; do
                 local found=0
@@ -1011,7 +1009,7 @@ un_un() {
                 fi
             done
             if [ $unmounted -eq 0 ]; then
-                echo_stop "Nie udalo sie odmontowac $mntdir po $max_attempts probach, kontynuuje mimo to" "Moze byc konieczne reczne odmontowanie pozniej"
+                echo_stop "Nie udalo sie odmontowac $mntdir po $max_attempts probach, kontynuuje mimo to. Moze byc konieczne reczne odmontowanie pozniej."
             fi
         else
             echo_info "$mntdir nie jest zamontowany"
@@ -1019,7 +1017,7 @@ un_un() {
         if [ -d "$mntdir" ]; then
             echo_info "Usuwanie katalogu montowania: $mntdir"
             if ! rm -rf "$mntdir"; then
-                echo_stop "Nie udalo sie usunac katalogu $mntdir, kontynuuje mimo to" "Katalog moze wymagac recznego usuniecia"
+                echo_stop "Nie udalo sie usunac katalogu $mntdir, kontynuuje mimo to. Katalog moze wymagac recznego usuniecia."
             else
                 echo_info "Katalog usuniety pomyslnie"
             fi
