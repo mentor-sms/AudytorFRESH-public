@@ -291,16 +291,17 @@ main() {
     cd "$target" || echo_error $LINENO "Nie udalo sie zmienic katalogu na $target"
     echo_info "Rozpoczynam wykonanie skryptu przygotowawczego..."
     mkdir -p "$target/.mentor"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Executing: $run $prepare_args" | tee "$target/.mentor/prepare4lab.lab.log" || true
-    eval "stdbuf -i0 -o0 -e0 $run $prepare_args" 2>&1 | tee -a "$target/.mentor/prepare4lab.lab.log"
+    mkdir -p "$target/mentor"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Executing: $run $prepare_args" | tee "$target/mentor/prepare4lab.lab.log" || true
+    eval "stdbuf -i0 -o0 -e0 $run $prepare_args" 2>&1 | tee -a "$target/mentor/prepare4lab.lab.log"
     local exit_code
     exit_code=${PIPESTATUS[0]}
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh exit code: $exit_code" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh exit code: $exit_code" | tee -a "$target/mentor/prepare4lab.lab.log" || true
     if [ "$exit_code" -eq 0 ]; then
-      echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh completed successfully" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh completed successfully" | tee -a "$target/mentor/prepare4lab.lab.log" || true
       echo_info "Skrypt przygotowawczy zakonczony pomyslnie"
     else
-      echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh failed with exit code: $exit_code" | tee -a "$target/.mentor/prepare4lab.lab.log" || true
+      echo "[$(date '+%Y-%m-%d %H:%M:%S')] prepare4lab.sh failed with exit code: $exit_code" | tee -a "$target/mentor/prepare4lab.lab.log" || true
       echo_error $LINENO "Wykonanie skryptu przygotowawczego nie powiodlo sie"
     fi
   else
@@ -403,12 +404,12 @@ echo_wait() {
 }
 clean_home() {
   echo_info "Cleaning home directory: $target"
-  if [ -d "$target/.mentor" ]; then
-    echo_info "Removing .mentor directory"
+  if [ -d "$target/mentor" ]; then
+    echo_info "Removing mentor directory"
     if [ "$dry" -ne 1 ]; then
-      rm -rf "$target/.mentor" || echo_error $LINENO "Failed to remove .mentor directory"
+      rm -rf "$target/mentor" || echo_error $LINENO "Failed to remove .mentor directory"
     else
-      echo_info "Dry run: Would remove $target/.mentor"
+      echo_info "Dry run: Would remove $target/mentor"
     fi
   else
     echo_info ".mentor directory does not exist"
@@ -434,12 +435,12 @@ clean_home() {
   else
     echo_info "prepare.lab.step file does not exist"
   fi
-  if [ -d "$target/.source4rpi" ]; then
+  if [ -d "$target/.mentor/source4rpi" ]; then
     echo_info "Removing .source4rpi directory"
     if [ "$dry" -ne 1 ]; then
-      rm -rf "$target/.source4rpi" || echo_error $LINENO "Failed to remove .source4rpi directory"
+      rm -rf "$target/.mentor/source4rpi" || echo_error $LINENO "Failed to remove .source4rpi directory"
     else
-      echo_info "Dry run: Would remove $target/.source4rpi"
+      echo_info "Dry run: Would remove $target/.mentor/source4rpi"
     fi
   else
     echo_info ".source4rpi directory does not exist"
@@ -687,7 +688,7 @@ create_backup() {
     echo_info "--nobackup włączone. Pomijanie tworzenia kopii zapasowej dla: $filepath"
     return 0
   fi
-  if [[ "$filepath" == *"home/$username/.mentor"* || "$filepath" == *"home/$username/mentor"* || "$filepath" == *"home/$username/.source4rpi"* ]]; then
+  if [[ "$filepath" == *"home/$username/.mentor"* || "$filepath" == *"home/$username/mentor"* || "$filepath" == *"home/$username/.mentor/source4rpi"* ]]; then
     echo_info "Pomijanie tworzenia kopii zapasowej dla: $filepath (ścieżka wykluczona)"
     return 0
   fi
