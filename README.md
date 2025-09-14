@@ -13,9 +13,9 @@ Temat: AudytorFRESH/setup4rpi
 
 `ssh_exe.txt` - polecenie w PATH, lub sciezka do `Apps.exe`
 
-`id_repo_private[.pub]` - klucz do repozytorium AudytorFRESH-private
+`id_audytor_priv_ro[.pub]` - klucz do repozytorium AudytorFRESH-private
 
-`id_repo_config[.pub]` - klucz do repozytorium AudytorFRESH-private
+`id_audytor_conf_ro[.pub]` - klucz do repozytorium AudytorFRESH-private
 
 `win_chown.bat` - skrypt przyznawania uprawnien dla plikow SSH na Windows (nie modyfikuj użycia!)
 
@@ -59,7 +59,7 @@ dotychczasowego
 `etc\ssh\ssh_host_rsa_key[.pub]` - zawsze taki jak `id_rsa[.pub]`
 
 `~\.mentor\known_keys\*.pub` - generacja `/home/pi/.ssh/{known_hosts, authorized_keys}` (+ `id_rsa[.pub]`,
-`ssh4win\id_ed25519[.pub]`)
+`ssh4win\id_setup4rpi[.pub]`)
 
 `etc\dhcpcd.conf` - konfiguracja klienta DHCP
 
@@ -88,7 +88,7 @@ Pliki generowane automatycznie (zmiany uzytkownika zostana zignorowane!):
 ```
 
 `.mentor/known_keys/*.pub` - extra klucze SSH dla `~/.ssh/{known_hosts, authorized_keys}` (+ `id_rsa[.pub]`, +
-`id_ed25519[.pub]`)
+`id_setup4rpi[.pub]`)
 
 `.mentor/profile.txt`, `.mentor/prepare4lab.run` - zamiast `.profile`
 

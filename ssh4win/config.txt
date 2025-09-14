@@ -53,14 +53,14 @@ Host mentor-github-*
     User git
 
 Host mentor-github-private
-    IdentityFile ~/.ssh/id_repo_private
+    IdentityFile ~/.ssh/id_audytor_priv_ro
 
 Host mentor-github-config
-    IdentityFile ~/.ssh/id_repo_config
+    IdentityFile ~/.ssh/id_audytor_conf_ro
 
 Host mentor-rpi*
     User pi
-    IdentityFile ~/.ssh/id_ed25519
+    IdentityFile ~/.ssh/id_setup4rpi
 
     #ControlMaster yes
     #ControlPersist 1m
